@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storico — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Top Bar ─────────────────────────────────────────── -->
+<nav id="topbar">
+  <div class="logo">
+    <i class="fa fa-broadcast-tower"></i>
+    RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link active">📊 Storico</a>
+  </div>
+  <div class="spacer"></div>
+  <a class="topbar-btn" href="https://dpc-radar.readthedocs.io/it/latest/" target="_blank" title="Documentazione API">
+    <i class="fa fa-book"></i>
+  </a>
+</nav>
+
+<!-- ── Body ────────────────────────────────────────────── -->
+<div id="app" style="height:calc(100vh - 48px)">
+  <div class="storico-layout" style="height:100%">
+
+    <!-- ── Sidebar parametri ──────────────────────────── -->
+    <aside id="storico-sidebar">
+
+      <div>
+        <div class="sidebar-label" style="margin-bottom:8px">
+          <i class="fa fa-database"></i> Download Storico Radar
+        </div>
+        <p style="font-size:11px;color:var(--text3);line-height:1.6">
+          Estrae i valori di precipitazione dai prodotti radar DPC per i punti selezionati,
+          per un range di date. Il download genera un file CSV pronto per Excel.
+        </p>
+      </div>
+
+      <!-- Prodotto -->
+      <div class="form-group">
+        <label class="form-label" for="product-select">Prodotto</label>
+        <select id="product-select" class="form-select"></select>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group">
+        <label class="form-label" for="date-from">Data inizio</label>
+        <input type="date" id="date-from" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="date-to">Data fine</label>
+        <input type="date" id="date-to" class="form-input">
+      </div>
+
+      <!-- Ricerca punto -->
+      <div class="form-group">
+        <div class="sidebar-label">Punti di interesse (max 3)</div>
+        <div class="search-wrap" style="margin-bottom:6px">
+          <i class="fa fa-search search-icon"></i>
+          <input type="text" id="location-search" class="form-input"
+            style="width:100%;padding-left:28px"
+            placeholder="Cerca località…"
+            autocomplete="off">
+          <div id="search-results"></div>
+        </div>
+        <label class="click-mode-toggle" style="font-size:11px;color:var(--text2)">
+          <input type="checkbox" id="map-click-mode">
+          <i class="fa fa-mouse-pointer"></i> Click su mappa per aggiungere punto
+        </label>
+      </div>
+      <div id="points-list" style="font-size:11px">
+        <p class="no-points">Nessun punto. Cerca o clicca sulla mappa.</p>
+      </div>
+
+      <!-- Avvia -->
+      <button class="btn-primary" id="btn-run">
+        <i class="fa fa-play"></i> Avvia elaborazione
+      </button>
+
+      <!-- Progress -->
+      <div id="progress-wrap">
+        <div class="progress-bar-bg">
+          <div id="progress-bar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+        <div id="run-log"></div>
+      </div>
+
+      <!-- Download -->
+      <div style="display:flex;gap:6px">
+        <button class="btn-primary" id="btn-download" style="display:none;flex:1" onclick="StoricoApp.downloadCSV()">
+          <i class="fa fa-download"></i> CSV
+        </button>
+        <button class="btn-primary" id="btn-download-xlsx" style="display:none;flex:1;background:#1a472a;color:#7bed9f" onclick="StoricoApp.downloadExcel()">
+          <i class="fa fa-file-excel"></i> Excel
+        </button>
+      </div>
+
+      <div style="margin-top:auto;padding-top:10px;border-top:1px solid var(--border2)">
+        <p style="font-size:10px;color:var(--text3);line-height:1.6">
+          ⚠️ L'elaborazione effettua una richiesta API per ogni giorno del range.
+          Mantenere la pagina aperta durante il processo. Max 90 giorni per esecuzione.
+        </p>
+      </div>
+
+    </aside><!-- /storico-sidebar -->
+
+    <!-- ── Area destra: mappa + risultati ───────────────── -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+
+      <!-- Mappa -->
+      <div id="storico-map" style="height:50%;min-height:200px"></div>
+
+      <!-- Risultati -->
+      <div id="storico-results" style="height:50%;background:var(--bg2);border-top:1px solid var(--border)">
+        <div style="padding:8px 12px;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px">
+          <i class="fa fa-table"></i> Risultati
+          <span style="font-size:9px">(visualizzazione anteprima — usa il pulsante CSV per scaricare)</span>
+        </div>
+        <div id="storico-results-inner" style="flex:1;overflow:auto;padding:8px">
+          <p style="color:var(--text3);font-size:12px;padding:20px;text-align:center">
+            I risultati appariranno qui dopo l'elaborazione.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ── Librerie ────────────────────────────────────────── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster@1.6.1/georaster.browser.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@0.9.0/dist/georaster-layer-for-leaflet.browserify.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/colormap.js"></script>
+<script src="js/georaster-utils.js"></script>
+<script src="js/location.js"></script>
+<script src="js/storico.js"></script>
+
+<!-- Inietta il risultato nella tabella -->
+<script>
+  // Sovrascrive il rendering tabella in storico-results-inner
+  const origRender = StoricoApp._renderTable;
+  document.addEventListener('DOMContentLoaded', () => {
+    const observer = new MutationObserver(() => {
+      const inner = document.getElementById('storico-results-inner');
+      const table = document.querySelector('.result-table');
+      if (table && inner && !inner.contains(table)) {
+        inner.innerHTML = '';
+        inner.appendChild(table);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+</script>
+
+</body>
+</html>
