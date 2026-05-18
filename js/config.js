@@ -5,6 +5,18 @@
 
 const CONFIG = {
 
+  // ───────────────────────────────────────────────────────────────────────
+  // CORS PROXY (Cloudflare Worker dedicato)
+  // Serve a scaricare i file .tif dal bucket S3 di DPC che non ha CORS.
+  // Se imposti la stringa vuota '' il codice in api.js userà la catena di
+  // proxy pubblici di fallback (allorigins, codetabs, cors.sh).
+  // ───────────────────────────────────────────────────────────────────────
+  CORS_PROXY: 'https://radar-dpc-proxy.riccardo-giusti-gst.workers.dev/?url=',
+
+  // WebSocket DPC: lasciare null finché non viene reso pubblico.
+  // Quando null il sito usa il polling REST (auto-refresh ogni 60 s).
+  WSS_URL: null,
+
   API: {
     BASE: 'https://radar-api.protezionecivile.it',
     LAST: '/findLastProductByType',
@@ -23,13 +35,16 @@ const CONFIG = {
 
   BUFFER_KM: 2,
   REFRESH_MS: 60_000,
-  MAX_FRAMES: 24, // max fotogrammi animazione
+  MAX_FRAMES: 24,
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Prodotti disponibili sull'API DPC
+  // ───────────────────────────────────────────────────────────────────────
   PRODUCTS: {
     VMI: {
       label: 'VMI – Riflettività verticale massima',
       unit: 'dBZ',
-      stepMs: 300_000,      // 5 min
+      stepMs: 300_000,
       category: 'base',
       colorScale: 'dbz',
       description: 'Valore massimo di riflettività radar sulla verticale. Indica la presenza e intensità dei precipitati.',
@@ -41,6 +56,22 @@ const CONFIG = {
       category: 'base',
       colorScale: 'rain_rate',
       description: 'Stima dell\'intensità di pioggia istantanea al suolo.',
+    },
+    SRT1: {
+      label: 'SRT1 – Cumulata oraria',
+      unit: 'mm',
+      stepMs: 300_000,
+      category: 'base',
+      colorScale: 'accumulation',
+      description: 'Precipitazione cumulata nell\'ultima ora.',
+    },
+    IR_108: {
+      label: 'IR 10.8 – Infrarosso satellitare',
+      unit: 'K',
+      stepMs: 900_000,
+      category: 'altro',
+      colorScale: 'temperature',
+      description: 'Temperatura di brillanza canale IR 10.8 µm (Meteosat).',
     },
     CUM3: {
       label: 'CUM3 – Cumulata 3h',
@@ -106,16 +137,16 @@ const CONFIG = {
       colorScale: 'probability',
       description: 'Probability Of Hail — stima della probabilità di grandine al suolo.',
     },
-    CAPPI_1:  { label: 'CAPPI 1 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_2:  { label: 'CAPPI 2 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_3:  { label: 'CAPPI 3 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_4:  { label: 'CAPPI 4 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_5:  { label: 'CAPPI 5 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_6:  { label: 'CAPPI 6 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_7:  { label: 'CAPPI 7 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_8:  { label: 'CAPPI 8 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_9:  { label: 'CAPPI 9 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
-    CAPPI_10: { label: 'CAPPI 10 km', unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz' },
+    CAPPI_1:  { label: 'CAPPI 1 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 1 km.' },
+    CAPPI_2:  { label: 'CAPPI 2 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 2 km.' },
+    CAPPI_3:  { label: 'CAPPI 3 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 3 km.' },
+    CAPPI_4:  { label: 'CAPPI 4 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 4 km.' },
+    CAPPI_5:  { label: 'CAPPI 5 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 5 km.' },
+    CAPPI_6:  { label: 'CAPPI 6 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 6 km.' },
+    CAPPI_7:  { label: 'CAPPI 7 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 7 km.' },
+    CAPPI_8:  { label: 'CAPPI 8 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 8 km.' },
+    CAPPI_9:  { label: 'CAPPI 9 km',  unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 9 km.' },
+    CAPPI_10: { label: 'CAPPI 10 km', unit: 'dBZ', stepMs: 300_000, category: 'cappi', colorScale: 'dbz', description: 'Riflettività radar a quota costante 10 km.' },
     SITES: {
       label: 'Siti Radar',
       unit: '',
@@ -135,11 +166,14 @@ const CONFIG = {
     meta:     { label: 'Info',      icon: 'ℹ️' },
   },
 
-  // Ogni scala è un array di [valore, [r,g,b,a]]
+  // ───────────────────────────────────────────────────────────────────────
+  // Scale colori: ogni scala è un array di [valore_soglia, [r, g, b, a]]
+  // Interpolazione lineare tra i punti.
+  // ───────────────────────────────────────────────────────────────────────
   COLOR_SCALES: {
     dbz: [
-      [-30, [0, 0, 0, 0]],
-      [  0, [100, 149, 237, 60]],
+      [-30, [  0,   0,   0,   0]],
+      [  0, [100, 149, 237,  60]],
       [ 10, [  0, 230, 230, 140]],
       [ 20, [  0, 200,   0, 180]],
       [ 30, [255, 255,   0, 200]],
@@ -210,13 +244,18 @@ const CONFIG = {
     ],
   },
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Soglie allerta per prodotto (warn = avviso, danger = critico)
+  // ───────────────────────────────────────────────────────────────────────
   ALERT_THRESHOLDS: {
-    SRI:  { warn: 10, danger: 30, unit: 'mm/h' },
-    CUM3: { warn: 20, danger: 50, unit: 'mm' },
-    CUM6: { warn: 40, danger: 80, unit: 'mm' },
-    CUM12:{ warn: 60, danger:120, unit: 'mm' },
-    CUM24:{ warn: 80, danger:150, unit: 'mm' },
-    VIL:  { warn: 20, danger: 50, unit: 'kg/m²' },
-    POH:  { warn: 30, danger: 70, unit: '%' },
+    SRI:   { warn: 10,  danger: 30,  unit: 'mm/h'  },
+    CUM3:  { warn: 20,  danger: 50,  unit: 'mm'    },
+    CUM6:  { warn: 40,  danger: 80,  unit: 'mm'    },
+    CUM12: { warn: 60,  danger: 120, unit: 'mm'    },
+    CUM24: { warn: 80,  danger: 150, unit: 'mm'    },
+    VIL:   { warn: 20,  danger: 50,  unit: 'kg/m²' },
+    ETM:   { warn: 10,  danger: 15,  unit: 'km'    },
+    POH:   { warn: 50,  danger: 80,  unit: '%'     },
+    VMI:   { warn: 40,  danger: 55,  unit: 'dBZ'   },
   },
 };
