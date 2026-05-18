@@ -1,136 +1,135 @@
 /**
  * websocket.js — Client WebSocket/STOMP per notifiche push Radar DPC
- * wss://radar-wss.protezionecivile.it
  *
- * Sostituisce il polling REST con un canale push: la piattaforma riceve
- * esattamente il timestamp corretto del nuovo campione, senza errori 404
- * per timestamp non ancora disponibili.
+ * NOTA: l'endpoint wss://radar-wss.protezionecivile.it non è ufficialmente
+ * documentato e in molti casi non è raggiungibile da origin esterni.
+ * Per questo motivo:
+ *   - si tenta UNA sola connessione, senza riconnessioni infinite
+ *   - in caso di fallimento si passa silenziosamente al polling REST
+ *   - lo status indicator mostra "polling" invece di "errore"
+ *
+ * Se DPC pubblica in futuro un endpoint ufficiale lo si imposta in
+ * CONFIG.WSS_URL e si riabilita auto-reconnect a true.
  */
 
 const RadarWebSocket = (() => {
 
-  const WSS_URL = 'wss://radar-wss.protezionecivile.it';
-  const TOPIC   = '/topic/product';
-  const RECONNECT_DELAY_MS = 8000;
+  const WSS_URL = CONFIG.WSS_URL || null;     // se null → WSS disabilitato
+  const TOPIC = '/topic/product';
+  const ATTEMPT_TIMEOUT_MS = 6000;            // se non si connette in 6 s, addio
 
   let _client = null;
-  let _handlers = new Map(); // productType → [callback, ...]
-  let _globalHandlers = [];  // callback per qualsiasi prodotto
-  let _status = 'disconnected'; // 'disconnected' | 'connecting' | 'connected'
+  let _handlers = new Map();
+  let _globalHandlers = [];
+  let _status = 'disabled';
   let _onStatusChange = null;
+  let _attempted = false;
 
-  /** Avvia la connessione WebSocket/STOMP */
   function connect(onStatusChange) {
-    if (_client && _client.active) return;
     _onStatusChange = onStatusChange;
 
-    if (typeof StompJs === 'undefined') {
-      console.warn('RadarWebSocket: StompJs non disponibile, fallback a polling REST');
-      _setStatus('error');
+    // Caso 1: WSS disabilitato esplicitamente → resto in stato 'polling'
+    if (!WSS_URL) {
+      _setStatus('polling');
       return;
     }
 
+    // Caso 2: già tentato una volta e fallito → non riprovo
+    if (_attempted && _status !== 'connected') {
+      _setStatus('polling');
+      return;
+    }
+
+    // Caso 3: libreria STOMP non caricata → polling
+    if (typeof StompJs === 'undefined') {
+      _setStatus('polling');
+      return;
+    }
+
+    _attempted = true;
     _setStatus('connecting');
 
-    _client = new StompJs.Client({
-      brokerURL: WSS_URL,
-      reconnectDelay: RECONNECT_DELAY_MS,
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
+    try {
+      _client = new StompJs.Client({
+        brokerURL: WSS_URL,
+        reconnectDelay: 0,           // niente auto-reconnect
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
 
-      onConnect: () => {
-        _setStatus('connected');
-        console.log('[WSS] Connesso a', WSS_URL);
+        onConnect: () => {
+          _setStatus('connected');
+          _client.subscribe(TOPIC, (frame) => {
+            try {
+              const msg = JSON.parse(frame.body);
+              _dispatch(msg);
+            } catch (_) {}
+          });
+        },
 
-        _client.subscribe(TOPIC, (frame) => {
-          try {
-            const msg = JSON.parse(frame.body);
-            // { productType: "VMI", time: 1758706200000, period: "PT5M" }
-            _dispatch(msg);
-          } catch (e) {
-            console.error('[WSS] Parse error:', e);
-          }
-        });
-      },
+        onDisconnect: () => { _setStatus('polling'); },
+        onStompError: () => { _silentFallback(); },
+        onWebSocketError: () => { _silentFallback(); },
+        onWebSocketClose: () => {
+          if (_status !== 'connected') _silentFallback();
+        },
+      });
 
-      onDisconnect: () => {
-        _setStatus('disconnected');
-        console.log('[WSS] Disconnesso');
-      },
+      _client.activate();
 
-      onStompError: (frame) => {
-        console.error('[WSS] STOMP error:', frame.headers?.message);
-        _setStatus('error');
-      },
+      // safety net: se entro N secondi non si è connesso, abortisco
+      setTimeout(() => {
+        if (_status !== 'connected') _silentFallback();
+      }, ATTEMPT_TIMEOUT_MS);
 
-      onWebSocketError: (evt) => {
-        console.warn('[WSS] WebSocket error — riconnessione in', RECONNECT_DELAY_MS / 1000, 's');
-        _setStatus('reconnecting');
-      },
-    });
-
-    _client.activate();
+    } catch (_) {
+      _silentFallback();
+    }
   }
 
-  /** Disconnette e pulisce */
+  function _silentFallback() {
+    try { _client?.deactivate(); } catch (_) {}
+    _client = null;
+    _setStatus('polling');
+  }
+
   function disconnect() {
-    if (_client) {
-      _client.deactivate();
-      _client = null;
-    }
-    _setStatus('disconnected');
+    try { _client?.deactivate(); } catch (_) {}
+    _client = null;
+    _setStatus('disabled');
   }
 
-  /**
-   * Registra un handler per aggiornamenti di uno specifico prodotto.
-   * @param {string|null} productType  - es. "VMI", null = tutti i prodotti
-   * @param {Function} callback        - fn({ productType, time, period })
-   * @returns {Function} unsubscribe
-   */
   function on(productType, callback) {
-    if (productType === null) {
+    if (productType === null || productType === undefined || productType === '*') {
       _globalHandlers.push(callback);
-      return () => { _globalHandlers = _globalHandlers.filter(h => h !== callback); };
+    } else {
+      if (!_handlers.has(productType)) _handlers.set(productType, []);
+      _handlers.get(productType).push(callback);
     }
-    if (!_handlers.has(productType)) _handlers.set(productType, []);
-    _handlers.get(productType).push(callback);
-    return () => {
-      const arr = _handlers.get(productType);
-      if (arr) _handlers.set(productType, arr.filter(h => h !== callback));
-    };
+  }
+
+  function off(productType, callback) {
+    if (productType === null || productType === '*') {
+      _globalHandlers = _globalHandlers.filter(c => c !== callback);
+    } else if (_handlers.has(productType)) {
+      _handlers.set(productType, _handlers.get(productType).filter(c => c !== callback));
+    }
   }
 
   function _dispatch(msg) {
     const { productType } = msg;
-    // Handler specifici
-    (_handlers.get(productType) ?? []).forEach(h => { try { h(msg); } catch(e) { console.error(e); } });
-    // Handler globali
-    _globalHandlers.forEach(h => { try { h(msg); } catch(e) { console.error(e); } });
+    (_handlers.get(productType) || []).forEach(cb => { try { cb(msg); } catch (_) {} });
+    _globalHandlers.forEach(cb => { try { cb(msg); } catch (_) {} });
   }
 
   function _setStatus(s) {
+    if (s === _status) return;
     _status = s;
-    _onStatusChange?.(s);
-    _updateStatusUI(s);
-  }
-
-  function _updateStatusUI(s) {
-    const el = document.getElementById('wss-status');
-    if (!el) return;
-    const labels = {
-      connecting:   { icon: '🔄', text: 'WSS connessione…', cls: 'warn' },
-      connected:    { icon: '🟢', text: 'WSS live',         cls: 'ok'   },
-      disconnected: { icon: '⚫', text: 'WSS offline',      cls: 'err'  },
-      reconnecting: { icon: '🔁', text: 'WSS riconnessione…', cls: 'warn' },
-      error:        { icon: '🔴', text: 'WSS errore',       cls: 'err'  },
-    };
-    const { icon, text, cls } = labels[s] ?? labels.error;
-    el.innerHTML = `${icon} ${text}`;
-    el.className = `wss-indicator wss-${cls}`;
+    if (typeof _onStatusChange === 'function') {
+      try { _onStatusChange(s); } catch (_) {}
+    }
   }
 
   function getStatus() { return _status; }
-  function isConnected() { return _status === 'connected'; }
 
-  return { connect, disconnect, on, getStatus, isConnected };
+  return { connect, disconnect, on, off, getStatus };
 })();
