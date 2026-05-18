@@ -1,0 +1,68 @@
+name: Archive Radar Data
+
+# Esegue ogni giorno alle 05:00 UTC (07:00 italiane d'estate, 06:00 d'inverno)
+# Scarica i dati radar DPC per le aree configurate e li archivia nel repo.
+#
+# Si può anche lanciare a mano dalla tab "Actions" → "Archive Radar Data" →
+# "Run workflow", specificando "days" per il bootstrap iniziale (es. 7).
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Quanti giorni a ritroso recuperare (1-30, default 1)'
+        default: '1'
+        type: string
+      force:
+        description: 'Sovrascrivi righe esistenti (default false)'
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'archive/scripts/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r archive/scripts/requirements.txt
+
+      - name: Run collector
+        run: |
+          DAYS="${{ github.event.inputs.days || '1' }}"
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          python archive/scripts/collect.py --days "$DAYS" $FORCE_FLAG
+
+      - name: Commit data
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/data/
+          if git diff --cached --quiet; then
+            echo "No new data to commit."
+          else
+            git commit -m "data: archive run $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
+          fi
