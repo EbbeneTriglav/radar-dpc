@@ -1,22 +1,18 @@
 /**
  * websocket.js — Client WebSocket/STOMP per notifiche push Radar DPC
  *
- * NOTA: l'endpoint wss://radar-wss.protezionecivile.it non è ufficialmente
- * documentato e in molti casi non è raggiungibile da origin esterni.
- * Per questo motivo:
+ * L'endpoint wss://radar-wss.protezionecivile.it non è documentato e spesso
+ * non è raggiungibile da origin esterni. Per questo:
  *   - si tenta UNA sola connessione, senza riconnessioni infinite
  *   - in caso di fallimento si passa silenziosamente al polling REST
  *   - lo status indicator mostra "polling" invece di "errore"
- *
- * Se DPC pubblica in futuro un endpoint ufficiale lo si imposta in
- * CONFIG.WSS_URL e si riabilita auto-reconnect a true.
  */
 
 const RadarWebSocket = (() => {
 
   const WSS_URL = CONFIG.WSS_URL || null;     // se null → WSS disabilitato
   const TOPIC = '/topic/product';
-  const ATTEMPT_TIMEOUT_MS = 6000;            // se non si connette in 6 s, addio
+  const ATTEMPT_TIMEOUT_MS = 6000;
 
   let _client = null;
   let _handlers = new Map();
@@ -28,19 +24,14 @@ const RadarWebSocket = (() => {
   function connect(onStatusChange) {
     _onStatusChange = onStatusChange;
 
-    // Caso 1: WSS disabilitato esplicitamente → resto in stato 'polling'
     if (!WSS_URL) {
       _setStatus('polling');
       return;
     }
-
-    // Caso 2: già tentato una volta e fallito → non riprovo
     if (_attempted && _status !== 'connected') {
       _setStatus('polling');
       return;
     }
-
-    // Caso 3: libreria STOMP non caricata → polling
     if (typeof StompJs === 'undefined') {
       _setStatus('polling');
       return;
@@ -52,7 +43,7 @@ const RadarWebSocket = (() => {
     try {
       _client = new StompJs.Client({
         brokerURL: WSS_URL,
-        reconnectDelay: 0,           // niente auto-reconnect
+        reconnectDelay: 0,
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,
 
@@ -76,7 +67,6 @@ const RadarWebSocket = (() => {
 
       _client.activate();
 
-      // safety net: se entro N secondi non si è connesso, abortisco
       setTimeout(() => {
         if (_status !== 'connected') _silentFallback();
       }, ATTEMPT_TIMEOUT_MS);
@@ -131,5 +121,8 @@ const RadarWebSocket = (() => {
 
   function getStatus() { return _status; }
 
-  return { connect, disconnect, on, off, getStatus };
+  /** Compatibilità con main.js che chiama RadarWebSocket.isConnected() */
+  function isConnected() { return _status === 'connected'; }
+
+  return { connect, disconnect, on, off, getStatus, isConnected };
 })();
