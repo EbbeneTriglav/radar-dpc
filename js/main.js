@@ -32,11 +32,8 @@ function initMap() {
     attributionControl: true,
   });
 
-  tileLayer = L.tileLayer(CONFIG.MAP.TILE_URL, {
-    attribution: CONFIG.MAP.TILE_ATTR,
-    maxZoom: 18,
-    subdomains: 'abcd',
-  }).addTo(map);
+  // Layer picker: 5 basemap free (CARTO Dark/Light, OSM, OSM Humanitario, Satellite Esri)
+  BasemapPicker.init(map);
 
   // Zoom control posizionato in alto a destra
   L.control.zoom({ position: 'topright' }).addTo(map);
@@ -178,7 +175,9 @@ function _readUrlParams() {
 function toggleTheme() {
   isDarkTheme = !isDarkTheme;
   document.body.classList.toggle('light-theme', !isDarkTheme);
-  tileLayer.setUrl(isDarkTheme ? CONFIG.MAP.TILE_URL : CONFIG.MAP.TILE_URL_LIGHT);
+  if (typeof BasemapPicker !== 'undefined') {
+    BasemapPicker.applyTheme(isDarkTheme ? 'dark' : 'light');
+  }
 }
 
 // ─── Build sidebar prodotti ───────────────────────────────────────────────────
@@ -260,13 +259,14 @@ function _opacity() {
 }
 
 function _formatTs(ms) {
-  return new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
+  return Timezone.formatTime(ms);
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   initMap();
   _buildProductList();
+  _bindTimezoneToggle();
 
   Player.init({
     onFrameChange,
@@ -337,3 +337,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }, 5000);
 });
+
+
+// ─── Toggle UTC ↔ Locale (richiamato dal bottone in topbar) ───────────────────
+function _bindTimezoneToggle() {
+  const btn = document.getElementById('btn-timezone');
+  if (!btn) return;
+
+  function _refreshLabel() {
+    const lbl = btn.querySelector('.tz-label');
+    if (lbl) lbl.textContent = Timezone.mode === 'utc' ? 'UTC' : 'Locale';
+    btn.title = Timezone.mode === 'utc'
+      ? 'Mostra ora locale (Europe/Rome)'
+      : 'Mostra ora UTC (come API DPC)';
+  }
+  _refreshLabel();
+
+  btn.addEventListener('click', () => Timezone.toggle());
+
+  window.addEventListener('timezone-changed', () => {
+    _refreshLabel();
+    // Aggiorna l'orologio del frame attivo
+    const cur = document.getElementById('current-time');
+    if (cur && Player && typeof Player.getCurrentTimestamp === 'function') {
+      const ts = Player.getCurrentTimestamp();
+      if (ts) cur.textContent = _formatTs(ts);
+    }
+  });
+}

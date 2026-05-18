@@ -123,7 +123,7 @@ const AlertSystem = (() => {
     }
     elLog.innerHTML = _alertLog.map(a => {
       const d = new Date(a.ts);
-      const time = d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'UTC' });
+      const time = Timezone.format(d.getTime(), { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       return `
         <div class="alert-item ${a.level}">
           <span class="alert-icon">${a.level === 'danger' ? '🚨' : '⚠️'}</span>
@@ -131,7 +131,7 @@ const AlertSystem = (() => {
             <strong>${a.point}</strong>
             <span>${a.product} = ${a.value.toFixed(1)} ${a.unit}</span>
           </div>
-          <span class="alert-time">${time} UTC</span>
+          <span class="alert-time">${time} ${Timezone.suffix(d.getTime())}</span>
         </div>
       `;
     }).join('');
@@ -145,6 +145,16 @@ const AlertSystem = (() => {
   }
 
   function setEnabled(v) { _enabled = v; if (elToggle) elToggle.checked = v; }
+  function refresh() {
+    if (typeof _renderLog === 'function') { try { _renderLog(); } catch (_) {} }
+  }
 
-  return { init, check, clearLog, setEnabled };
+
+  return { refresh, init, check, clearLog, setEnabled };
 })();
+
+
+// Re-render lista allerte al cambio fuso orario
+window.addEventListener('timezone-changed', () => {
+  try { Alerts?.refresh?.(); } catch (_) {}
+});

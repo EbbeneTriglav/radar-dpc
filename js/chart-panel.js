@@ -74,7 +74,7 @@ const ChartPanel = (() => {
 
     const labels = allTs.map(ts => {
       const d = new Date(ts);
-      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+      return Timezone.formatShort(d.getTime());
     });
 
     const datasets = points.map(point => {
@@ -236,6 +236,18 @@ const ChartPanel = (() => {
   }
 
   function getHistory() { return JSON.parse(JSON.stringify(_history)); }
+  function refresh() {
+    if (typeof _chart !== 'undefined' && _chart) {
+      try { _chart.update(); } catch (_) {}
+    }
+  }
 
-  return { init, setProduct, addData, clearHistory, downloadCSV, downloadExcel, getHistory };
+
+  return { refresh, init, setProduct, addData, clearHistory, downloadCSV, downloadExcel, getHistory };
 })();
+
+
+// Refresh tick X-axis al cambio fuso orario
+window.addEventListener('timezone-changed', () => {
+  try { ChartPanel?.refresh?.(); } catch (_) {}
+});

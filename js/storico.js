@@ -17,10 +17,9 @@ const StoricoApp = (() => {
       zoom: 6,
       zoomControl: true,
     });
-    L.tileLayer(CONFIG.MAP.TILE_URL, {
-      attribution: CONFIG.MAP.TILE_ATTR,
-      subdomains: 'abcd',
-    }).addTo(_map);
+
+    // Layer picker: 5 basemap free
+    BasemapPicker.init(_map);
 
     GeoRasterUtils.init(_map);
     LocationPanel.init(_map, (pts) => { _points = pts; });
