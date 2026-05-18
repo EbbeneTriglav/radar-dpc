@@ -79,10 +79,19 @@ const GeoRasterUtils = (() => {
   }
 
   // ─── Parsing GeoTIFF ──────────────────────────────────────────────────────
+  // georaster v1.6.0 accetta direttamente ArrayBuffer; internamente usa
+  // geotiff.js per il parsing. Non passare un oggetto GeoTIFF già parsato:
+  // la firma corretta è parseGeoraster(input, metadata?, debug?).
   async function parseGeoTiff(arrayBuffer) {
-    const geotiff  = await GeoTIFF.fromArrayBuffer(arrayBuffer);
-    const georaster = await parseGeoraster(geotiff);
-    return georaster;
+    try {
+      const georaster = await parseGeoraster(arrayBuffer);
+      return georaster;
+    } catch (err) {
+      console.error('[georaster] parseGeoraster fallito:', err);
+      console.error('[georaster] buffer size:', arrayBuffer?.byteLength, 'first bytes:',
+        new Uint8Array(arrayBuffer.slice(0, 8)));
+      throw new Error('Parsing GeoTIFF fallito: ' + (err.message || err));
+    }
   }
 
   // ─── Rendering su Leaflet ─────────────────────────────────────────────────
