@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260518d">
+  <link rel="stylesheet" href="css/style.css?v=20260518e">
 </head>
 <body>
 
@@ -25,6 +25,9 @@
     <a href="storico.html" class="nav-link active">📊 Storico</a>
   </div>
   <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
+    <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
+  </button>
   <a class="topbar-btn" href="https://dpc-radar.readthedocs.io/it/latest/" target="_blank" title="Documentazione API">
     <i class="fa fa-book"></i>
   </a>
@@ -120,10 +123,10 @@
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 
       <!-- Mappa -->
-      <div id="storico-map" style="height:50%;min-height:200px"></div>
+      <div id="storico-map" style="height:70%;min-height:300px"></div>
 
       <!-- Risultati -->
-      <div id="storico-results" style="height:50%;background:var(--bg2);border-top:1px solid var(--border)">
+      <div id="storico-results" style="height:30%;background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column">
         <div style="padding:8px 12px;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px">
           <i class="fa fa-table"></i> Risultati
           <span style="font-size:9px">(visualizzazione anteprima — usa il pulsante CSV per scaricare)</span>
@@ -149,12 +152,14 @@
 <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
-<script src="js/config.js?v=20260518d"></script>
-<script src="js/api.js?v=20260518d"></script>
-<script src="js/colormap.js?v=20260518d"></script>
-<script src="js/georaster-utils.js?v=20260518d"></script>
-<script src="js/location.js?v=20260518d"></script>
-<script src="js/storico.js?v=20260518d"></script>
+<script src="js/timezone.js?v=20260518e"></script>
+<script src="js/basemap-picker.js?v=20260518e"></script>
+<script src="js/config.js?v=20260518e"></script>
+<script src="js/api.js?v=20260518e"></script>
+<script src="js/colormap.js?v=20260518e"></script>
+<script src="js/georaster-utils.js?v=20260518e"></script>
+<script src="js/location.js?v=20260518e"></script>
+<script src="js/storico.js?v=20260518e"></script>
 
 <!-- Inietta il risultato nella tabella -->
 <script>
@@ -171,6 +176,25 @@
     });
     observer.observe(document.body, { childList: true, subtree: true });
   });
+</script>
+
+
+<!-- Binding bottone toggle UTC/Locale per la pagina storico -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-timezone');
+  if (!btn) return;
+  function refresh() {
+    const lbl = btn.querySelector('.tz-label');
+    if (lbl) lbl.textContent = Timezone.mode === 'utc' ? 'UTC' : 'Locale';
+    btn.title = Timezone.mode === 'utc'
+      ? 'Mostra ora locale (Europe/Rome)'
+      : 'Mostra ora UTC (come API DPC)';
+  }
+  refresh();
+  btn.addEventListener('click', () => Timezone.toggle());
+  window.addEventListener('timezone-changed', refresh);
+});
 </script>
 
 </body>

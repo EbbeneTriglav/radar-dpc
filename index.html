@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +15,7 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <!-- App styles -->
-  <link rel="stylesheet" href="css/style.css?v=20260518d">
+  <link rel="stylesheet" href="css/style.css?v=20260518e">
 </head>
 <body>
 
@@ -47,6 +47,9 @@
 
   <button class="topbar-btn" id="btn-theme" title="Tema chiaro/scuro">
     <i class="fa fa-circle-half-stroke"></i>
+  </button>
+  <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
+    <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
   </button>
   <button class="topbar-btn" id="btn-screenshot" title="Screenshot mappa">
     <i class="fa fa-camera"></i>
@@ -275,16 +278,18 @@
   </script>
 
 <!-- ── Moduli app ──────────────────────────────────────── -->
-<script src="js/config.js?v=20260518d"></script>
-<script src="js/api.js?v=20260518d"></script>
-<script src="js/colormap.js?v=20260518d"></script>
-<script src="js/georaster-utils.js?v=20260518d"></script>
-<script src="js/websocket.js?v=20260518d"></script>
-<script src="js/player.js?v=20260518d"></script>
-<script src="js/location.js?v=20260518d"></script>
-<script src="js/chart-panel.js?v=20260518d"></script>
-<script src="js/alerts.js?v=20260518d"></script>
-<script src="js/main.js?v=20260518d"></script>
+<script src="js/timezone.js?v=20260518e"></script>
+<script src="js/basemap-picker.js?v=20260518e"></script>
+<script src="js/config.js?v=20260518e"></script>
+<script src="js/api.js?v=20260518e"></script>
+<script src="js/colormap.js?v=20260518e"></script>
+<script src="js/georaster-utils.js?v=20260518e"></script>
+<script src="js/websocket.js?v=20260518e"></script>
+<script src="js/player.js?v=20260518e"></script>
+<script src="js/location.js?v=20260518e"></script>
+<script src="js/chart-panel.js?v=20260518e"></script>
+<script src="js/alerts.js?v=20260518e"></script>
+<script src="js/main.js?v=20260518e"></script>
 
 </body>
 </html>
