@@ -2,33 +2,31 @@
  * api.js — Wrapper per l'API REST Radar DPC
  * https://radar-api.protezionecivile.it
  *
- * Il bucket S3 dpc-radar.s3.eu-south-1.amazonaws.com NON ha header CORS
- * abilitati per origin esterni: il fetch diretto da GitHub Pages fallisce
- * sempre. Si usa quindi una catena di proxy CORS pubblici con fallback.
+ * Strategia di download dei GeoTIFF da S3:
+ *   - se CONFIG.CORS_PROXY è impostato (Cloudflare Worker proprio):
+ *       chiama direttamente quello, senza nemmeno provare il fetch diretto
+ *       che sappiamo già che fallisce sempre con CORS.
+ *   - altrimenti: prova fetch diretto, poi catena di proxy pubblici.
  *
- * IMPORTANTE: in produzione conviene sostituire la lista CORS_PROXIES con
- * un solo URL puntato a un proprio Cloudflare Worker (vedi
- * /cloudflare-worker/worker.js nel repo). 100k richieste/giorno gratis,
- * latenza < 50 ms, niente rate-limit dei proxy pubblici.
+ * Per debug le richieste sono loggate su console come [api].
  */
 
 const RadarAPI = (() => {
   const { BASE, LAST, DOWNLOAD } = CONFIG.API;
 
-  // Catena di proxy CORS in ordine di preferenza.
-  // Ogni elemento è una funzione che dato l'URL target ritorna l'URL proxato.
-  // Verificati funzionanti a maggio 2026.
-  const CORS_PROXIES = [
-    // Se CONFIG.CORS_PROXY è impostato (es. Cloudflare Worker proprio) lo usa per primo
-    ...(CONFIG.CORS_PROXY ? [(u) => CONFIG.CORS_PROXY + encodeURIComponent(u)] : []),
+  const PUBLIC_PROXIES = [
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
     (u) => `https://proxy.cors.sh/${u}`,
   ];
 
-  const FETCH_TIMEOUT_MS = 15000;
+  const HAS_CUSTOM_PROXY = !!(CONFIG.CORS_PROXY && CONFIG.CORS_PROXY.length > 0);
 
-  /** Fetch con timeout (AbortController) */
+  // Log all'avvio quale modalità sta usando (utile per debug)
+  console.log('[api] init — CORS_PROXY:', HAS_CUSTOM_PROXY ? CONFIG.CORS_PROXY : '(nessuno, uso fallback pubblici)');
+
+  const FETCH_TIMEOUT_MS = 20000;
+
   async function _fetchWithTimeout(url, opts = {}, timeoutMs = FETCH_TIMEOUT_MS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -45,7 +43,7 @@ const RadarAPI = (() => {
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     if (!data.lastProducts?.length) throw new Error('Nessun prodotto disponibile');
-    return data.lastProducts[0]; // { productType, time, period }
+    return data.lastProducts[0];
   }
 
   /** Ottiene la pre-signed URL S3 per un prodotto e timestamp */
@@ -60,44 +58,56 @@ const RadarAPI = (() => {
       try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    return res.json(); // { bucket, key, url, expiresSeconds }
+    return res.json();
   }
 
   /**
    * Scarica il GeoTIFF come ArrayBuffer dalla pre-signed URL S3.
-   * Strategia:
-   *   1. tenta fetch diretto (utile in localhost o se DPC abilita CORS)
-   *   2. in caso di errore, itera i proxy CORS finché uno funziona
    */
   async function fetchGeoTiff(url) {
-    // 1) tentativo diretto
+    // === MODO 1: Cloudflare Worker proprio ===
+    // Sappiamo che il fetch diretto fallisce sempre per CORS, quindi salta
+    // direttamente sul worker. Niente fallback ai proxy pubblici (rate-limit).
+    if (HAS_CUSTOM_PROXY) {
+      const proxyUrl = CONFIG.CORS_PROXY + encodeURIComponent(url);
+      console.log('[api] fetchGeoTiff via custom proxy:', proxyUrl.substring(0, 100) + '…');
+      const res = await _fetchWithTimeout(proxyUrl);
+      if (!res.ok) {
+        throw new Error(`Custom proxy HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+      }
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength < 256) {
+        throw new Error(`Risposta proxy troppo piccola (${buf.byteLength} B), probabilmente un errore`);
+      }
+      console.log(`[api] fetchGeoTiff OK — ${buf.byteLength} B`);
+      return buf;
+    }
+
+    // === MODO 2: proxy pubblici (catena) ===
+    // 1) tentativo diretto (utile in localhost o future modifiche CORS DPC)
     try {
       const res = await _fetchWithTimeout(url, { mode: 'cors' }, 8000);
       if (res.ok) return await res.arrayBuffer();
-    } catch (_) {
-      // CORS / rete → si passa ai proxy
-    }
+    } catch (_) {}
 
-    // 2) catena di proxy
+    // 2) catena di proxy pubblici
     let lastErr = null;
-    for (let i = 0; i < CORS_PROXIES.length; i++) {
-      const proxyUrl = CORS_PROXIES[i](url);
+    for (let i = 0; i < PUBLIC_PROXIES.length; i++) {
+      const proxyUrl = PUBLIC_PROXIES[i](url);
       try {
         const res = await _fetchWithTimeout(proxyUrl);
         if (!res.ok) {
-          lastErr = new Error(`Proxy ${i} HTTP ${res.status}`);
+          lastErr = new Error(`Public proxy ${i} HTTP ${res.status}`);
           continue;
         }
         const buf = await res.arrayBuffer();
         if (buf.byteLength < 256) {
-          // probabile risposta di errore HTML del proxy mascherata da 200
-          lastErr = new Error(`Proxy ${i} risposta troppo piccola (${buf.byteLength} B)`);
+          lastErr = new Error(`Public proxy ${i} risposta troppo piccola (${buf.byteLength} B)`);
           continue;
         }
         return buf;
       } catch (e) {
         lastErr = e;
-        // continua col prossimo proxy
       }
     }
     throw new Error(`Download GeoTIFF fallito su tutti i proxy: ${lastErr?.message || 'unknown'}`);
@@ -105,7 +115,7 @@ const RadarAPI = (() => {
 
   /**
    * Pipeline completa: tipo → URL S3 → ArrayBuffer
-   * Usa cache locale per evitare download duplicati
+   * Usa cache locale per evitare download duplicati.
    */
   const _cache = new Map();
 
@@ -116,7 +126,6 @@ const RadarAPI = (() => {
     const { url } = await getDownloadUrl(productType, productDate);
     const buffer = await fetchGeoTiff(url);
 
-    // Mantieni max 20 entry in cache (FIFO)
     if (_cache.size >= 20) {
       const firstKey = _cache.keys().next().value;
       _cache.delete(firstKey);
@@ -125,16 +134,10 @@ const RadarAPI = (() => {
     return buffer;
   }
 
-  /**
-   * Costruisce un array di timestamp storici per animazione
-   */
   function buildTimestamps(lastTs, stepMs, count) {
     return Array.from({ length: count }, (_, i) => lastTs - (count - 1 - i) * stepMs);
   }
 
-  /**
-   * Geocoding via Nominatim OSM
-   */
   async function geocode(query) {
     const coordMatch = query.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
     if (coordMatch) {
