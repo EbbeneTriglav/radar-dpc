@@ -216,15 +216,60 @@
 
 <div id="toast-container"></div>
 
-  <!-- Librerie -->
+  <!-- ─────────────────────────────────────────────────────────────────
+       Librerie esterne (CDN). Ordine importante: le successive
+       dipendono dalle precedenti.
+       URL aggiornati 2026-05-18 — versioni testate e funzionanti.
+       ───────────────────────────────────────────────────────────── -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.1/georaster.browser.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@0.9.0/dist/georaster-layer-for-leaflet.browserify.min.js"></script>
+
+  <!-- georaster: parser GeoTIFF. Espone window.parseGeoraster -->
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+
+  <!-- georaster-layer-for-leaflet: layer Leaflet per i georaster. Espone window.GeoRasterLayer -->
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+
+  <!-- Chart.js per il grafico serie temporale -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- @stomp/stompjs per il WebSocket (opzionale, fallback gestito) -->
   <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+
+  <!-- SheetJS per export Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Sanity check delle dipendenze esterne prima di caricare i moduli
+       dell'app. Se una libreria CDN è inaccessibile, lo dichiariamo
+       subito all'utente invece di morire in un crash silenzioso.
+       ───────────────────────────────────────────────────────────── -->
+  <script>
+    (function () {
+      const checks = [
+        ['Leaflet',                 typeof L !== 'undefined'],
+        ['proj4',                   typeof proj4 !== 'undefined'],
+        ['GeoTIFF',                 typeof GeoTIFF !== 'undefined'],
+        ['georaster (parseGeoraster)',  typeof parseGeoraster !== 'undefined'],
+        ['GeoRasterLayer',          typeof GeoRasterLayer !== 'undefined'],
+        ['Chart.js',                typeof Chart !== 'undefined'],
+        ['StompJs',                 typeof StompJs !== 'undefined'],
+        ['SheetJS (XLSX)',          typeof XLSX !== 'undefined'],
+      ];
+      const missing = checks.filter(([, ok]) => !ok).map(([name]) => name);
+      if (missing.length) {
+        console.error('[Radar DPC] Librerie CDN mancanti:', missing);
+        const msg = 'Errore di caricamento librerie esterne: ' + missing.join(', ') +
+                    '. Controlla la connessione di rete o ricarica la pagina.';
+        const sb = document.getElementById('status-bar');
+        if (sb) {
+          sb.className = 'status-error';
+          sb.innerHTML = '<i class="fa fa-exclamation-triangle"></i> ' + msg;
+        }
+      }
+    })();
+  </script>
 
 <!-- ── Moduli app ──────────────────────────────────────── -->
 <script src="js/config.js"></script>
