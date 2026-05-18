@@ -267,6 +267,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMap();
   _buildProductList();
   _bindTimezoneToggle();
+  // Inizializza tab Archivio (lazy: legge i CSV solo all'apertura prima volta)
+  if (typeof ArchiveTab !== 'undefined') {
+    ArchiveTab.init().catch(e => console.warn('[archive] init err:', e));
+  }
 
   Player.init({
     onFrameChange,
