@@ -250,22 +250,21 @@ def save_state(state_file, state):
     state_file.write_text(json.dumps(state, indent=2, sort_keys=True))
 
 
-def _level_key(area_name, level):
-    return f'{area_name}:{level}'
+def _level_key(area_name, product, level):
+    return f'{area_name}:{product}:{level}'
 
 
-def evaluate_thresholds(area, current_value, state, now_iso, anti_spam_min, rearm_pct):
+def evaluate_thresholds(area, product, thresholds, current_value, state, now_iso, anti_spam_min, rearm_pct):
     """
     Per ogni soglia decide se TRIGGERARE (nuova notifica) o RIARMARE.
     Ritorna: lista di soglie da notificare (dict).
     Modifica state in place.
     """
     triggers = []
-    thresholds = sorted(area['monitoring']['thresholds'],
-                        key=lambda x: x['value_mm'])
+    thresholds_sorted = sorted(thresholds, key=lambda x: x['value_mm'])
 
-    for th in thresholds:
-        key = _level_key(area['name'], th['level'])
+    for th in thresholds_sorted:
+        key = _level_key(area['name'], product, th['level'])
         st = state.get(key, {'active': False, 'last_trigger_utc': None, 'last_below_utc': None})
 
         threshold_mm = th['value_mm']
@@ -305,11 +304,13 @@ def evaluate_thresholds(area, current_value, state, now_iso, anti_spam_min, rear
 
 # ─── Composizione messaggi ───────────────────────────────────────────────────
 
-def compose_messages(area, threshold, stats, observation_ts_iso, forecast):
+def compose_messages(area, product, threshold, stats, observation_ts_iso, forecast):
     label = area['label']
     lvl   = threshold['level']
     icon  = threshold['icon']
     val_mm = threshold['value_mm']
+    # unità leggibile per prodotto
+    unit_label = {'SRT1': 'mm/1h', 'CUM3': 'mm/3h'}.get(product, 'mm')
     obs_mean = stats['mean']
     obs_max  = stats['max']
 
@@ -331,13 +332,15 @@ def compose_messages(area, threshold, stats, observation_ts_iso, forecast):
     if forecast:
         fc_line = f"Forecast prossime {forecast['horizon_hours']}h (OpenMeteo): max cumulata 1h prevista {forecast['max_1h_next']:.1f} mm — totale periodo {forecast['total_period']:.1f} mm.\n"
 
+    obs_label = {'SRT1': 'Cumulata oraria (SRT1)', 'CUM3': 'Cumulata 3h (CUM3)'}.get(product, product)
+
     # Plaintext
     text = (
         f"{icon} ALLERTA PIOGGIA — {label} — livello {lvl.upper()}\n\n"
-        f"Cumulata oraria osservata (SRT1):\n"
+        f"{obs_label}:\n"
         f"  • Media area: {obs_mean:.1f} mm\n"
         f"  • Max area:   {obs_max:.1f} mm\n"
-        f"Soglia superata: {val_mm} mm\n"
+        f"Soglia superata: {val_mm} {unit_label}\n"
         f"Ora osservazione: {obs_str}\n\n"
         f"{fc_line}"
         f"Dati: API Protezione Civile — radar-api.protezionecivile.it\n"
@@ -346,8 +349,8 @@ def compose_messages(area, threshold, stats, observation_ts_iso, forecast):
     # Telegram markdown
     md = (
         f"{icon} *ALLERTA — {label}*\n"
-        f"Livello: *{lvl.upper()}*\n"
-        f"Soglia: {val_mm} mm/1h\n\n"
+        f"Prodotto: *{product}* • Livello: *{lvl.upper()}*\n"
+        f"Soglia: {val_mm} {unit_label}\n\n"
         f"Osservato:\n"
         f"  media: *{obs_mean:.1f} mm*\n"
         f"  max:   *{obs_max:.1f} mm*\n"
@@ -377,7 +380,7 @@ def compose_messages(area, threshold, stats, observation_ts_iso, forecast):
     </div>
     """
 
-    subject = f"{icon} {label} — {lvl.upper()} (cumulata 1h: {obs_mean:.1f} mm)"
+    subject = f"{icon} {label} — {lvl.upper()} {product} ({obs_mean:.1f} {unit_label})"
     return subject, text, html, md
 
 
@@ -388,83 +391,88 @@ def process_area(area, archive_dir, events_writer):
         return
 
     mon = area['monitoring']
-    product = mon.get('product', 'SRT1')
-    metric  = mon.get('metric', 'mean')   # 'mean' o 'max'
+    metric  = mon.get('metric', 'mean')
     anti_spam = int(mon.get('anti_spam_minutes', 30))
     rearm_pct = int(mon.get('rearm_below_pct', 50))
 
-    log.info(f'[{area["label"]}] monitoring {product} ({metric})')
+    # Backward compat: schema vecchio aveva product+thresholds top-level.
+    # Lo converto in 'products' dict.
+    if 'products' in mon:
+        products_cfg = mon['products']
+    else:
+        prod_name = mon.get('product', 'SRT1')
+        products_cfg = {prod_name: {'thresholds': mon.get('thresholds', [])}}
 
-    # 1) ultimo timestamp disponibile
-    last = get_last_product(product)
-    if not last:
-        log.warning(f'  no last product for {product}')
-        return
-    ts_ms = last['time']
-    ts_dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
-    ts_iso = ts_dt.isoformat().replace('+00:00', 'Z')
-
-    # 2) download GeoTIFF
-    url = get_pre_signed_url(product, ts_ms)
-    if not url:
-        return
-    tiff = download_geotiff(url)
-    if not tiff:
-        return
-
-    # 3) stats sul poligono
-    stats = stats_for_polygon(tiff, area['polygon'])
-    if not stats:
-        log.warning(f'  stats N/D')
-        return
-
-    metric_value = stats[metric]
-    log.info(f'  observation {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm')
-
-    # 4) valuta soglie
     state_file = archive_dir / 'state' / 'monitor_state.json'
     state = load_state(state_file)
     now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
-    triggers = evaluate_thresholds(area, metric_value, state, now_iso, anti_spam, rearm_pct)
-    save_state(state_file, state)
 
-    if not triggers:
-        log.info('  nessuna soglia attivata')
-        return
-
-    # 5) forecast (una volta sola, condiviso fra tutti i trigger)
+    # Forecast condiviso fra tutti i prodotti dell'area (chiamato max una volta)
     forecast = None
-    if mon.get('forecast', {}).get('enabled'):
-        forecast = fetch_forecast(
-            area['centroid']['lat'],
-            area['centroid']['lon'],
-            hours=mon['forecast'].get('lookahead_hours', 6),
-        )
-        if forecast:
-            log.info(f'  forecast max 1h next 6h: {forecast["max_1h_next"]:.1f} mm')
-
-    # 6) invia notifiche per ciascun trigger
+    forecast_done = False
     channels = set(mon.get('channels', []))
-    for th in triggers:
-        subject, text, html, md = compose_messages(area, th, stats, ts_iso, forecast)
-        email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
-        tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
 
-        events_writer.writerow({
-            'event_timestamp_utc':        now_iso,
-            'area_name':                  area['name'],
-            'level':                      th['level'],
-            'threshold_mm':               th['value_mm'],
-            'observed_mm_mean':           f"{stats['mean']:.3f}",
-            'observed_mm_max':            f"{stats['max']:.3f}",
-            'product':                    product,
-            'observation_timestamp_utc':  ts_iso,
-            'forecast_max_6h_mm':         f"{forecast['max_1h_next']:.2f}" if forecast else '',
-            'notified_email':             email_status,
-            'notified_telegram':          tg_status,
-            'note':                       '',
-        })
-        log.info(f'  ✓ trigger {th["level"]}: email={email_status} telegram={tg_status}')
+    for product, prod_cfg in products_cfg.items():
+        thresholds = prod_cfg.get('thresholds', [])
+        if not thresholds:
+            continue
+        log.info(f'[{area["label"]}] monitoring {product} ({metric})')
+
+        last = get_last_product(product)
+        if not last:
+            log.warning(f'  no last product for {product}')
+            continue
+        ts_ms = last['time']
+        ts_iso = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+
+        url = get_pre_signed_url(product, ts_ms)
+        if not url:
+            continue
+        tiff = download_geotiff(url)
+        if not tiff:
+            continue
+
+        stats = stats_for_polygon(tiff, area['polygon'])
+        if not stats:
+            log.warning(f'  stats N/D per {product}')
+            continue
+        log.info(f'  {product} {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm')
+
+        metric_value = stats[metric]
+        triggers = evaluate_thresholds(area, product, thresholds, metric_value, state, now_iso, anti_spam, rearm_pct)
+        if not triggers:
+            log.info(f'  {product}: nessuna soglia attivata')
+            continue
+
+        # Forecast on-demand (una volta sola)
+        if not forecast_done and mon.get('forecast', {}).get('enabled'):
+            forecast = fetch_forecast(area['centroid']['lat'], area['centroid']['lon'],
+                                      hours=mon['forecast'].get('lookahead_hours', 6))
+            forecast_done = True
+            if forecast:
+                log.info(f'  forecast max 1h next 6h: {forecast["max_1h_next"]:.1f} mm')
+
+        for th in triggers:
+            subject, text, html, md = compose_messages(area, product, th, stats, ts_iso, forecast)
+            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
+            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+            events_writer.writerow({
+                'event_timestamp_utc':        now_iso,
+                'area_name':                  area['name'],
+                'level':                      th['level'],
+                'threshold_mm':               th['value_mm'],
+                'observed_mm_mean':           f"{stats['mean']:.3f}",
+                'observed_mm_max':            f"{stats['max']:.3f}",
+                'product':                    product,
+                'observation_timestamp_utc':  ts_iso,
+                'forecast_max_6h_mm':         f"{forecast['max_1h_next']:.2f}" if forecast else '',
+                'notified_email':             email_status,
+                'notified_telegram':          tg_status,
+                'note':                       '',
+            })
+            log.info(f'  ✓ trigger {product}/{th["level"]}: email={email_status} telegram={tg_status}')
+
+    save_state(state_file, state)
 
 
 def main():
