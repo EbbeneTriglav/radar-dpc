@@ -1,0 +1,17 @@
+{
+  "panna:alarm": {
+    "active": false,
+    "last_below_utc": null,
+    "last_trigger_utc": null
+  },
+  "panna:emergency": {
+    "active": false,
+    "last_below_utc": null,
+    "last_trigger_utc": null
+  },
+  "panna:warning": {
+    "active": false,
+    "last_below_utc": null,
+    "last_trigger_utc": null
+  }
+}
