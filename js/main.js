@@ -267,10 +267,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMap();
   _buildProductList();
   _bindTimezoneToggle();
-  // Inizializza tab Archivio (lazy: legge i CSV solo all'apertura prima volta)
-  if (typeof ArchiveTab !== 'undefined') {
-    ArchiveTab.init().catch(e => console.warn('[archive] init err:', e));
-  }
+  // Pre-popola le 3 aree di studio come punti di interrogazione (Ruspino/Panna/Cepina)
+  _loadDefaultAreas();
 
   Player.init({
     onFrameChange,
@@ -368,4 +366,44 @@ function _bindTimezoneToggle() {
       if (ts) cur.textContent = _formatTs(ts);
     }
   });
+}
+
+
+// ─── Aree di studio preconfigurate (caricate da archive/areas.json) ──────────
+async function _loadDefaultAreas() {
+  if (typeof LocationPanel === 'undefined') return;
+  try {
+    const r = await fetch('archive/areas.json', { cache: 'no-cache' });
+    if (!r.ok) {
+      console.log('[areas] archive/areas.json non trovato, skip preset');
+      return;
+    }
+    const config = await r.json();
+    const areas = config.areas || [];
+    if (!areas.length) return;
+
+    // Attendi che la mappa sia inizializzata e il prodotto caricato
+    // (l'addPoint del LocationPanel ha bisogno della mappa + del georaster attivo)
+    let attempts = 0;
+    const tryAdd = async () => {
+      // Aspetta fino a 10 secondi per avere il georaster attivo
+      if (typeof GeoRasterUtils === 'undefined' || !GeoRasterUtils.getCurrent()) {
+        if (attempts++ < 20) {
+          setTimeout(tryAdd, 500);
+        }
+        return;
+      }
+      for (const a of areas) {
+        try {
+          await LocationPanel.addPoint(a.centroid.lat, a.centroid.lon, `📍 ${a.label}`);
+        } catch (e) {
+          console.warn('[areas] addPoint fallito per', a.label, e);
+        }
+      }
+      console.log(`[areas] ${areas.length} aree preset aggiunte`);
+    };
+    tryAdd();
+  } catch (e) {
+    console.warn('[areas] load preset fallito:', e);
+  }
 }
