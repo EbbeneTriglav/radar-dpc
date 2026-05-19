@@ -193,7 +193,43 @@
           "lat": 44.094786,
           "lon": 11.282969
         }
-      ]
+      ],
+      "monitoring": {
+        "enabled": true,
+        "product": "SRT1",
+        "thresholds": [
+          {
+            "level": "warning",
+            "value_mm": 5,
+            "icon": "⚠️",
+            "priority": 1
+          },
+          {
+            "level": "alarm",
+            "value_mm": 10,
+            "icon": "🚨",
+            "priority": 2
+          },
+          {
+            "level": "emergency",
+            "value_mm": 15,
+            "icon": "🆘",
+            "priority": 3
+          }
+        ],
+        "metric": "mean",
+        "channels": [
+          "email",
+          "telegram"
+        ],
+        "anti_spam_minutes": 30,
+        "rearm_below_pct": 50,
+        "forecast": {
+          "enabled": true,
+          "source": "openmeteo",
+          "lookahead_hours": 6
+        }
+      }
     },
     {
       "name": "cepina",
