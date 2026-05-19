@@ -96,7 +96,68 @@
           "lat": 45.831388,
           "lon": 9.642094
         }
-      ]
+      ],
+      "monitoring": {
+        "enabled": true,
+        "metric": "mean",
+        "channels": [
+          "email",
+          "telegram"
+        ],
+        "anti_spam_minutes": 30,
+        "rearm_below_pct": 50,
+        "forecast": {
+          "enabled": true,
+          "source": "openmeteo",
+          "lookahead_hours": 6
+        },
+        "products": {
+          "SRT1": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 10,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 20,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 30,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          },
+          "CUM3": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 15,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 30,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 50,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "name": "panna",
@@ -196,27 +257,6 @@
       ],
       "monitoring": {
         "enabled": true,
-        "product": "SRT1",
-        "thresholds": [
-          {
-            "level": "warning",
-            "value_mm": 5,
-            "icon": "⚠️",
-            "priority": 1
-          },
-          {
-            "level": "alarm",
-            "value_mm": 10,
-            "icon": "🚨",
-            "priority": 2
-          },
-          {
-            "level": "emergency",
-            "value_mm": 15,
-            "icon": "🆘",
-            "priority": 3
-          }
-        ],
         "metric": "mean",
         "channels": [
           "email",
@@ -228,12 +268,58 @@
           "enabled": true,
           "source": "openmeteo",
           "lookahead_hours": 6
+        },
+        "products": {
+          "SRT1": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 5,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 10,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 15,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          },
+          "CUM3": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 10,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 15,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 20,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          }
         }
       }
     },
     {
       "name": "cepina",
-      "label": "Cepina",
+      "label": "Cepina (Levissima)",
       "centroid": {
         "lat": 46.442772,
         "lon": 10.32425
@@ -322,7 +408,68 @@
           "lat": 46.43208,
           "lon": 10.308301
         }
-      ]
+      ],
+      "monitoring": {
+        "enabled": true,
+        "metric": "mean",
+        "channels": [
+          "email",
+          "telegram"
+        ],
+        "anti_spam_minutes": 30,
+        "rearm_below_pct": 50,
+        "forecast": {
+          "enabled": true,
+          "source": "openmeteo",
+          "lookahead_hours": 6
+        },
+        "products": {
+          "SRT1": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 5,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 15,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 30,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          },
+          "CUM3": {
+            "thresholds": [
+              {
+                "level": "warning",
+                "value_mm": 10,
+                "icon": "⚠️",
+                "priority": 1
+              },
+              {
+                "level": "alarm",
+                "value_mm": 15,
+                "icon": "🚨",
+                "priority": 2
+              },
+              {
+                "level": "emergency",
+                "value_mm": 40,
+                "icon": "🆘",
+                "priority": 3
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }
