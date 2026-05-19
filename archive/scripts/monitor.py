@@ -148,8 +148,10 @@ def stats_for_polygon(tiff_bytes, polygon_latlon):
 
 def fetch_forecast(lat, lon, hours=6):
     """
-    Restituisce max precipitazione attesa nei prossimi N ore (mm/15min totali).
-    Granularità 15 minuti.
+    Restituisce metriche forecast nelle prossime N ore (granularità 15 min).
+      max_1h_next: max cumulata rolling 1h nella finestra
+      max_3h_next: max cumulata rolling 3h nella finestra
+      total_period: somma totale del periodo
     """
     try:
         r = _http('GET', OPENMETEO_API, params={
@@ -165,14 +167,17 @@ def fetch_forecast(lat, lon, hours=6):
         prec = data.get('minutely_15', {}).get('precipitation', [])
         if not prec:
             return None
-        # somma rolling 1h (4 step da 15 min) per stimare max cumulata 1h prevista
-        max_1h = 0.0
-        for i in range(len(prec) - 3):
-            window = sum(p for p in prec[i:i+4] if p is not None)
-            if window > max_1h:
-                max_1h = window
+        # somma rolling 1h (4 step da 15 min) e 3h (12 step) per stimare picchi previsti
+        def rolling_max(values, window):
+            mx = 0.0
+            for i in range(len(values) - window + 1):
+                s = sum(v for v in values[i:i+window] if v is not None)
+                if s > mx:
+                    mx = s
+            return mx
         return {
-            'max_1h_next': round(max_1h, 2),
+            'max_1h_next': round(rolling_max(prec, 4),  2),
+            'max_3h_next': round(rolling_max(prec, 12), 2),
             'total_period': round(sum(p or 0 for p in prec), 2),
             'horizon_hours': hours,
         }
@@ -250,6 +255,71 @@ def save_state(state_file, state):
     state_file.write_text(json.dumps(state, indent=2, sort_keys=True))
 
 
+# ─── Last observations: scrive ad ogni run uno snapshot per il frontend ──────
+def update_last_observation(file, area_name, product, ts_iso, stats):
+    data = {}
+    if file.exists():
+        try: data = json.loads(file.read_text())
+        except Exception: data = {}
+    data.setdefault(area_name, {})
+    data[area_name][product] = {
+        'timestamp_utc': ts_iso,
+        'mean':  round(stats['mean'], 3),
+        'max':   round(stats['max'],  3),
+        'count': stats['count'],
+        'updated_at_utc': datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z'),
+    }
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+
+# ─── Forecast trigger: confronta forecast 1h/3h con le soglie SRT1/CUM3 ──────
+def evaluate_forecast_thresholds(area, products_cfg, forecast, state, now_iso, anti_spam_min, rearm_pct):
+    """
+    Confronta i max forecast 1h e 3h con le soglie SRT1 e CUM3 rispettivamente.
+    State key: '<area>:forecast:<product>:<level>'.
+    Ritorna lista trigger forecast (con flag 'forecast': True + 'forecast_value').
+    """
+    if not forecast:
+        return []
+
+    triggers = []
+    pairs = [
+        ('SRT1', forecast.get('max_1h_next'), '1h prossime 6h'),
+        ('CUM3', forecast.get('max_3h_next'), '3h prossime 6h'),
+    ]
+    for product, fc_value, horizon in pairs:
+        if fc_value is None or product not in products_cfg:
+            continue
+        for th in sorted(products_cfg[product]['thresholds'], key=lambda x: x['value_mm']):
+            key = f"{area['name']}:forecast:{product}:{th['level']}"
+            st = state.get(key, {'active': False, 'last_trigger_utc': None, 'last_below_utc': None})
+            threshold_mm = th['value_mm']
+            rearm_value  = threshold_mm * rearm_pct / 100.0
+
+            if fc_value >= threshold_mm:
+                if not st['active']:
+                    st['active'] = True
+                    st['last_trigger_utc'] = now_iso
+                    st['last_below_utc'] = None
+                    triggers.append({**th, 'forecast': True, 'product': product,
+                                     'horizon': horizon, 'forecast_value': fc_value})
+            elif fc_value < rearm_value:
+                if st['active']:
+                    if not st['last_below_utc']:
+                        st['last_below_utc'] = now_iso
+                    else:
+                        last_below = datetime.fromisoformat(st['last_below_utc'].replace('Z','+00:00'))
+                        now_dt = datetime.fromisoformat(now_iso.replace('Z','+00:00'))
+                        if (now_dt - last_below).total_seconds() >= anti_spam_min * 60:
+                            st['active'] = False
+                            st['last_below_utc'] = None
+            else:
+                st['last_below_utc'] = None
+            state[key] = st
+    return triggers
+
+
 def _level_key(area_name, product, level):
     return f'{area_name}:{product}:{level}'
 
@@ -303,6 +373,59 @@ def evaluate_thresholds(area, product, thresholds, current_value, state, now_iso
 
 
 # ─── Composizione messaggi ───────────────────────────────────────────────────
+
+def compose_messages_forecast(area, trigger, forecast):
+    """Componi messaggi per un trigger predittivo (OpenMeteo)."""
+    label = area['label']
+    lvl   = trigger['level']
+    icon  = trigger['icon']
+    val_mm = trigger['value_mm']
+    product = trigger['product']
+    horizon = trigger['horizon']
+    fc_val = trigger['forecast_value']
+    unit_label = 'mm/1h' if product == 'SRT1' else 'mm/3h'
+
+    text = (
+        f"🔮 PREVISIONE PIOGGIA — {label} — livello {lvl.upper()}\n\n"
+        f"OpenMeteo prevede picco cumulata {horizon}:\n"
+        f"  • Stima: {fc_val:.1f} {unit_label}\n"
+        f"  • Soglia: {val_mm} {unit_label}\n\n"
+        f"Forecast finestra {forecast['horizon_hours']}h totali:\n"
+        f"  • Max 1h: {forecast['max_1h_next']:.1f} mm\n"
+        f"  • Max 3h: {forecast['max_3h_next']:.1f} mm\n"
+        f"  • Totale: {forecast['total_period']:.1f} mm\n\n"
+        f"Sorgente: OpenMeteo nowcast (15-min granularity)\n"
+    )
+    md = (
+        f"{icon} 🔮 *PREVISIONE — {label}*\n"
+        f"Livello: *{lvl.upper()}* ({product} prevista)\n"
+        f"Soglia: {val_mm} {unit_label} • Stima: *{fc_val:.1f} {unit_label}*\n"
+        f"Orizzonte: {horizon}\n"
+        f"_Sorgente: OpenMeteo_"
+    )
+    color = {'warning': '#e0a800', 'alarm': '#e85e2c', 'emergency': '#c41e3a'}.get(lvl, '#888')
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px">
+      <div style="background:{color};color:white;padding:12px 18px;border-radius:6px 6px 0 0">
+        <h2 style="margin:0">🔮 {label} — {lvl.upper()} <span style="font-size:14px;font-weight:normal">(previsione)</span></h2>
+      </div>
+      <div style="border:1px solid #ddd;border-top:0;padding:18px;border-radius:0 0 6px 6px">
+        <p>OpenMeteo prevede picco cumulata <b>{horizon}</b>:</p>
+        <ul>
+          <li>Stima: <b>{fc_val:.1f} {unit_label}</b></li>
+          <li>Soglia: <b>{val_mm} {unit_label}</b></li>
+        </ul>
+        <p style="background:#f4f4f4;padding:8px;border-radius:4px;font-size:12px">
+          Finestra {forecast['horizon_hours']}h — max 1h: {forecast['max_1h_next']:.1f} mm •
+          max 3h: {forecast['max_3h_next']:.1f} mm • totale: {forecast['total_period']:.1f} mm
+        </p>
+        <p style="font-size:11px;color:#888">Sorgente: OpenMeteo nowcast</p>
+      </div>
+    </div>
+    """
+    subject = f"🔮 {label} — PREVISIONE {lvl.upper()} {product} ({fc_val:.1f} {unit_label} attesi)"
+    return subject, text, html, md
+
 
 def compose_messages(area, product, threshold, stats, observation_ts_iso, forecast):
     label = area['label']
@@ -438,6 +561,10 @@ def process_area(area, archive_dir, events_writer):
             continue
         log.info(f'  {product} {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm')
 
+        # Salva ultima osservazione (anche se nessuna soglia attiva → frontend lo legge)
+        last_obs_file = archive_dir / 'data' / 'last_observations.json'
+        update_last_observation(last_obs_file, area['name'], product, ts_iso, stats)
+
         metric_value = stats[metric]
         triggers = evaluate_thresholds(area, product, thresholds, metric_value, state, now_iso, anti_spam, rearm_pct)
         if not triggers:
@@ -450,7 +577,7 @@ def process_area(area, archive_dir, events_writer):
                                       hours=mon['forecast'].get('lookahead_hours', 6))
             forecast_done = True
             if forecast:
-                log.info(f'  forecast max 1h next 6h: {forecast["max_1h_next"]:.1f} mm')
+                log.info(f'  forecast: max 1h={forecast["max_1h_next"]:.1f} max 3h={forecast["max_3h_next"]:.1f} mm')
 
         for th in triggers:
             subject, text, html, md = compose_messages(area, product, th, stats, ts_iso, forecast)
@@ -471,6 +598,36 @@ def process_area(area, archive_dir, events_writer):
                 'note':                       '',
             })
             log.info(f'  ✓ trigger {product}/{th["level"]}: email={email_status} telegram={tg_status}')
+
+    # ─── Forecast triggers (predittivi OpenMeteo) ────────────────────────────
+    # Anche se non c'è stato nessun trigger osservato, il forecast viene caricato
+    # qui se non già fatto, per valutarne le soglie predittive.
+    if mon.get('forecast', {}).get('enabled') and not forecast_done:
+        forecast = fetch_forecast(area['centroid']['lat'], area['centroid']['lon'],
+                                  hours=mon['forecast'].get('lookahead_hours', 6))
+        forecast_done = True
+
+    if forecast:
+        fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, state, now_iso, anti_spam, rearm_pct)
+        for tr in fc_triggers:
+            subject, text, html, md = compose_messages_forecast(area, tr, forecast)
+            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
+            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+            events_writer.writerow({
+                'event_timestamp_utc':       now_iso,
+                'area_name':                 area['name'],
+                'level':                     'forecast_' + tr['level'],
+                'threshold_mm':              tr['value_mm'],
+                'observed_mm_mean':          '',
+                'observed_mm_max':           '',
+                'product':                   tr['product'],
+                'observation_timestamp_utc': '',
+                'forecast_max_6h_mm':        f"{tr['forecast_value']:.2f}",
+                'notified_email':            email_status,
+                'notified_telegram':         tg_status,
+                'note':                      f"forecast {tr['horizon']}",
+            })
+            log.info(f"  ✓ forecast trigger {tr['product']}/{tr['level']}: email={email_status} telegram={tg_status}")
 
     save_state(state_file, state)
 
