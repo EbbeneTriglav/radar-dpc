@@ -1,0 +1,83 @@
+name: Rain Monitor
+
+# Monitoraggio piogge ogni 15 minuti per le aree con monitoring attivo.
+# Invia notifiche via email + Telegram quando vengono superate le soglie.
+#
+# Secrets necessari (Settings → Secrets and variables → Actions → New):
+#   SMTP_HOST          es. smtp.gmail.com
+#   SMTP_PORT          587
+#   SMTP_USER          tuo.indirizzo@gmail.com
+#   SMTP_PASS          App password Gmail (16 char senza spazi)
+#   SMTP_TO            destinatario (più destinatari separati da virgola)
+#   TELEGRAM_TOKEN     token bot da @BotFather
+#   TELEGRAM_CHAT_ID   chat ID destinatario
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'    # ogni 15 minuti
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: esegue senza inviare notifiche'
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'archive/scripts/requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r archive/scripts/requirements.txt
+
+      - name: Run monitor
+        env:
+          SMTP_HOST:        ${{ secrets.SMTP_HOST }}
+          SMTP_PORT:        ${{ secrets.SMTP_PORT }}
+          SMTP_USER:        ${{ secrets.SMTP_USER }}
+          SMTP_PASS:        ${{ secrets.SMTP_PASS }}
+          SMTP_TO:          ${{ secrets.SMTP_TO }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python archive/scripts/monitor.py --dry-run
+          else
+            python archive/scripts/monitor.py
+          fi
+
+      - name: Commit state and events
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/state/ archive/data/events.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No state/event changes to commit."
+          else
+            git commit -m "monitor: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            # retry push fino a 3 volte (può conflittare con altri workflow)
+            for i in 1 2 3; do
+              if git push; then break; fi
+              echo "Push fallito, retry $i/3..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
+          fi
