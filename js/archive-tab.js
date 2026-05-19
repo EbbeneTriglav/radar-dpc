@@ -209,13 +209,20 @@ const ArchiveTab = (() => {
     const info = document.getElementById('archive-info');
     if (!info) return;
     const cum24 = _data[_currentArea]?.cum24 || [];
-    const areaRows = cum24.filter(r => r.location_type === 'area');
-    if (!areaRows.length) {
-      info.innerHTML = '<i class="fa fa-info-circle"></i> Nessun dato CUM24 ancora archiviato per questa area.';
+    const cum3  = _data[_currentArea]?.cum3  || [];
+    const areaRows24 = cum24.filter(r => r.location_type === 'area');
+    const areaRows3  = cum3.filter(r  => r.location_type === 'area');
+    if (!areaRows24.length && !areaRows3.length) {
+      info.innerHTML = '<i class="fa fa-info-circle"></i> ' +
+        'Archivio vuoto per questa area. ' +
+        'Lancia il workflow <code>archive-daily.yml</code> da GitHub Actions ' +
+        '(Run workflow → days=7) per il bootstrap iniziale.';
       return;
     }
-    const dates = areaRows.map(r => r.timestamp_utc.slice(0, 10)).sort();
-    info.innerHTML = `${areaRows.length} giorni CUM24 archiviati • dal ${dates[0]} al ${dates[dates.length - 1]}`;
+    const dates24 = areaRows24.map(r => r.timestamp_utc.slice(0, 10)).sort();
+    const dates3  = areaRows3.map(r  => r.timestamp_utc.slice(0, 10)).sort();
+    info.innerHTML = `CUM24: ${areaRows24.length} giorni${dates24.length ? ` (${dates24[0]}…${dates24[dates24.length-1]})` : ''}` +
+                     ` • CUM3: ${areaRows3.length} record`;
   }
 
   // ─── Mini-mappa con poligono e arealizzazione IDW ────────────────────────
@@ -527,12 +534,14 @@ const ArchiveTab = (() => {
     });
   }
 
-  function _renderChartCum3() {
+  async function _renderChartCum3() {
     const ctx = document.getElementById('archive-chart-cum3');
     if (!ctx) return;
     const rows = (_data[_currentArea]?.cum3 || [])
       .filter(r => r.location_type === 'area')
       .sort((a, b) => a.timestamp_utc.localeCompare(b.timestamp_utc));
+
+    // Costruisci labels timeline
     const labels = rows.map(r => {
       const ms = new Date(r.timestamp_utc).getTime();
       return (typeof Timezone !== 'undefined')
@@ -546,22 +555,49 @@ const ArchiveTab = (() => {
     document.getElementById('archive-cum3-summary').textContent =
       `${rows.length} record • totale ${sum.toFixed(1)} mm • picco 3h ${max.toFixed(1)} mm`;
 
+    // OpenMeteo forecast prossime 24h come overlay (linea blu chiaro)
+    let omLabels = [], omData = [];
+    try {
+      const area = _areasConfig.areas.find(a => a.name === _currentArea);
+      if (area) {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${area.centroid.lat}` +
+          `&longitude=${area.centroid.lon}&minutely_15=precipitation&forecast_minutes=1440&timezone=UTC`);
+        const d = await r.json();
+        const ts = d.minutely_15?.time || [];
+        const pr = d.minutely_15?.precipitation || [];
+        // Aggrega in cumulate 3h per matchare la granularità DPC
+        for (let i = 0; i + 12 <= ts.length; i += 12) {
+          const ms = new Date(ts[i] + 'Z').getTime();
+          const lbl = (typeof Timezone !== 'undefined')
+            ? Timezone.format(ms, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+            : ts[i].slice(0, 16).replace('T', ' ');
+          omLabels.push(lbl);
+          omData.push(pr.slice(i, i + 12).reduce((a, v) => a + (v || 0), 0));
+        }
+      }
+    } catch (e) { console.warn('OM fetch err', e); }
+
+    // Unifica gli assi: append forecast in coda alle observed
+    const allLabels = labels.concat(omLabels);
+    const observedAligned = data.concat(omData.map(() => null));
+    const forecastAligned = labels.map(() => null).concat(omData);
+
     if (_chartCum3) _chartCum3.destroy();
     _chartCum3 = new Chart(ctx, {
-      type: 'line',
       data: {
-        labels,
-        datasets: [{
-          label: 'CUM3 medio area (mm/3h)',
-          data,
-          borderColor: CHART_COLORS.cum3,
-          backgroundColor: CHART_COLORS.cum3 + '33',
-          fill: true,
-          tension: 0.2,
-          pointRadius: 2,
-        }],
+        labels: allLabels,
+        datasets: [
+          { type: 'line', label: 'DPC CUM3 osservato',
+            data: observedAligned, borderColor: CHART_COLORS.cum3,
+            backgroundColor: CHART_COLORS.cum3 + '33', fill: true, tension: 0.2, pointRadius: 2 },
+          { type: 'line', label: 'OpenMeteo forecast 3h cumulata',
+            data: forecastAligned, borderColor: '#82b1ff',
+            backgroundColor: '#82b1ff22', borderDash: [4, 3], fill: false, tension: 0.3, pointRadius: 1 },
+        ],
       },
-      options: _commonChartOpts('mm/3h'),
+      options: { ..._commonChartOpts('mm/3h'),
+        plugins: { legend: { display: true, labels: { color: '#aaa', font: { size: 10 } }, position: 'bottom' } },
+      },
     });
   }
 
