@@ -11,61 +11,74 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260518h">
+  <link rel="stylesheet" href="css/style.css?v=20260518i">
 
   <style>
     body { overflow: hidden; }
     #monitor-app {
-      position: fixed;
-      top: 50px; left: 0; right: 0; bottom: 0;
-      overflow-y: auto;
-      padding: 16px 20px;
-      background: var(--bg);
+      position: fixed; top: 50px; left: 0; right: 0; bottom: 0;
+      overflow-y: auto; padding: 16px 20px; background: var(--bg);
     }
-    .mon-grid { display: grid; grid-template-columns: 1fr; gap: 14px; max-width: 1200px; margin: 0 auto; }
+    .mon-grid { display: grid; grid-template-columns: 1fr; gap: 14px; max-width: 1300px; margin: 0 auto; }
     .mon-area-card { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 14px; }
-    .mon-area-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .mon-area-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .mon-area-head h2 { margin: 0; font-size: 18px; color: var(--text); }
     .mon-area-status { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .status-ok       { background: #1e4d28; color: #b8f0c5; }
-    .status-warning  { background: #5e4a0c; color: #ffd76b; }
-    .status-alarm    { background: #6a2a14; color: #ffb38e; }
-    .status-emergency{ background: #6e1830; color: #ff8aa8; }
-    .status-loading  { background: #2a3140; color: #aab; }
+    .status-ok        { background: #1e4d28; color: #b8f0c5; }
+    .status-warning   { background: #5e4a0c; color: #ffd76b; }
+    .status-alarm     { background: #6a2a14; color: #ffb38e; }
+    .status-emergency { background: #6e1830; color: #ff8aa8; }
 
-    .mon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+    .mon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
     @media (max-width: 800px) { .mon-row { grid-template-columns: 1fr; } }
-
-    .mon-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
-    .mon-panel h3 { margin: 0 0 8px; font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
-    .mon-bignum { font-size: 28px; font-weight: 700; color: var(--text); }
-    .mon-bignum .mon-unit { font-size: 14px; color: var(--text3); margin-left: 4px; }
+    .mon-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+    .mon-panel h3 { margin: 0 0 6px; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .mon-bignum { font-size: 22px; font-weight: 700; color: var(--text); }
+    .mon-bignum .mon-unit { font-size: 12px; color: var(--text3); margin-left: 4px; }
     .mon-subtle { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
-    .mon-thresh-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .mon-prod-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 800px) { .mon-prod-grid { grid-template-columns: 1fr; } }
+
+    .mon-thresh-list { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
     .mon-thresh-tag { padding: 3px 8px; border-radius: 10px; font-size: 10px; background: var(--bg2); border: 1px solid var(--border2); color: var(--text3); }
     .mon-thresh-tag.active { background: #6a2a14; color: #ffb38e; border-color: #c54521; }
+    .mon-edit-btn { background: transparent; border: 0; color: var(--text3); cursor: pointer; font-size: 11px; }
+    .mon-edit-btn:hover { color: var(--text); }
 
-    .mon-events { max-height: 200px; overflow-y: auto; }
-    .mon-event { padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .mon-edit-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+    .mon-edit-row label { font-size: 10px; color: var(--text3); }
+    .mon-edit-row input[type=number] { width: 56px; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; padding: 3px 5px; font-size: 11px; }
+    .mon-edit-row .mon-edit-actions { margin-left: auto; display: flex; gap: 4px; }
+    .mon-edit-row .btn-sm { font-size: 10px; padding: 3px 8px; }
+
+    .mon-events { max-height: 180px; overflow-y: auto; }
+    .mon-event { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 11px; }
     .mon-event:last-child { border-bottom: 0; }
-    .mon-event .lvl { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; margin-right: 6px; font-weight: 600; }
+    .mon-event .lvl { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; margin-right: 5px; font-weight: 600; }
     .lvl-warning   { background: #5e4a0c; color: #ffd76b; }
     .lvl-alarm     { background: #6a2a14; color: #ffb38e; }
     .lvl-emergency { background: #6e1830; color: #ff8aa8; }
 
-    .mon-chart-wrap { height: 220px; }
+    .mon-chart-wrap { height: 180px; }
+    .mon-noevents { color: var(--text3); font-size: 11px; padding: 6px; text-align: center; }
 
-    .mon-noevents { color: var(--text3); font-size: 11px; padding: 8px; text-align: center; }
+    .mon-toolbar { display: flex; gap: 8px; align-items: center; margin: 0 auto 14px; max-width: 1300px; padding: 0 4px; }
+    .mon-override-badge { background: #1e3a5f; color: #cfe7ff; padding: 3px 8px; border-radius: 10px; font-size: 10px; }
+
+    /* Modal export */
+    .mon-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .mon-modal-bg.open { display: flex; }
+    .mon-modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 18px; max-width: 700px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .mon-modal h3 { margin: 0 0 10px; color: var(--text); }
+    .mon-modal pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px; font-size: 11px; color: var(--text2); max-height: 50vh; overflow: auto; }
+    .mon-modal-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
   </style>
 </head>
 <body>
 
 <nav id="topbar">
-  <div class="logo">
-    <i class="fa fa-bell"></i>
-    RADAR<span style="color:var(--text2);font-weight:300">·</span>MONITOR
-  </div>
+  <div class="logo"><i class="fa fa-bell"></i> RADAR<span style="color:var(--text2);font-weight:300">·</span>MONITOR</div>
   <div class="nav-links">
     <a href="index.html" class="nav-link">🗺 Mappa Live</a>
     <a href="storico.html" class="nav-link">📊 Storico</a>
@@ -76,56 +89,116 @@
   <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
     <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
   </button>
-  <button class="topbar-btn" id="btn-refresh" title="Aggiorna ora">
-    <i class="fa fa-sync"></i>
-  </button>
+  <button class="topbar-btn" id="btn-refresh" title="Aggiorna ora"><i class="fa fa-sync"></i></button>
 </nav>
 
 <div id="monitor-app">
+  <div class="mon-toolbar">
+    <span id="overrides-badge" class="mon-override-badge" style="display:none">⚠️ Hai modifiche locali alle soglie</span>
+    <span style="flex:1"></span>
+    <button class="btn-sm" id="btn-export"><i class="fa fa-download"></i> Esporta config soglie</button>
+    <button class="btn-sm" id="btn-reset-overrides" style="display:none"><i class="fa fa-undo"></i> Ripristina default</button>
+  </div>
   <div class="mon-grid" id="mon-grid">
     <div style="text-align:center;padding:40px;color:var(--text3)">
-      <i class="fa fa-spinner fa-spin"></i> Caricamento configurazione…
+      <i class="fa fa-spinner fa-spin"></i> Caricamento…
+    </div>
+  </div>
+</div>
+
+<div class="mon-modal-bg" id="export-modal">
+  <div class="mon-modal">
+    <h3><i class="fa fa-download"></i> Esporta configurazione soglie</h3>
+    <p style="font-size:12px;color:var(--text2)">
+      Per applicare le tue modifiche anche alle notifiche email/Telegram del workflow,
+      copia il blocco JSON sotto e <b>incollalo in <code>archive/areas.json</code></b> al
+      posto di quello attuale (preserva la chiave <code>"areas":</code>). Poi commit + push.
+    </p>
+    <pre id="export-json"></pre>
+    <div class="mon-modal-actions">
+      <button class="btn-sm" id="btn-copy"><i class="fa fa-copy"></i> Copia negli appunti</button>
+      <button class="btn-sm" id="btn-modal-close">Chiudi</button>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="js/timezone.js?v=20260518h"></script>
-<script src="js/config.js?v=20260518h"></script>
+<script src="js/timezone.js?v=20260518i"></script>
+<script src="js/config.js?v=20260518i"></script>
 
 <script>
-// ─── Pagina Monitor — implementazione inline (no nuovo modulo, semplice) ─────
+// ─── Pagina Monitor (multi-prodotto + soglie editabili) ─────────────────────
 
 const AREAS_URL  = 'archive/areas.json';
 const EVENTS_URL = 'archive/data/events.csv';
 const OM_URL     = 'https://api.open-meteo.com/v1/forecast';
+const LS_PREFIX  = 'radar-dpc.monitor.thresholds.';
 
-let _areas = [];
+let _areas = [];     // areas come letti da areas.json (immutabili)
 let _events = [];
 let _charts = {};
+let _editing = {};   // {areaName: bool}
 
+// ── Override locali soglie ─────────────────────────────────────────────────
+function loadOverrides(areaName) {
+  try { return JSON.parse(localStorage.getItem(LS_PREFIX + areaName) || 'null'); }
+  catch { return null; }
+}
+function saveOverrides(areaName, products) {
+  localStorage.setItem(LS_PREFIX + areaName, JSON.stringify(products));
+  refreshOverridesBadge();
+}
+function clearAllOverrides() {
+  _areas.forEach(a => localStorage.removeItem(LS_PREFIX + a.name));
+  refreshOverridesBadge();
+}
+function hasAnyOverride() {
+  return _areas.some(a => localStorage.getItem(LS_PREFIX + a.name));
+}
+function refreshOverridesBadge() {
+  const has = hasAnyOverride();
+  document.getElementById('overrides-badge').style.display    = has ? '' : 'none';
+  document.getElementById('btn-reset-overrides').style.display = has ? '' : 'none';
+}
+
+function effectiveProducts(area) {
+  const overrides = loadOverrides(area.name);
+  if (overrides) return overrides;
+  return area.monitoring?.products || {};
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   await loadAreas();
   await loadEvents();
   render();
 
-  document.getElementById('btn-refresh')?.addEventListener('click', async () => {
-    await loadEvents();
-    render();
-  });
+  document.getElementById('btn-refresh').onclick = async () => { await loadEvents(); render(); };
+  document.getElementById('btn-export').onclick = openExportModal;
+  document.getElementById('btn-modal-close').onclick = () => document.getElementById('export-modal').classList.remove('open');
+  document.getElementById('btn-copy').onclick = () => {
+    navigator.clipboard.writeText(document.getElementById('export-json').textContent);
+    document.getElementById('btn-copy').innerHTML = '<i class="fa fa-check"></i> Copiato';
+    setTimeout(() => { document.getElementById('btn-copy').innerHTML = '<i class="fa fa-copy"></i> Copia negli appunti'; }, 1500);
+  };
+  document.getElementById('btn-reset-overrides').onclick = () => {
+    if (confirm('Cancella le tue modifiche locali e ripristina le soglie dal repository?')) {
+      clearAllOverrides();
+      render();
+    }
+  };
 
-  // Topbar TZ
   const tzBtn = document.getElementById('btn-timezone');
-  function refreshTz() {
-    const lbl = tzBtn?.querySelector('.tz-label');
+  const refreshTz = () => {
+    const lbl = tzBtn.querySelector('.tz-label');
     if (lbl) lbl.textContent = Timezone.mode === 'utc' ? 'UTC' : 'Locale';
-  }
+  };
   refreshTz();
-  tzBtn?.addEventListener('click', () => Timezone.toggle());
+  tzBtn.onclick = () => Timezone.toggle();
   window.addEventListener('timezone-changed', () => { refreshTz(); render(); });
 
-  // Auto-refresh ogni 60 secondi (lato client) → ricarica eventi
   setInterval(async () => { await loadEvents(); render(); }, 60_000);
+  refreshOverridesBadge();
 }
 
 async function loadAreas() {
@@ -133,10 +206,7 @@ async function loadAreas() {
     const r = await fetch(AREAS_URL, { cache: 'no-cache' });
     const data = await r.json();
     _areas = (data.areas || []).filter(a => a.monitoring?.enabled);
-  } catch (e) {
-    console.error('areas load failed', e);
-    _areas = [];
-  }
+  } catch { _areas = []; }
 }
 
 async function loadEvents() {
@@ -153,69 +223,59 @@ async function loadEvents() {
       headers.forEach((h, i) => { row[h] = cells[i] || ''; });
       return row;
     });
-  } catch (e) {
-    _events = [];
-  }
+  } catch { _events = []; }
 }
 
+// ── Render ─────────────────────────────────────────────────────────────────
 function render() {
   const grid = document.getElementById('mon-grid');
   if (!_areas.length) {
     grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">
-      <p><i class="fa fa-info-circle"></i> Nessuna area con monitoring attivo configurata.</p>
-      <p style="font-size:11px">Imposta <code>monitoring.enabled = true</code> in <code>archive/areas.json</code>.</p>
+      <p><i class="fa fa-info-circle"></i> Nessuna area con monitoring attivo.</p>
     </div>`;
     return;
   }
-  grid.innerHTML = _areas.map(a => renderAreaCard(a)).join('');
-  _areas.forEach(a => { loadForecastChart(a); });
+  grid.innerHTML = _areas.map(renderAreaCard).join('');
+  _areas.forEach(a => loadForecastChart(a));
 }
 
 function renderAreaCard(area) {
-  const mon = area.monitoring;
-  const areaEvents = _events
-    .filter(e => e.area_name === area.name)
+  const products = effectiveProducts(area);
+  const isEditing = !!_editing[area.name];
+
+  const areaEvents = _events.filter(e => e.area_name === area.name)
     .sort((a, b) => b.event_timestamp_utc.localeCompare(a.event_timestamp_utc));
-
-  // Stato corrente: il livello più alto ATTIVO non ancora "spento"
-  // Visto che lo state file è server-side, lo deduciamo dall'ultimo evento delle ultime 2 ore
   const now = Date.now();
-  const recentEvents = areaEvents.filter(e => {
-    const t = new Date(e.event_timestamp_utc).getTime();
-    return (now - t) < 2 * 3600_000;
+  const recentEvents = areaEvents.filter(e => (now - new Date(e.event_timestamp_utc).getTime()) < 2 * 3600_000);
+
+  // Stato corrente: livello max attivo tra tutti i prodotti
+  const lvlPriority = { warning: 1, alarm: 2, emergency: 3 };
+  let currentLevel = 'ok';
+  recentEvents.forEach(e => {
+    if ((lvlPriority[e.level] || 0) > (lvlPriority[currentLevel] || 0)) currentLevel = e.level;
   });
-  const currentLevel = recentEvents.length
-    ? recentEvents[0].level
-    : 'ok';
-  const statusLabel = {
-    ok:        'OK',
-    warning:   'WARNING',
-    alarm:     'ALARM',
-    emergency: 'EMERGENCY',
-  }[currentLevel] || 'OK';
+  const statusLabel = currentLevel === 'ok' ? 'OK' : currentLevel.toUpperCase();
+  const isOverridden = !!loadOverrides(area.name);
 
-  const thresholds = mon.thresholds.map(t => {
-    const isActive = recentEvents.some(e => e.level === t.level);
-    return `<span class="mon-thresh-tag ${isActive ? 'active' : ''}">${t.icon} ${t.level.toUpperCase()} ≥ ${t.value_mm} mm/1h</span>`;
-  }).join('');
+  // Ultima osservazione per ciascun prodotto
+  const lastByProduct = {};
+  for (const ev of areaEvents) {
+    if (!lastByProduct[ev.product]) lastByProduct[ev.product] = ev;
+  }
 
-  // Ultimo valore osservato dagli eventi (se ce ne sono)
-  const lastObs = areaEvents[0];
-  const lastValueMean = lastObs ? parseFloat(lastObs.observed_mm_mean).toFixed(1) : '—';
-  const lastValueMax  = lastObs ? parseFloat(lastObs.observed_mm_max).toFixed(1) : '—';
-  const lastObsTs = lastObs ? Timezone.formatDateTime(new Date(lastObs.observation_timestamp_utc).getTime()) : '—';
+  const productCards = Object.entries(products).map(([prodName, prodCfg]) =>
+    renderProductPanel(area, prodName, prodCfg, lastByProduct[prodName], recentEvents, isEditing)
+  ).join('');
 
-  // Lista eventi recenti (max 8)
-  const eventsList = areaEvents.slice(0, 8).map(e => {
-    const tsMs = new Date(e.event_timestamp_utc).getTime();
-    const tsStr = Timezone.formatDateTime(tsMs);
-    const emailIcon = e.notified_email === 'true' ? '✉️' : (e.notified_email === 'skipped' ? '' : '⚠️');
-    const tgIcon    = e.notified_telegram === 'true' ? '✈️' : (e.notified_telegram === 'skipped' ? '' : '⚠️');
+  const eventsList = areaEvents.slice(0, 6).map(e => {
+    const tsStr = Timezone.formatDateTime(new Date(e.event_timestamp_utc).getTime());
+    const em = e.notified_email === 'true' ? '✉️' : (e.notified_email === 'skipped' ? '' : '⚠️');
+    const tg = e.notified_telegram === 'true' ? '✈️' : (e.notified_telegram === 'skipped' ? '' : '⚠️');
     return `<div class="mon-event">
       <span class="lvl lvl-${e.level}">${e.level}</span>
-      <span>${parseFloat(e.observed_mm_mean).toFixed(1)} mm</span>
+      <span><b>${e.product}</b> ${parseFloat(e.observed_mm_mean).toFixed(1)} mm</span>
       <span style="color:var(--text3)"> ≥ ${e.threshold_mm}</span>
-      <span style="float:right;color:var(--text3);font-size:10px">${tsStr} ${emailIcon}${tgIcon}</span>
+      <span style="float:right;color:var(--text3);font-size:10px">${tsStr} ${em}${tg}</span>
     </div>`;
   }).join('') || `<div class="mon-noevents">Nessun evento registrato</div>`;
 
@@ -224,33 +284,100 @@ function renderAreaCard(area) {
       <div class="mon-area-head">
         <h2>📍 ${area.label}</h2>
         <span class="mon-area-status status-${currentLevel}">${statusLabel}</span>
+        ${isOverridden ? '<span class="mon-override-badge">soglie locali</span>' : ''}
         <span style="flex:1"></span>
-        <span style="font-size:11px;color:var(--text3)">monitor: ${mon.product} • ${mon.metric || 'mean'}</span>
+        <button class="mon-edit-btn" onclick="toggleEdit('${area.name}')">
+          <i class="fa fa-${isEditing ? 'check' : 'pen'}"></i> ${isEditing ? 'Fatto' : 'Modifica soglie'}
+        </button>
       </div>
-
-      <div class="mon-thresh-list">${thresholds}</div>
-
-      <div class="mon-row" style="margin-top:12px">
+      <div class="mon-prod-grid">${productCards}</div>
+      <div class="mon-row" style="margin-top:10px">
         <div class="mon-panel">
-          <h3>Ultima osservazione</h3>
-          <div class="mon-bignum">${lastValueMean} <span class="mon-unit">mm/1h (media)</span></div>
-          <div class="mon-subtle">max ${lastValueMax} mm — ${lastObsTs}</div>
+          <h3>Eventi recenti</h3>
+          <div class="mon-events">${eventsList}</div>
         </div>
-
         <div class="mon-panel">
           <h3>Forecast prossime 6h (OpenMeteo)</h3>
           <div class="mon-chart-wrap"><canvas id="forecast-${area.name}"></canvas></div>
         </div>
       </div>
-
-      <div class="mon-panel" style="margin-top:12px">
-        <h3>Eventi recenti</h3>
-        <div class="mon-events">${eventsList}</div>
-      </div>
     </div>
   `;
 }
 
+function renderProductPanel(area, prodName, prodCfg, lastEvent, recentEvents, isEditing) {
+  const unit = prodName === 'SRT1' ? 'mm/1h' : (prodName === 'CUM3' ? 'mm/3h' : 'mm');
+  const thresholds = prodCfg.thresholds || [];
+
+  const tagsHtml = thresholds.map(t => {
+    const active = recentEvents.some(e => e.product === prodName && e.level === t.level);
+    return `<span class="mon-thresh-tag ${active ? 'active' : ''}">${t.icon} ${t.level} ≥ ${t.value_mm}</span>`;
+  }).join('');
+
+  const editorHtml = !isEditing ? '' : thresholds.map((t, i) => `
+    <label>${t.icon} ${t.level}</label>
+    <input type="number" step="0.5" min="0" value="${t.value_mm}"
+      data-area="${area.name}" data-prod="${prodName}" data-idx="${i}"
+      onchange="updateThreshold(this)">
+  `).join('');
+
+  const lastValue = lastEvent ? `${parseFloat(lastEvent.observed_mm_mean).toFixed(1)} ${unit} (media)` : 'no eventi';
+  const lastTs    = lastEvent ? Timezone.formatDateTime(new Date(lastEvent.observation_timestamp_utc).getTime()) : '—';
+  const maxVal    = lastEvent ? `max ${parseFloat(lastEvent.observed_mm_max).toFixed(1)} mm` : '';
+
+  return `
+    <div class="mon-panel">
+      <h3>${prodName} · ${prodName === 'SRT1' ? 'Cumulata 1h' : 'Cumulata 3h'}</h3>
+      <div class="mon-bignum">${lastValue}</div>
+      <div class="mon-subtle">${maxVal} ${maxVal ? '·' : ''} ${lastTs}</div>
+      <div class="mon-thresh-list">${tagsHtml}</div>
+      ${isEditing ? `<div class="mon-edit-row">${editorHtml}</div>` : ''}
+    </div>
+  `;
+}
+
+// ── Editing soglie ─────────────────────────────────────────────────────────
+function toggleEdit(areaName) {
+  _editing[areaName] = !_editing[areaName];
+  render();
+}
+
+function updateThreshold(input) {
+  const areaName = input.dataset.area;
+  const prod     = input.dataset.prod;
+  const idx      = parseInt(input.dataset.idx, 10);
+  const val      = parseFloat(input.value);
+  if (!isFinite(val) || val < 0) return;
+
+  // Recupera o crea override partendo dai default
+  const area = _areas.find(a => a.name === areaName);
+  let override = loadOverrides(areaName);
+  if (!override) {
+    override = JSON.parse(JSON.stringify(area.monitoring.products));
+  }
+  if (!override[prod] || !override[prod].thresholds[idx]) return;
+  override[prod].thresholds[idx].value_mm = val;
+  saveOverrides(areaName, override);
+}
+window.toggleEdit = toggleEdit;
+window.updateThreshold = updateThreshold;
+
+// ── Export config ──────────────────────────────────────────────────────────
+async function openExportModal() {
+  // Costruisce un areas.json completo con gli override applicati
+  const r = await fetch(AREAS_URL, { cache: 'no-cache' });
+  const fullConfig = await r.json();
+  for (const a of fullConfig.areas) {
+    const ov = loadOverrides(a.name);
+    if (ov && a.monitoring) {
+      a.monitoring.products = ov;
+    }
+  }
+  document.getElementById('export-json').textContent = JSON.stringify(fullConfig, null, 2);
+  document.getElementById('export-modal').classList.add('open');
+}
+
+// ── Forecast chart ─────────────────────────────────────────────────────────
 async function loadForecastChart(area) {
   const canvas = document.getElementById(`forecast-${area.name}`);
   if (!canvas) return;
@@ -268,30 +395,19 @@ async function loadForecastChart(area) {
     if (_charts[area.name]) _charts[area.name].destroy();
     _charts[area.name] = new Chart(canvas, {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Pioggia (mm/15min)',
-          data: prec,
-          backgroundColor: '#3eaaffcc',
-          borderColor: '#3eaaff',
-          borderWidth: 1,
-        }],
-      },
+      data: { labels, datasets: [{ label: 'mm/15min', data: prec,
+        backgroundColor: '#3eaaffcc', borderColor: '#3eaaff', borderWidth: 1 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: { color: '#aaa', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.05)' } },
           y: { title: { display: true, text: 'mm/15min', color: '#aaa' },
-               ticks: { color: '#aaa' },
-               grid: { color: 'rgba(255,255,255,0.05)' } },
+               ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
         },
       },
     });
-  } catch (e) {
-    console.warn('forecast', area.name, e);
-  }
+  } catch (e) { console.warn('forecast', area.name, e); }
 }
 
 document.addEventListener('DOMContentLoaded', init);
