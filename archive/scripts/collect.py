@@ -111,20 +111,33 @@ def _http_request(method, url, **kwargs):
 
 
 def get_pre_signed_url(product_type, product_date_ms):
-    """Chiama l'API DPC per ottenere la pre-signed URL del file S3."""
-    r = _http_request('POST', f'{DPC_API}/downloadProduct',
-                      json={'productType': product_type, 'productDate': product_date_ms},
-                      headers={'Content-Type': 'application/json'})
+    """Chiama l'API DPC per ottenere la pre-signed URL del file S3.
+    Ritorna None su qualunque errore (incluso HTTP 5xx persistente)."""
+    try:
+        r = _http_request('POST', f'{DPC_API}/downloadProduct',
+                          json={'productType': product_type, 'productDate': product_date_ms},
+                          headers={'Content-Type': 'application/json'})
+    except Exception as e:
+        log.warning(f'  downloadProduct {product_type} @ {product_date_ms}: {e}')
+        return None
     if not r.ok:
         log.warning(f'  downloadProduct {product_type} @ {product_date_ms}: HTTP {r.status_code}')
         return None
-    data = r.json()
+    try:
+        data = r.json()
+    except Exception as e:
+        log.warning(f'  downloadProduct response non-JSON: {e}')
+        return None
     return data.get('url')
 
 
 def download_geotiff(url):
-    """Scarica il GeoTIFF e ritorna i bytes (oppure None)."""
-    r = _http_request('GET', url)
+    """Scarica il GeoTIFF e ritorna i bytes (oppure None su qualunque errore)."""
+    try:
+        r = _http_request('GET', url)
+    except Exception as e:
+        log.warning(f'  download fallito: {e}')
+        return None
     if not r.ok or len(r.content) < 256:
         log.warning(f'  download fallito: HTTP {r.status_code}, {len(r.content)} bytes')
         return None
@@ -308,17 +321,21 @@ def process_day_product(area, product, day, data_dir, force=False):
             keys_to_force_remove.update(vertex_keys)
 
         log.info(f'  → fetch {product} @ {ts_iso}')
-        url = get_pre_signed_url(product, ts_ms)
-        if not url:
-            continue
-        tiff = download_geotiff(url)
-        if not tiff:
-            continue
+        try:
+            url = get_pre_signed_url(product, ts_ms)
+            if not url:
+                continue
+            tiff = download_geotiff(url)
+            if not tiff:
+                continue
 
-        # Stats area
-        area_stats = stats_for_polygon(tiff, area['polygon'])
-        if area_stats is None:
-            log.warning(f'  area stats N/D per {area["name"]} @ {ts_iso}')
+            # Stats area
+            area_stats = stats_for_polygon(tiff, area['polygon'])
+            if area_stats is None:
+                log.warning(f'  area stats N/D per {area["name"]} @ {ts_iso}')
+                continue
+        except Exception as e:
+            log.warning(f'  errore inatteso su {product} @ {ts_iso}: {e} — skip')
             continue
 
         rows_to_add.append({
@@ -339,7 +356,11 @@ def process_day_product(area, product, day, data_dir, force=False):
 
         # Estrazione puntuale sui vertici
         for v in area['sample_vertices']:
-            val = value_at_point(tiff, v['lat'], v['lon'])
+            try:
+                val = value_at_point(tiff, v['lat'], v['lon'])
+            except Exception as e:
+                log.warning(f'  value_at_point fallito per {v["id"]}: {e}')
+                val = None
             rows_to_add.append({
                 'timestamp_utc':   ts_iso,
                 'product':         product,
