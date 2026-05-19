@@ -6,41 +6,46 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radar DPC — Monitoring sorgenti</title>
+  <title>Radar DPC — Monitoring</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260518i">
+  <link rel="stylesheet" href="css/style.css?v=20260518j">
 
   <style>
     body { overflow: hidden; }
     #monitor-app {
       position: fixed; top: 50px; left: 0; right: 0; bottom: 0;
-      overflow-y: auto; padding: 16px 20px; background: var(--bg);
+      overflow-y: auto; padding: 14px 18px; background: var(--bg);
     }
-    .mon-grid { display: grid; grid-template-columns: 1fr; gap: 14px; max-width: 1300px; margin: 0 auto; }
+    .mon-grid { display: grid; gap: 14px; max-width: 1400px; margin: 0 auto; }
+    .mon-toolbar { display: flex; gap: 10px; align-items: center; max-width: 1400px; margin: 0 auto 12px; flex-wrap: wrap; }
+    .mon-toolbar label { font-size: 11px; color: var(--text2); }
+    .mon-toolbar select { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; padding: 4px 8px; font-size: 11px; }
+
     .mon-area-card { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 14px; }
     .mon-area-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-    .mon-area-head h2 { margin: 0; font-size: 18px; color: var(--text); }
+    .mon-area-head h2 { margin: 0; font-size: 17px; color: var(--text); }
     .mon-area-status { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     .status-ok        { background: #1e4d28; color: #b8f0c5; }
     .status-warning   { background: #5e4a0c; color: #ffd76b; }
     .status-alarm     { background: #6a2a14; color: #ffb38e; }
     .status-emergency { background: #6e1830; color: #ff8aa8; }
 
-    .mon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-    @media (max-width: 800px) { .mon-row { grid-template-columns: 1fr; } }
+    .mon-prod-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    @media (max-width: 900px) { .mon-prod-row { grid-template-columns: 1fr; } }
+
     .mon-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
-    .mon-panel h3 { margin: 0 0 6px; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+    .mon-panel h3 { margin: 0 0 6px; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+    .mon-panel h3 .pill { background: var(--bg2); padding: 1px 6px; border-radius: 6px; font-size: 9px; }
     .mon-bignum { font-size: 22px; font-weight: 700; color: var(--text); }
     .mon-bignum .mon-unit { font-size: 12px; color: var(--text3); margin-left: 4px; }
-    .mon-subtle { font-size: 11px; color: var(--text3); margin-top: 4px; }
+    .mon-bignum.stale { color: var(--text3); }
+    .mon-subtle { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .mon-na { color: var(--text3); font-style: italic; font-size: 13px; }
 
-    .mon-prod-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 800px) { .mon-prod-grid { grid-template-columns: 1fr; } }
-
-    .mon-thresh-list { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+    .mon-thresh-list { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
     .mon-thresh-tag { padding: 3px 8px; border-radius: 10px; font-size: 10px; background: var(--bg2); border: 1px solid var(--border2); color: var(--text3); }
     .mon-thresh-tag.active { background: #6a2a14; color: #ffb38e; border-color: #c54521; }
     .mon-edit-btn { background: transparent; border: 0; color: var(--text3); cursor: pointer; font-size: 11px; }
@@ -49,24 +54,23 @@
     .mon-edit-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
     .mon-edit-row label { font-size: 10px; color: var(--text3); }
     .mon-edit-row input[type=number] { width: 56px; background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; padding: 3px 5px; font-size: 11px; }
-    .mon-edit-row .mon-edit-actions { margin-left: auto; display: flex; gap: 4px; }
-    .mon-edit-row .btn-sm { font-size: 10px; padding: 3px 8px; }
 
-    .mon-events { max-height: 180px; overflow-y: auto; }
+    .mon-events { max-height: 180px; overflow-y: auto; margin-top: 6px; }
     .mon-event { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 11px; }
     .mon-event:last-child { border-bottom: 0; }
     .mon-event .lvl { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; margin-right: 5px; font-weight: 600; }
-    .lvl-warning   { background: #5e4a0c; color: #ffd76b; }
-    .lvl-alarm     { background: #6a2a14; color: #ffb38e; }
-    .lvl-emergency { background: #6e1830; color: #ff8aa8; }
+    .lvl-warning, .lvl-forecast_warning   { background: #5e4a0c; color: #ffd76b; }
+    .lvl-alarm, .lvl-forecast_alarm       { background: #6a2a14; color: #ffb38e; }
+    .lvl-emergency, .lvl-forecast_emergency { background: #6e1830; color: #ff8aa8; }
+    .mon-event .pred { color: #82b1ff; }
 
-    .mon-chart-wrap { height: 180px; }
+    .mon-chart-wrap { height: 220px; }
     .mon-noevents { color: var(--text3); font-size: 11px; padding: 6px; text-align: center; }
 
-    .mon-toolbar { display: flex; gap: 8px; align-items: center; margin: 0 auto 14px; max-width: 1300px; padding: 0 4px; }
-    .mon-override-badge { background: #1e3a5f; color: #cfe7ff; padding: 3px 8px; border-radius: 10px; font-size: 10px; }
+    .mon-override-badge, .mon-fc-badge { padding: 3px 8px; border-radius: 10px; font-size: 10px; }
+    .mon-override-badge { background: #1e3a5f; color: #cfe7ff; }
+    .mon-fc-badge { background: #2e3d5e; color: #82b1ff; }
 
-    /* Modal export */
     .mon-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
     .mon-modal-bg.open { display: flex; }
     .mon-modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 18px; max-width: 700px; width: 100%; max-height: 80vh; overflow-y: auto; }
@@ -94,10 +98,19 @@
 
 <div id="monitor-app">
   <div class="mon-toolbar">
+    <label>Finestra grafico:
+      <select id="timing-select">
+        <option value="1">1h</option>
+        <option value="3" selected>3h</option>
+        <option value="6">6h</option>
+        <option value="12">12h</option>
+        <option value="24">24h</option>
+      </select>
+    </label>
     <span id="overrides-badge" class="mon-override-badge" style="display:none">⚠️ Hai modifiche locali alle soglie</span>
     <span style="flex:1"></span>
     <button class="btn-sm" id="btn-export"><i class="fa fa-download"></i> Esporta config soglie</button>
-    <button class="btn-sm" id="btn-reset-overrides" style="display:none"><i class="fa fa-undo"></i> Ripristina default</button>
+    <button class="btn-sm" id="btn-reset-overrides" style="display:none"><i class="fa fa-undo"></i> Default</button>
   </div>
   <div class="mon-grid" id="mon-grid">
     <div style="text-align:center;padding:40px;color:var(--text3)">
@@ -110,171 +123,177 @@
   <div class="mon-modal">
     <h3><i class="fa fa-download"></i> Esporta configurazione soglie</h3>
     <p style="font-size:12px;color:var(--text2)">
-      Per applicare le tue modifiche anche alle notifiche email/Telegram del workflow,
-      copia il blocco JSON sotto e <b>incollalo in <code>archive/areas.json</code></b> al
-      posto di quello attuale (preserva la chiave <code>"areas":</code>). Poi commit + push.
+      Copia il blocco JSON e incollalo in <code>archive/areas.json</code> nel repo. Commit + push per attivare le modifiche sul workflow di notifiche.
     </p>
     <pre id="export-json"></pre>
     <div class="mon-modal-actions">
-      <button class="btn-sm" id="btn-copy"><i class="fa fa-copy"></i> Copia negli appunti</button>
+      <button class="btn-sm" id="btn-copy"><i class="fa fa-copy"></i> Copia</button>
       <button class="btn-sm" id="btn-modal-close">Chiudi</button>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="js/timezone.js?v=20260518i"></script>
-<script src="js/config.js?v=20260518i"></script>
+<script src="js/timezone.js?v=20260518j"></script>
+<script src="js/config.js?v=20260518j"></script>
 
 <script>
-// ─── Pagina Monitor (multi-prodotto + soglie editabili) ─────────────────────
+// ─── Monitor v2 ──────────────────────────────────────────────────────────────
+const AREAS_URL    = 'archive/areas.json';
+const EVENTS_URL   = 'archive/data/events.csv';
+const LAST_OBS_URL = 'archive/data/last_observations.json';
+const OM_URL       = 'https://api.open-meteo.com/v1/forecast';
+const LS_PREFIX    = 'radar-dpc.monitor.thresholds.';
 
-const AREAS_URL  = 'archive/areas.json';
-const EVENTS_URL = 'archive/data/events.csv';
-const OM_URL     = 'https://api.open-meteo.com/v1/forecast';
-const LS_PREFIX  = 'radar-dpc.monitor.thresholds.';
-
-let _areas = [];     // areas come letti da areas.json (immutabili)
+let _areas = [];
 let _events = [];
+let _lastObs = {};      // {area: {SRT1:{...}, CUM3:{...}}}
+let _archive = {};      // {area: {cum3: rows, cum24: rows}}
 let _charts = {};
-let _editing = {};   // {areaName: bool}
+let _editing = {};
+let _timing = 3;        // ore selezionate
 
-// ── Override locali soglie ─────────────────────────────────────────────────
-function loadOverrides(areaName) {
-  try { return JSON.parse(localStorage.getItem(LS_PREFIX + areaName) || 'null'); }
-  catch { return null; }
+// ── Override storage ──────────────────────────────────────────────────────
+function loadOverrides(n){ try{return JSON.parse(localStorage.getItem(LS_PREFIX+n)||'null');}catch{return null;} }
+function saveOverrides(n,p){ localStorage.setItem(LS_PREFIX+n, JSON.stringify(p)); refreshOverridesBadge(); }
+function clearAllOverrides(){ _areas.forEach(a => localStorage.removeItem(LS_PREFIX+a.name)); refreshOverridesBadge(); }
+function hasAnyOverride(){ return _areas.some(a => localStorage.getItem(LS_PREFIX+a.name)); }
+function refreshOverridesBadge(){
+  document.getElementById('overrides-badge').style.display    = hasAnyOverride() ? '' : 'none';
+  document.getElementById('btn-reset-overrides').style.display = hasAnyOverride() ? '' : 'none';
 }
-function saveOverrides(areaName, products) {
-  localStorage.setItem(LS_PREFIX + areaName, JSON.stringify(products));
-  refreshOverridesBadge();
-}
-function clearAllOverrides() {
-  _areas.forEach(a => localStorage.removeItem(LS_PREFIX + a.name));
-  refreshOverridesBadge();
-}
-function hasAnyOverride() {
-  return _areas.some(a => localStorage.getItem(LS_PREFIX + a.name));
-}
-function refreshOverridesBadge() {
-  const has = hasAnyOverride();
-  document.getElementById('overrides-badge').style.display    = has ? '' : 'none';
-  document.getElementById('btn-reset-overrides').style.display = has ? '' : 'none';
+function effectiveProducts(area){
+  return loadOverrides(area.name) || area.monitoring?.products || {};
 }
 
-function effectiveProducts(area) {
-  const overrides = loadOverrides(area.name);
-  if (overrides) return overrides;
-  return area.monitoring?.products || {};
-}
-
-// ── Init ───────────────────────────────────────────────────────────────────
-async function init() {
-  await loadAreas();
-  await loadEvents();
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init(){
+  await Promise.all([loadAreas(), loadEvents(), loadLastObs()]);
+  await loadArchiveForAll();
   render();
+  refreshOverridesBadge();
 
-  document.getElementById('btn-refresh').onclick = async () => { await loadEvents(); render(); };
+  document.getElementById('btn-refresh').onclick = async () => {
+    await Promise.all([loadEvents(), loadLastObs()]);
+    await loadArchiveForAll();
+    render();
+  };
   document.getElementById('btn-export').onclick = openExportModal;
   document.getElementById('btn-modal-close').onclick = () => document.getElementById('export-modal').classList.remove('open');
   document.getElementById('btn-copy').onclick = () => {
     navigator.clipboard.writeText(document.getElementById('export-json').textContent);
-    document.getElementById('btn-copy').innerHTML = '<i class="fa fa-check"></i> Copiato';
-    setTimeout(() => { document.getElementById('btn-copy').innerHTML = '<i class="fa fa-copy"></i> Copia negli appunti'; }, 1500);
+    const b = document.getElementById('btn-copy');
+    b.innerHTML = '<i class="fa fa-check"></i> Copiato';
+    setTimeout(() => b.innerHTML = '<i class="fa fa-copy"></i> Copia', 1500);
   };
   document.getElementById('btn-reset-overrides').onclick = () => {
-    if (confirm('Cancella le tue modifiche locali e ripristina le soglie dal repository?')) {
-      clearAllOverrides();
-      render();
-    }
+    if (confirm('Cancella le modifiche locali e ripristina default?')) { clearAllOverrides(); render(); }
   };
+  document.getElementById('timing-select').onchange = e => { _timing = parseInt(e.target.value, 10); render(); };
 
   const tzBtn = document.getElementById('btn-timezone');
-  const refreshTz = () => {
-    const lbl = tzBtn.querySelector('.tz-label');
-    if (lbl) lbl.textContent = Timezone.mode === 'utc' ? 'UTC' : 'Locale';
-  };
-  refreshTz();
+  const refTz = () => { const l = tzBtn.querySelector('.tz-label'); if (l) l.textContent = Timezone.mode === 'utc' ? 'UTC' : 'Locale'; };
+  refTz();
   tzBtn.onclick = () => Timezone.toggle();
-  window.addEventListener('timezone-changed', () => { refreshTz(); render(); });
+  window.addEventListener('timezone-changed', () => { refTz(); render(); });
 
-  setInterval(async () => { await loadEvents(); render(); }, 60_000);
-  refreshOverridesBadge();
+  setInterval(async () => { await Promise.all([loadEvents(), loadLastObs()]); render(); }, 60_000);
 }
 
-async function loadAreas() {
+async function loadAreas(){
   try {
     const r = await fetch(AREAS_URL, { cache: 'no-cache' });
-    const data = await r.json();
-    _areas = (data.areas || []).filter(a => a.monitoring?.enabled);
+    const d = await r.json();
+    _areas = (d.areas||[]).filter(a => a.monitoring?.enabled);
   } catch { _areas = []; }
 }
 
-async function loadEvents() {
+async function loadEvents(){
   try {
     const r = await fetch(EVENTS_URL, { cache: 'no-cache' });
     if (!r.ok) { _events = []; return; }
-    const text = await r.text();
-    const lines = text.trim().split(/\r?\n/);
+    const lines = (await r.text()).trim().split(/\r?\n/);
     if (lines.length < 2) { _events = []; return; }
-    const headers = lines[0].split(',');
-    _events = lines.slice(1).map(line => {
-      const cells = line.split(',');
-      const row = {};
-      headers.forEach((h, i) => { row[h] = cells[i] || ''; });
-      return row;
-    });
+    const h = lines[0].split(',');
+    _events = lines.slice(1).map(line => { const c = line.split(','); const o = {}; h.forEach((x,i) => o[x] = c[i]||''); return o; });
   } catch { _events = []; }
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function render() {
+async function loadLastObs(){
+  try {
+    const r = await fetch(LAST_OBS_URL, { cache: 'no-cache' });
+    if (!r.ok) { _lastObs = {}; return; }
+    _lastObs = await r.json();
+  } catch { _lastObs = {}; }
+}
+
+async function loadArchiveForAll(){
+  for (const a of _areas) {
+    if (_archive[a.name]) continue;
+    _archive[a.name] = { cum3: await loadCsv(`archive/data/${a.name}_cum3.csv`),
+                         cum24: await loadCsv(`archive/data/${a.name}_cum24.csv`) };
+  }
+}
+
+async function loadCsv(url){
+  try {
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (!r.ok) return [];
+    const lines = (await r.text()).trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const h = lines[0].split(',');
+    return lines.slice(1).map(line => { const c = line.split(','); const o = {}; h.forEach((x,i) => o[x] = c[i]||''); return o; });
+  } catch { return []; }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(){
   const grid = document.getElementById('mon-grid');
   if (!_areas.length) {
     grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">
-      <p><i class="fa fa-info-circle"></i> Nessuna area con monitoring attivo.</p>
-    </div>`;
+      <i class="fa fa-info-circle"></i> Nessuna area con monitoring attivo.</div>`;
     return;
   }
   grid.innerHTML = _areas.map(renderAreaCard).join('');
-  _areas.forEach(a => loadForecastChart(a));
+  _areas.forEach(a => loadChart(a));
 }
 
-function renderAreaCard(area) {
+function renderAreaCard(area){
   const products = effectiveProducts(area);
   const isEditing = !!_editing[area.name];
+  const isOverridden = !!loadOverrides(area.name);
 
+  // Eventi recenti (ultime 2h)
   const areaEvents = _events.filter(e => e.area_name === area.name)
     .sort((a, b) => b.event_timestamp_utc.localeCompare(a.event_timestamp_utc));
   const now = Date.now();
   const recentEvents = areaEvents.filter(e => (now - new Date(e.event_timestamp_utc).getTime()) < 2 * 3600_000);
 
-  // Stato corrente: livello max attivo tra tutti i prodotti
-  const lvlPriority = { warning: 1, alarm: 2, emergency: 3 };
-  let currentLevel = 'ok';
+  // Stato corrente (livello max attivo)
+  const pri = { warning: 1, alarm: 2, emergency: 3 };
+  let level = 'ok';
   recentEvents.forEach(e => {
-    if ((lvlPriority[e.level] || 0) > (lvlPriority[currentLevel] || 0)) currentLevel = e.level;
+    const lv = e.level.replace('forecast_', '');
+    if ((pri[lv]||0) > (pri[level]||0)) level = lv;
   });
-  const statusLabel = currentLevel === 'ok' ? 'OK' : currentLevel.toUpperCase();
-  const isOverridden = !!loadOverrides(area.name);
 
-  // Ultima osservazione per ciascun prodotto
-  const lastByProduct = {};
-  for (const ev of areaEvents) {
-    if (!lastByProduct[ev.product]) lastByProduct[ev.product] = ev;
-  }
-
-  const productCards = Object.entries(products).map(([prodName, prodCfg]) =>
-    renderProductPanel(area, prodName, prodCfg, lastByProduct[prodName], recentEvents, isEditing)
+  const productCards = Object.entries(products).map(([prod, cfg]) =>
+    renderProductPanel(area, prod, cfg, recentEvents, isEditing)
   ).join('');
 
-  const eventsList = areaEvents.slice(0, 6).map(e => {
+  const evList = areaEvents.slice(0, 6).map(e => {
     const tsStr = Timezone.formatDateTime(new Date(e.event_timestamp_utc).getTime());
+    const isFc = e.level.startsWith('forecast_');
+    const lv = e.level.replace('forecast_', '');
     const em = e.notified_email === 'true' ? '✉️' : (e.notified_email === 'skipped' ? '' : '⚠️');
     const tg = e.notified_telegram === 'true' ? '✈️' : (e.notified_telegram === 'skipped' ? '' : '⚠️');
+    const val = isFc ? `prev. ${parseFloat(e.forecast_max_6h_mm).toFixed(1)} mm` :
+                       `${parseFloat(e.observed_mm_mean).toFixed(1)} mm`;
     return `<div class="mon-event">
-      <span class="lvl lvl-${e.level}">${e.level}</span>
-      <span><b>${e.product}</b> ${parseFloat(e.observed_mm_mean).toFixed(1)} mm</span>
+      <span class="lvl lvl-${lv}">${isFc ? '🔮' : ''}${lv}</span>
+      <span><b>${e.product}</b> ${val}</span>
       <span style="color:var(--text3)"> ≥ ${e.threshold_mm}</span>
+      ${e.note ? `<span class="pred"> · ${e.note}</span>` : ''}
       <span style="float:right;color:var(--text3);font-size:10px">${tsStr} ${em}${tg}</span>
     </div>`;
   }).join('') || `<div class="mon-noevents">Nessun evento registrato</div>`;
@@ -283,131 +302,179 @@ function renderAreaCard(area) {
     <div class="mon-area-card">
       <div class="mon-area-head">
         <h2>📍 ${area.label}</h2>
-        <span class="mon-area-status status-${currentLevel}">${statusLabel}</span>
+        <span class="mon-area-status status-${level}">${level === 'ok' ? 'OK' : level.toUpperCase()}</span>
         ${isOverridden ? '<span class="mon-override-badge">soglie locali</span>' : ''}
         <span style="flex:1"></span>
         <button class="mon-edit-btn" onclick="toggleEdit('${area.name}')">
           <i class="fa fa-${isEditing ? 'check' : 'pen'}"></i> ${isEditing ? 'Fatto' : 'Modifica soglie'}
         </button>
       </div>
-      <div class="mon-prod-grid">${productCards}</div>
-      <div class="mon-row" style="margin-top:10px">
+
+      <div class="mon-prod-row">${productCards}</div>
+
+      <div class="mon-prod-row" style="margin-top:10px">
         <div class="mon-panel">
-          <h3>Eventi recenti</h3>
-          <div class="mon-events">${eventsList}</div>
+          <h3>📊 Grafico ${_timing}h <span class="pill">DPC + OpenMeteo</span></h3>
+          <div class="mon-chart-wrap"><canvas id="chart-${area.name}"></canvas></div>
         </div>
         <div class="mon-panel">
-          <h3>Forecast prossime 6h (OpenMeteo)</h3>
-          <div class="mon-chart-wrap"><canvas id="forecast-${area.name}"></canvas></div>
+          <h3>📜 Eventi recenti</h3>
+          <div class="mon-events">${evList}</div>
         </div>
       </div>
     </div>
   `;
 }
 
-function renderProductPanel(area, prodName, prodCfg, lastEvent, recentEvents, isEditing) {
-  const unit = prodName === 'SRT1' ? 'mm/1h' : (prodName === 'CUM3' ? 'mm/3h' : 'mm');
-  const thresholds = prodCfg.thresholds || [];
+function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
+  const unit = prod === 'SRT1' ? 'mm/1h' : 'mm/3h';
+  const thresholds = cfg.thresholds || [];
 
-  const tagsHtml = thresholds.map(t => {
-    const active = recentEvents.some(e => e.product === prodName && e.level === t.level);
-    return `<span class="mon-thresh-tag ${active ? 'active' : ''}">${t.icon} ${t.level} ≥ ${t.value_mm}</span>`;
+  // Ultimo valore: da last_observations.json
+  const obs = _lastObs[area.name]?.[prod];
+  let valueHtml;
+  if (obs) {
+    const isStale = (Date.now() - new Date(obs.timestamp_utc).getTime()) > 6 * 3600_000;
+    valueHtml = `
+      <div class="mon-bignum ${isStale ? 'stale' : ''}">${obs.mean.toFixed(1)} <span class="mon-unit">${unit} (media)</span></div>
+      <div class="mon-subtle">max ${obs.max.toFixed(1)} mm · ${Timezone.formatDateTime(new Date(obs.timestamp_utc).getTime())}</div>
+    `;
+  } else {
+    valueHtml = `<div class="mon-na">In attesa primo aggiornamento dal workflow…</div>`;
+  }
+
+  const tags = thresholds.map(t => {
+    const active = recentEvents.some(e => e.product === prod && e.level.replace('forecast_','') === t.level);
+    return `<span class="mon-thresh-tag ${active?'active':''}">${t.icon} ${t.level} ≥ ${t.value_mm}</span>`;
   }).join('');
 
-  const editorHtml = !isEditing ? '' : thresholds.map((t, i) => `
+  const editor = !isEditing ? '' : thresholds.map((t, i) => `
     <label>${t.icon} ${t.level}</label>
     <input type="number" step="0.5" min="0" value="${t.value_mm}"
-      data-area="${area.name}" data-prod="${prodName}" data-idx="${i}"
+      data-area="${area.name}" data-prod="${prod}" data-idx="${i}"
       onchange="updateThreshold(this)">
   `).join('');
 
-  const lastValue = lastEvent ? `${parseFloat(lastEvent.observed_mm_mean).toFixed(1)} ${unit} (media)` : 'no eventi';
-  const lastTs    = lastEvent ? Timezone.formatDateTime(new Date(lastEvent.observation_timestamp_utc).getTime()) : '—';
-  const maxVal    = lastEvent ? `max ${parseFloat(lastEvent.observed_mm_max).toFixed(1)} mm` : '';
-
   return `
     <div class="mon-panel">
-      <h3>${prodName} · ${prodName === 'SRT1' ? 'Cumulata 1h' : 'Cumulata 3h'}</h3>
-      <div class="mon-bignum">${lastValue}</div>
-      <div class="mon-subtle">${maxVal} ${maxVal ? '·' : ''} ${lastTs}</div>
-      <div class="mon-thresh-list">${tagsHtml}</div>
-      ${isEditing ? `<div class="mon-edit-row">${editorHtml}</div>` : ''}
+      <h3>${prod} <span class="pill">${prod === 'SRT1' ? '1h reali' : '3h reali'}</span></h3>
+      ${valueHtml}
+      <div class="mon-thresh-list">${tags}</div>
+      ${isEditing ? `<div class="mon-edit-row">${editor}</div>` : ''}
     </div>
   `;
 }
 
-// ── Editing soglie ─────────────────────────────────────────────────────────
-function toggleEdit(areaName) {
-  _editing[areaName] = !_editing[areaName];
-  render();
+// ── Grafico DPC osservato + OpenMeteo (passato + forecast) ────────────────
+async function loadChart(area){
+  const canvas = document.getElementById(`chart-${area.name}`);
+  if (!canvas) return;
+
+  // Costruisci DPC observed series in base al timing
+  const dpcSeries = buildDpcSeries(area, _timing);
+
+  // OpenMeteo: prendiamo finestra centrata su ora attuale (passato 1h + futuro N ore)
+  let omSeries = [];
+  try {
+    const pastH = 1;
+    const futH = _timing;
+    const r = await fetch(`${OM_URL}?latitude=${area.centroid.lat}&longitude=${area.centroid.lon}` +
+      `&minutely_15=precipitation&past_minutely_15=${pastH * 4}&forecast_minutes=${futH * 60}&timezone=UTC`);
+    const data = await r.json();
+    const times = data.minutely_15?.time || [];
+    const prec  = data.minutely_15?.precipitation || [];
+    omSeries = times.map((t, i) => ({ ts: new Date(t + 'Z').getTime(), v: prec[i] || 0 }));
+  } catch (e) { console.warn('OM fetch err', e); }
+
+  // Costruisci asse temporale unificato
+  const allTs = new Set();
+  dpcSeries.forEach(d => allTs.add(d.ts));
+  omSeries.forEach(d => allTs.add(d.ts));
+  const tsList = [...allTs].sort();
+  const labels = tsList.map(t => Timezone.formatShort(t));
+  const dpcMap = new Map(dpcSeries.map(d => [d.ts, d.v]));
+  const omMap  = new Map(omSeries.map(d => [d.ts, d.v]));
+  const dpcData = tsList.map(t => dpcMap.has(t) ? dpcMap.get(t) : null);
+  const omData  = tsList.map(t => omMap.has(t) ? omMap.get(t) : null);
+
+  if (_charts[area.name]) _charts[area.name].destroy();
+  _charts[area.name] = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar',  label: `DPC osservato`,
+          data: dpcData, backgroundColor: '#7bed9fcc', borderColor: '#7bed9f', borderWidth: 1 },
+        { type: 'line', label: `OpenMeteo (forecast)`,
+          data: omData,  borderColor: '#82b1ff', backgroundColor: '#82b1ff44',
+          tension: 0.3, pointRadius: 1, fill: true },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#aaa', font: { size: 10 } }, position: 'bottom' },
+      },
+      scales: {
+        x: { ticks: { color: '#aaa', maxTicksLimit: 10, autoSkip: true },
+             grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { title: { display: true, text: 'mm', color: '#aaa' },
+             ticks: { color: '#aaa' },
+             grid:  { color: 'rgba(255,255,255,0.05)' } },
+      },
+    },
+  });
 }
 
-function updateThreshold(input) {
-  const areaName = input.dataset.area;
-  const prod     = input.dataset.prod;
-  const idx      = parseInt(input.dataset.idx, 10);
-  const val      = parseFloat(input.value);
-  if (!isFinite(val) || val < 0) return;
+function buildDpcSeries(area, timing){
+  // timing: 1=usa SRT1 (non archiviato) → vuoto; 3=ultimo CUM3; 6/12=somma CUM3; 24=CUM24
+  // Visto che SRT1 non è archiviato, per 1h usiamo l'ultima osservazione singola da last_obs
+  const cum3 = (_archive[area.name]?.cum3 || []).filter(r => r.location_type === 'area');
+  const cum24 = (_archive[area.name]?.cum24 || []).filter(r => r.location_type === 'area');
 
-  // Recupera o crea override partendo dai default
-  const area = _areas.find(a => a.name === areaName);
-  let override = loadOverrides(areaName);
-  if (!override) {
-    override = JSON.parse(JSON.stringify(area.monitoring.products));
+  if (timing === 24) {
+    return cum24.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
+                .sort((a,b) => a.ts - b.ts);
   }
-  if (!override[prod] || !override[prod].thresholds[idx]) return;
-  override[prod].thresholds[idx].value_mm = val;
-  saveOverrides(areaName, override);
+  if (timing === 3 || timing === 6 || timing === 12) {
+    // Mostra la serie CUM3 e basta — utente può aggregare visivamente
+    const series = cum3.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
+                       .sort((a,b) => a.ts - b.ts);
+    // Filtra ultimi N giorni in base al timing
+    const days = timing <= 3 ? 1 : (timing <= 12 ? 3 : 7);
+    const cutoff = Date.now() - days * 86400_000;
+    return series.filter(d => d.ts >= cutoff);
+  }
+  if (timing === 1) {
+    // Solo l'ultimo SRT1 da last_obs
+    const obs = _lastObs[area.name]?.SRT1;
+    if (!obs) return [];
+    return [{ ts: new Date(obs.timestamp_utc).getTime(), v: obs.mean }];
+  }
+  return [];
+}
+
+// ── Editor & export ────────────────────────────────────────────────────────
+function toggleEdit(name){ _editing[name] = !_editing[name]; render(); }
+function updateThreshold(input){
+  const a = input.dataset.area, p = input.dataset.prod, i = parseInt(input.dataset.idx, 10);
+  const v = parseFloat(input.value);
+  if (!isFinite(v) || v < 0) return;
+  const area = _areas.find(x => x.name === a);
+  let ov = loadOverrides(a) || JSON.parse(JSON.stringify(area.monitoring.products));
+  if (ov[p]?.thresholds[i]) { ov[p].thresholds[i].value_mm = v; saveOverrides(a, ov); }
 }
 window.toggleEdit = toggleEdit;
 window.updateThreshold = updateThreshold;
 
-// ── Export config ──────────────────────────────────────────────────────────
-async function openExportModal() {
-  // Costruisce un areas.json completo con gli override applicati
+async function openExportModal(){
   const r = await fetch(AREAS_URL, { cache: 'no-cache' });
-  const fullConfig = await r.json();
-  for (const a of fullConfig.areas) {
+  const cfg = await r.json();
+  for (const a of cfg.areas) {
     const ov = loadOverrides(a.name);
-    if (ov && a.monitoring) {
-      a.monitoring.products = ov;
-    }
+    if (ov && a.monitoring) a.monitoring.products = ov;
   }
-  document.getElementById('export-json').textContent = JSON.stringify(fullConfig, null, 2);
+  document.getElementById('export-json').textContent = JSON.stringify(cfg, null, 2);
   document.getElementById('export-modal').classList.add('open');
-}
-
-// ── Forecast chart ─────────────────────────────────────────────────────────
-async function loadForecastChart(area) {
-  const canvas = document.getElementById(`forecast-${area.name}`);
-  if (!canvas) return;
-  try {
-    const r = await fetch(`${OM_URL}?latitude=${area.centroid.lat}&longitude=${area.centroid.lon}` +
-      `&minutely_15=precipitation&forecast_minutes=360&timezone=UTC`);
-    const data = await r.json();
-    const times = data.minutely_15?.time || [];
-    const prec  = data.minutely_15?.precipitation || [];
-    if (!times.length) {
-      canvas.parentElement.innerHTML = '<div class="mon-noevents">Forecast non disponibile</div>';
-      return;
-    }
-    const labels = times.map(t => Timezone.formatShort(new Date(t + 'Z').getTime()));
-    if (_charts[area.name]) _charts[area.name].destroy();
-    _charts[area.name] = new Chart(canvas, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'mm/15min', data: prec,
-        backgroundColor: '#3eaaffcc', borderColor: '#3eaaff', borderWidth: 1 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: '#aaa', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          y: { title: { display: true, text: 'mm/15min', color: '#aaa' },
-               ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        },
-      },
-    });
-  } catch (e) { console.warn('forecast', area.name, e); }
 }
 
 document.addEventListener('DOMContentLoaded', init);
