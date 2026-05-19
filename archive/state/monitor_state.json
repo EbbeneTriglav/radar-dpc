@@ -125,9 +125,9 @@
     "last_trigger_utc": null
   },
   "panna:forecast:SRT1:warning": {
-    "active": false,
+    "active": true,
     "last_below_utc": null,
-    "last_trigger_utc": null
+    "last_trigger_utc": "2026-05-19T20:57:30Z"
   },
   "panna:warning": {
     "active": false,
