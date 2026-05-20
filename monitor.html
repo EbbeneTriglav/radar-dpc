@@ -370,87 +370,113 @@ async function loadChart(area){
   const canvas = document.getElementById(`chart-${area.name}`);
   if (!canvas) return;
 
-  // Costruisci DPC observed series in base al timing
   const dpcSeries = buildDpcSeries(area, _timing);
 
-  // OpenMeteo: prendiamo finestra centrata su ora attuale (passato 1h + futuro N ore)
   let omSeries = [];
   try {
-    const pastH = 1;
     const futH = _timing;
     const r = await fetch(`${OM_URL}?latitude=${area.centroid.lat}&longitude=${area.centroid.lon}` +
-      `&minutely_15=precipitation&past_minutely_15=${pastH * 4}&forecast_minutes=${futH * 60}&timezone=UTC`);
+      `&minutely_15=precipitation&past_minutely_15=4&forecast_minutes=${futH * 60}&timezone=UTC`,
+      { cache: 'no-cache' });
     const data = await r.json();
     const times = data.minutely_15?.time || [];
     const prec  = data.minutely_15?.precipitation || [];
     omSeries = times.map((t, i) => ({ ts: new Date(t + 'Z').getTime(), v: prec[i] || 0 }));
-  } catch (e) { console.warn('OM fetch err', e); }
+  } catch (e) { console.warn('OM fetch err', area.name, e); }
 
-  // Costruisci asse temporale unificato
+  // Unifica timeline
   const allTs = new Set();
   dpcSeries.forEach(d => allTs.add(d.ts));
   omSeries.forEach(d => allTs.add(d.ts));
-  const tsList = [...allTs].sort();
+  const tsList = [...allTs].sort((a, b) => a - b);
   const labels = tsList.map(t => Timezone.formatShort(t));
   const dpcMap = new Map(dpcSeries.map(d => [d.ts, d.v]));
   const omMap  = new Map(omSeries.map(d => [d.ts, d.v]));
   const dpcData = tsList.map(t => dpcMap.has(t) ? dpcMap.get(t) : null);
   const omData  = tsList.map(t => omMap.has(t) ? omMap.get(t) : null);
+  const nowMs = Date.now();
 
   if (_charts[area.name]) _charts[area.name].destroy();
   _charts[area.name] = new Chart(canvas, {
     data: {
       labels,
       datasets: [
-        { type: 'bar',  label: `DPC osservato`,
+        { type: 'bar', label: 'DPC osservato',
           data: dpcData, backgroundColor: '#7bed9fcc', borderColor: '#7bed9f', borderWidth: 1 },
-        { type: 'line', label: `OpenMeteo (forecast)`,
-          data: omData,  borderColor: '#82b1ff', backgroundColor: '#82b1ff44',
-          tension: 0.3, pointRadius: 1, fill: true },
+        { type: 'line', label: 'OpenMeteo (forecast)',
+          data: omData, borderColor: '#82b1ff', backgroundColor: '#82b1ff44',
+          tension: 0.3, pointRadius: 1, fill: true,
+          segment: {
+            borderDash: ctx => (tsList[ctx.p1DataIndex] > nowMs) ? [5, 4] : undefined,
+          },
+        },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { labels: { color: '#aaa', font: { size: 10 } }, position: 'bottom' },
+        tooltip: {
+          backgroundColor: 'rgba(20,20,30,0.95)',
+          titleColor: '#fff', bodyColor: '#ddd', borderColor: '#444', borderWidth: 1,
+          callbacks: {
+            title: items => {
+              const idx = items[0].dataIndex;
+              const ts = tsList[idx];
+              const isFuture = ts > nowMs;
+              return (isFuture ? '🔮 ' : '📊 ') + Timezone.formatDateTime(ts);
+            },
+            label: item => {
+              if (item.parsed.y == null) return null;
+              return `${item.dataset.label}: ${item.parsed.y.toFixed(2)} mm`;
+            },
+          },
+        },
       },
       scales: {
-        x: { ticks: { color: '#aaa', maxTicksLimit: 10, autoSkip: true },
+        x: { ticks: { color: '#aaa', maxTicksLimit: 12, autoSkip: true,
+                     callback: function(v, i){
+                       const ts = tsList[i];
+                       if (ts == null) return '';
+                       const d = new Date(ts);
+                       // mostra data + ora per i tick
+                       return Timezone.format(ts, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+                     } },
              grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { title: { display: true, text: 'mm', color: '#aaa' },
              ticks: { color: '#aaa' },
-             grid:  { color: 'rgba(255,255,255,0.05)' } },
+             grid: { color: 'rgba(255,255,255,0.05)' },
+             beginAtZero: true },
       },
     },
   });
 }
 
 function buildDpcSeries(area, timing){
-  // timing: 1=usa SRT1 (non archiviato) → vuoto; 3=ultimo CUM3; 6/12=somma CUM3; 24=CUM24
-  // Visto che SRT1 non è archiviato, per 1h usiamo l'ultima osservazione singola da last_obs
   const cum3 = (_archive[area.name]?.cum3 || []).filter(r => r.location_type === 'area');
   const cum24 = (_archive[area.name]?.cum24 || []).filter(r => r.location_type === 'area');
+  const lastSRT1 = _lastObs[area.name]?.SRT1;
+  const lastCUM3 = _lastObs[area.name]?.CUM3;
 
+  let series = [];
   if (timing === 24) {
-    return cum24.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
-                .sort((a,b) => a.ts - b.ts);
-  }
-  if (timing === 3 || timing === 6 || timing === 12) {
-    // Mostra la serie CUM3 e basta — utente può aggregare visivamente
-    const series = cum3.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
-                       .sort((a,b) => a.ts - b.ts);
-    // Filtra ultimi N giorni in base al timing
-    const days = timing <= 3 ? 1 : (timing <= 12 ? 3 : 7);
+    series = cum24.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }));
+  } else if (timing === 1) {
+    if (lastSRT1) series = [{ ts: new Date(lastSRT1.timestamp_utc).getTime(), v: lastSRT1.mean }];
+  } else {
+    // 3h / 6h / 12h → serie CUM3 + ultimo valore
+    const days = timing <= 3 ? 1 : (timing <= 6 ? 2 : 4);
     const cutoff = Date.now() - days * 86400_000;
-    return series.filter(d => d.ts >= cutoff);
+    series = cum3.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
+                 .filter(d => d.ts >= cutoff);
+    // Aggiungi anche l'ultimo valore live da last_observations (se più recente dell'archivio)
+    if (lastCUM3) {
+      const ts = new Date(lastCUM3.timestamp_utc).getTime();
+      if (!series.some(d => d.ts === ts)) series.push({ ts, v: lastCUM3.mean });
+    }
   }
-  if (timing === 1) {
-    // Solo l'ultimo SRT1 da last_obs
-    const obs = _lastObs[area.name]?.SRT1;
-    if (!obs) return [];
-    return [{ ts: new Date(obs.timestamp_utc).getTime(), v: obs.mean }];
-  }
-  return [];
+  return series.sort((a,b) => a.ts - b.ts);
 }
 
 // ── Editor & export ────────────────────────────────────────────────────────
