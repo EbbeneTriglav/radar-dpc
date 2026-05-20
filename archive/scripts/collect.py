@@ -265,23 +265,55 @@ def replace_keys(csv_path, keys_to_remove):
 # ─── Generazione XLSX da CSV ─────────────────────────────────────────────────
 
 def regenerate_xlsx(data_dir, area_name):
-    """Crea/sovrascrive {area}.xlsx con due sheet: CUM24 e CUM3."""
+    """Crea/sovrascrive {area}.xlsx con sheet raw (long) + pivot (wide)."""
     wb = Workbook()
-    wb.remove(wb.active)  # rimuove sheet di default
+    wb.remove(wb.active)
 
     for product in ['CUM24', 'CUM3']:
         csv_p = _csv_path(data_dir, area_name, product)
-        ws = wb.create_sheet(product)
-        if not csv_p.exists():
+        # Sheet raw
+        ws = wb.create_sheet(f'{product}_raw')
+        rows_data = []
+        if csv_p.exists():
+            with open(csv_p, newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    ws.append(row)
+                    rows_data.append(row)
+            for col_idx in range(1, 7):
+                ws.column_dimensions[ws.cell(1, col_idx).column_letter].width = 18
+        else:
             ws.append(CSV_HEADERS)
-            continue
-        with open(csv_p, newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                ws.append(row)
-        # Auto-width approssimato (prime 6 colonne)
-        for col_idx in range(1, 7):
-            ws.column_dimensions[ws.cell(1, col_idx).column_letter].width = 18
+
+        # Sheet pivot (wide format: 1 riga per timestamp, colonne per area e vertici)
+        wsp = wb.create_sheet(f'{product}_pivot')
+        if len(rows_data) > 1:
+            hdr = rows_data[0]
+            idx = {h: i for i, h in enumerate(hdr)}
+            # Costruisci mapping timestamp → {area_mean, area_max, vertex_id: value}
+            by_ts = {}
+            vertex_ids = []
+            for r in rows_data[1:]:
+                ts = r[idx['timestamp_utc']]
+                lt = r[idx['location_type']]
+                ln = r[idx['location_name']]
+                if ts not in by_ts:
+                    by_ts[ts] = {'timestamp_utc': ts}
+                if lt == 'area':
+                    by_ts[ts]['area_mean'] = r[idx['mean']]
+                    by_ts[ts]['area_min']  = r[idx['min']]
+                    by_ts[ts]['area_max']  = r[idx['max']]
+                    by_ts[ts]['pixel_count'] = r[idx['pixel_count']]
+                elif lt == 'vertex':
+                    by_ts[ts][ln] = r[idx['value']]
+                    if ln not in vertex_ids:
+                        vertex_ids.append(ln)
+            pivot_cols = ['timestamp_utc', 'area_mean', 'area_min', 'area_max', 'pixel_count'] + sorted(vertex_ids)
+            wsp.append(pivot_cols)
+            for ts in sorted(by_ts.keys()):
+                wsp.append([by_ts[ts].get(c, '') for c in pivot_cols])
+            for col_idx in range(1, len(pivot_cols)+1):
+                wsp.column_dimensions[wsp.cell(1, col_idx).column_letter].width = 18
 
     xlsx_path = data_dir / f'{area_name}.xlsx'
     wb.save(xlsx_path)
@@ -411,7 +443,7 @@ def main():
 
     # Lavoreremo "ieri" a ritroso di N-1 giorni: oggi non è ancora completo
     today_utc = datetime.now(tz=timezone.utc).date()
-    days_to_process = [today_utc - timedelta(days=i + 1) for i in range(days)]
+    days_to_process = [today_utc - timedelta(days=i) for i in range(days)]
     days_to_process.reverse()  # ordine cronologico
 
     log.info(f'Processing days: {[d.isoformat() for d in days_to_process]}')
