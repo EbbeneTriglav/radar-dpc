@@ -43,6 +43,8 @@ import numpy as np
 import rasterio
 import rasterio.mask
 import requests
+from pyproj import Transformer
+from rasterio.windows import Window
 from shapely.geometry import Polygon, mapping
 
 # ─── Config & logging ────────────────────────────────────────────────────────
@@ -145,6 +147,169 @@ def stats_for_polygon(tiff_bytes, polygon_latlon):
 
 
 # ─── Forecast OpenMeteo ──────────────────────────────────────────────────────
+
+# Transformer WGS84 → TM custom DPC (usato per nowcasting VMI)
+_TM_PROJ = '+proj=tmerc +lat_0=42 +lon_0=12.5 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+_wgs84_to_tm = Transformer.from_crs('EPSG:4326', _TM_PROJ, always_xy=True)
+
+
+def fetch_wind(lat, lon):
+    """Direzione vento istantanea (gradi 0-360, 0=N, 90=E) e velocità da OpenMeteo."""
+    try:
+        r = _http('GET', OPENMETEO_API, params={
+            'latitude': lat, 'longitude': lon,
+            'current': 'wind_direction_10m,wind_speed_10m',
+            'timezone': 'UTC',
+        })
+        if not r or not r.ok: return None
+        d = r.json().get('current', {})
+        return {
+            'direction_deg': d.get('wind_direction_10m'),
+            'speed_kmh':     d.get('wind_speed_10m'),
+        }
+    except Exception:
+        return None
+
+
+def _bearing_to_compass(deg):
+    if deg is None: return '?'
+    dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+    return dirs[round(deg / 22.5) % 16]
+
+
+def check_nearby_storm(area, buffer_km, dbz_thresholds):
+    """
+    Scarica l'ultimo VMI e calcola max riflettività in un buffer (quadrato approssimato)
+    di buffer_km attorno al centroide. Confronta con dbz_thresholds e restituisce
+    eventuali trigger. Aggiunge direzione vento per indicare da dove arriva.
+    """
+    last = get_last_product('VMI')
+    if not last:
+        log.warning('  no last VMI')
+        return None, None
+    tiff = download_geotiff(get_pre_signed_url('VMI', last['time']))
+    if not tiff:
+        return None, None
+
+    cx_tm, cy_tm = _wgs84_to_tm.transform(area['centroid']['lon'], area['centroid']['lat'])
+
+    try:
+        with rasterio.open(io.BytesIO(tiff)) as src:
+            row, col = src.index(cx_tm, cy_tm)
+            pixel_size = abs(src.transform.a)
+            buffer_px = max(1, int(buffer_km * 1000 / pixel_size))
+            win = Window(col - buffer_px, row - buffer_px, 2 * buffer_px, 2 * buffer_px)
+            win = win.intersection(Window(0, 0, src.width, src.height))
+            data = src.read(1, window=win)
+            nodata = src.nodata if src.nodata is not None else -9999
+    except Exception as e:
+        log.warning(f'  VMI read fallito: {e}')
+        return None, None
+
+    valid = data[(data != nodata) & np.isfinite(data) & (data > -900) & (data < 1000)]
+    if valid.size == 0:
+        return {'max_dbz': None, 'pct_strong': 0.0, 'buffer_km': buffer_km,
+                'timestamp_utc': datetime.fromtimestamp(last['time']/1000, tz=timezone.utc)
+                                          .isoformat().replace('+00:00','Z')}, []
+
+    max_dbz = float(np.max(valid))
+    # Percentuale pixel sopra soglia minima (warning) per misurare "estensione"
+    min_thr = min(t['value_dbz'] for t in dbz_thresholds) if dbz_thresholds else 35
+    pct_strong = float(np.sum(valid >= min_thr) / valid.size * 100)
+
+    summary = {
+        'max_dbz':       max_dbz,
+        'pct_strong':    pct_strong,
+        'buffer_km':     buffer_km,
+        'timestamp_utc': datetime.fromtimestamp(last['time']/1000, tz=timezone.utc)
+                                  .isoformat().replace('+00:00','Z'),
+    }
+
+    triggers = []
+    for th in sorted(dbz_thresholds, key=lambda x: x['value_dbz']):
+        if max_dbz >= th['value_dbz']:
+            triggers.append({**th, 'observed_dbz': max_dbz})
+    return summary, triggers
+
+
+def evaluate_storm_triggers(area, triggers, state, now_iso, anti_spam_min):
+    """Anti-spam per nowcasting radar (chiave: area:storm:level)."""
+    new_triggers = []
+    for tr in triggers:
+        key = f"{area['name']}:storm:{tr['level']}"
+        st = state.get(key, {'active': False, 'last_trigger_utc': None, 'last_below_utc': None})
+        if not st['active']:
+            st['active'] = True
+            st['last_trigger_utc'] = now_iso
+            new_triggers.append(tr)
+        state[key] = st
+    # Riarmo soglie storm non più triggerate in questo run
+    levels_now = {t['level'] for t in triggers}
+    for key in list(state.keys()):
+        if not key.startswith(f"{area['name']}:storm:"): continue
+        lv = key.rsplit(':', 1)[1]
+        if lv not in levels_now and state[key].get('active'):
+            if not state[key].get('last_below_utc'):
+                state[key]['last_below_utc'] = now_iso
+            else:
+                last_below = datetime.fromisoformat(state[key]['last_below_utc'].replace('Z','+00:00'))
+                now_dt = datetime.fromisoformat(now_iso.replace('Z','+00:00'))
+                if (now_dt - last_below).total_seconds() >= anti_spam_min * 60:
+                    state[key] = {'active': False, 'last_trigger_utc': None, 'last_below_utc': None}
+    return new_triggers
+
+
+def compose_messages_storm(area, trigger, summary, wind):
+    """Compone messaggi per nowcasting radar (cella convettiva nei dintorni)."""
+    label = area['label']
+    lvl   = trigger['level']
+    icon  = trigger['icon']
+    dbz   = trigger['observed_dbz']
+    thr   = trigger['value_dbz']
+    pct   = summary['pct_strong']
+    buf   = summary['buffer_km']
+
+    wind_str = ''
+    if wind and wind.get('direction_deg') is not None:
+        wind_str = f"Vento attuale: da {_bearing_to_compass(wind['direction_deg'])} ({wind['direction_deg']:.0f}°), {wind.get('speed_kmh', '?')} km/h.\n"
+
+    text = (
+        f"⛈️ TEMPORALE NEI DINTORNI — {label} — {lvl.upper()}\n\n"
+        f"Riflettività VMI radar DPC entro {buf} km dal centroide:\n"
+        f"  • Max osservato: {dbz:.1f} dBZ (soglia {thr} dBZ)\n"
+        f"  • Pixel sopra soglia: {pct:.1f}% del buffer\n\n"
+        f"{wind_str}"
+        f"Sorgente: VMI Protezione Civile (timestamp {summary['timestamp_utc']})\n"
+    )
+    md = (
+        f"{icon} *TEMPORALE — {label}*\n"
+        f"Livello: *{lvl.upper()}* (radar DPC)\n"
+        f"VMI max: *{dbz:.1f} dBZ* in {buf} km · soglia {thr}\n"
+        f"Estensione: {pct:.1f}% pixel\n"
+    )
+    if wind:
+        md += f"\nVento: da {_bearing_to_compass(wind['direction_deg'])} ({wind.get('speed_kmh','?')} km/h)"
+
+    color = {'warning': '#e0a800', 'alarm': '#e85e2c', 'emergency': '#c41e3a'}.get(lvl, '#888')
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px">
+      <div style="background:{color};color:white;padding:12px 18px;border-radius:6px 6px 0 0">
+        <h2 style="margin:0">⛈️ {label} — {lvl.upper()} <span style="font-size:14px;font-weight:normal">(nowcast radar)</span></h2>
+      </div>
+      <div style="border:1px solid #ddd;border-top:0;padding:18px;border-radius:0 0 6px 6px">
+        <p>VMI radar DPC entro <b>{buf} km</b> dal centroide:</p>
+        <ul>
+          <li>Max riflettività: <b>{dbz:.1f} dBZ</b> (soglia {thr} dBZ)</li>
+          <li>Pixel sopra soglia: <b>{pct:.1f}%</b></li>
+        </ul>
+        {f'<p>{wind_str}</p>' if wind_str else ''}
+        <p style="font-size:11px;color:#888">Timestamp: {summary['timestamp_utc']}</p>
+      </div>
+    </div>
+    """
+    subject = f"⛈️ {label} — TEMPORALE {lvl.upper()} VMI {dbz:.0f} dBZ entro {buf}km"
+    return subject, text, html, md
+
 
 def fetch_forecast(lat, lon, hours=6):
     """
@@ -267,6 +432,24 @@ def update_last_observation(file, area_name, product, ts_iso, stats):
         'mean':  round(stats['mean'], 3),
         'max':   round(stats['max'],  3),
         'count': stats['count'],
+        'updated_at_utc': datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z'),
+    }
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+
+def update_storm_observation(file, area_name, summary):
+    """Aggiunge il nowcasting VMI all'osservazione last per il frontend."""
+    data = {}
+    if file.exists():
+        try: data = json.loads(file.read_text())
+        except Exception: data = {}
+    data.setdefault(area_name, {})
+    data[area_name]['VMI_nowcast'] = {
+        'timestamp_utc': summary.get('timestamp_utc'),
+        'max_dbz':       summary.get('max_dbz'),
+        'pct_strong':    summary.get('pct_strong'),
+        'buffer_km':     summary.get('buffer_km'),
         'updated_at_utc': datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z'),
     }
     file.parent.mkdir(parents=True, exist_ok=True)
@@ -527,6 +710,7 @@ def process_area(area, archive_dir, events_writer):
         products_cfg = {prod_name: {'thresholds': mon.get('thresholds', [])}}
 
     state_file = archive_dir / 'state' / 'monitor_state.json'
+    last_obs_file = archive_dir / 'data' / 'last_observations.json'
     state = load_state(state_file)
     now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
 
@@ -562,7 +746,6 @@ def process_area(area, archive_dir, events_writer):
         log.info(f'  {product} {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm')
 
         # Salva ultima osservazione (anche se nessuna soglia attiva → frontend lo legge)
-        last_obs_file = archive_dir / 'data' / 'last_observations.json'
         update_last_observation(last_obs_file, area['name'], product, ts_iso, stats)
 
         metric_value = stats[metric]
@@ -628,6 +811,42 @@ def process_area(area, archive_dir, events_writer):
                 'note':                      f"forecast {tr['horizon']}",
             })
             log.info(f"  ✓ forecast trigger {tr['product']}/{tr['level']}: email={email_status} telegram={tg_status}")
+
+    # ─── Nowcasting radar (VMI nei dintorni) ─────────────────────────────────
+    nowcast_cfg = mon.get('nowcast_radar', {})
+    if nowcast_cfg.get('enabled'):
+        buf_km = nowcast_cfg.get('buffer_km', 25)
+        dbz_ths = nowcast_cfg.get('thresholds', [])
+        if dbz_ths:
+            log.info(f'[{area["label"]}] nowcasting VMI (buffer {buf_km}km)')
+            storm_summary, raw_triggers = check_nearby_storm(area, buf_km, dbz_ths)
+            if storm_summary:
+                # Salva anche nowcasting in last_observations.json
+                update_storm_observation(last_obs_file, area['name'], storm_summary)
+
+                if raw_triggers:
+                    fc_triggers = evaluate_storm_triggers(area, raw_triggers, state, now_iso, anti_spam)
+                    if fc_triggers:
+                        wind = fetch_wind(area['centroid']['lat'], area['centroid']['lon'])
+                        for tr in fc_triggers:
+                            subject, text, html, md = compose_messages_storm(area, tr, storm_summary, wind)
+                            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
+                            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+                            events_writer.writerow({
+                                'event_timestamp_utc':       now_iso,
+                                'area_name':                 area['name'],
+                                'level':                     'storm_' + tr['level'],
+                                'threshold_mm':              tr['value_dbz'],
+                                'observed_mm_mean':          f"{tr['observed_dbz']:.2f}",
+                                'observed_mm_max':           f"{tr['observed_dbz']:.2f}",
+                                'product':                   'VMI',
+                                'observation_timestamp_utc': storm_summary['timestamp_utc'],
+                                'forecast_max_6h_mm':        '',
+                                'notified_email':            email_status,
+                                'notified_telegram':         tg_status,
+                                'note':                      f"nowcast buffer={buf_km}km pct_strong={storm_summary['pct_strong']:.1f}%",
+                            })
+                            log.info(f"  ✓ storm trigger {tr['level']} ({tr['observed_dbz']:.1f} dBZ): email={email_status} telegram={tg_status}")
 
     save_state(state_file, state)
 
