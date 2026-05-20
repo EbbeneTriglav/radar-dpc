@@ -1,6 +1,6 @@
 name: Archive Radar Data
 
-# Esegue ogni giorno alle 05:00 UTC (07:00 italiane d'estate, 06:00 d'inverno)
+# Esegue ogni 6 ore (00:00, 06:00, 12:00, 18:00 UTC)
 # Scarica i dati radar DPC per le aree configurate e li archivia nel repo.
 #
 # Si può anche lanciare a mano dalla tab "Actions" → "Archive Radar Data" →
@@ -8,12 +8,12 @@ name: Archive Radar Data
 
 on:
   schedule:
-    - cron: '0 5 * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       days:
         description: 'Quanti giorni a ritroso recuperare (1-30, default 1)'
-        default: '1'
+        default: '2'
         type: string
       force:
         description: 'Sovrascrivi righe esistenti (default false)'
