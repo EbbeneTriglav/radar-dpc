@@ -561,7 +561,8 @@ const ArchiveTab = (() => {
       const area = _areasConfig.areas.find(a => a.name === _currentArea);
       if (area) {
         const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${area.centroid.lat}` +
-          `&longitude=${area.centroid.lon}&minutely_15=precipitation&forecast_minutes=1440&timezone=UTC`);
+          `&longitude=${area.centroid.lon}&minutely_15=precipitation&forecast_minutes=1440&timezone=UTC`,
+          { cache: 'no-cache' });
         const d = await r.json();
         const ts = d.minutely_15?.time || [];
         const pr = d.minutely_15?.precipitation || [];
@@ -605,13 +606,27 @@ const ArchiveTab = (() => {
     return {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(20,20,30,0.95)',
+          titleColor: '#fff', bodyColor: '#ddd', borderColor: '#444', borderWidth: 1,
+          callbacks: {
+            label: item => {
+              if (item.parsed.y == null) return null;
+              return `${item.dataset.label}: ${item.parsed.y.toFixed(2)} mm`;
+            },
+          },
+        },
+      },
       scales: {
         x: { ticks: { color: '#aaa', maxTicksLimit: 12, autoSkip: true },
              grid:  { color: 'rgba(255,255,255,0.05)' } },
         y: { title: { display: true, text: yLabel, color: '#aaa' },
              ticks: { color: '#aaa' },
-             grid:  { color: 'rgba(255,255,255,0.05)' } },
+             grid:  { color: 'rgba(255,255,255,0.05)' },
+             beginAtZero: true },
       },
     };
   }
