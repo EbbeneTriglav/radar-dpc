@@ -161,13 +161,19 @@ const ChartPanel = (() => {
   function downloadCSV() {
     const prod = CONFIG.PRODUCTS[_productType];
     const unit = prod?.unit ?? '';
-    const rows = [['Timestamp_UTC', 'Punto', 'Media_' + unit, 'Min_' + unit, 'Max_' + unit, 'Pixel_count']];
+    const points = LocationPanel.getPoints();
+    const rows = [['Timestamp_UTC', 'Nome_punto', 'Lat', 'Lon',
+                   'Media_' + unit, 'Min_' + unit, 'Max_' + unit, 'Pixel_count']];
 
     Object.entries(_history).forEach(([id, arr]) => {
+      const p = points.find(x => String(x.id) === String(id));
+      const label = p?.label?.replace(/^📍\s*/, '') ?? `point_${id}`;
+      const lat = p?.lat?.toFixed(6) ?? '';
+      const lon = p?.lon?.toFixed(6) ?? '';
       arr.forEach(d => {
         rows.push([
           new Date(d.ts).toISOString(),
-          id,
+          label, lat, lon,
           d.mean?.toFixed(3) ?? '',
           d.min?.toFixed(3) ?? '',
           d.max?.toFixed(3) ?? '',
@@ -176,7 +182,7 @@ const ChartPanel = (() => {
       });
     });
 
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     _downloadBlob(csv, `radar_${_productType}_${Date.now()}.csv`, 'text/csv');
   }
 
@@ -188,13 +194,22 @@ const ChartPanel = (() => {
     const prod = CONFIG.PRODUCTS[_productType];
     const unit = prod?.unit ?? '';
 
-    // Costruisci array di oggetti per SheetJS
-    const rows = [];
+    const points = LocationPanel.getPoints();
+    const wb = XLSX.utils.book_new();
+
+    // Sheet "Tutti" con tutti i dati e nome punto leggibile
+    const allRows = [];
     Object.entries(_history).forEach(([id, arr]) => {
+      const p = points.find(x => String(x.id) === String(id));
+      const label = p?.label?.replace(/^📍\s*/, '') ?? `point_${id}`;
+      const lat = p?.lat ?? null;
+      const lon = p?.lon ?? null;
       arr.forEach(d => {
-        rows.push({
+        allRows.push({
           'Timestamp UTC':      new Date(d.ts).toISOString(),
-          'Punto ID':           id,
+          'Nome punto':         label,
+          'Lat':                lat,
+          'Lon':                lon,
           [`Media (${unit})`]:  d.mean !== null ? +d.mean.toFixed(3) : null,
           [`Min (${unit})`]:    d.min  !== null ? +d.min.toFixed(3)  : null,
           [`Max (${unit})`]:    d.max  !== null ? +d.max.toFixed(3)  : null,
@@ -202,16 +217,28 @@ const ChartPanel = (() => {
         });
       });
     });
+    const wsAll = XLSX.utils.json_to_sheet(allRows);
+    wsAll['!cols'] = [{wch:24},{wch:18},{wch:11},{wch:11},{wch:13},{wch:13},{wch:13},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, wsAll, 'Tutti');
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
+    // 1 sheet per ogni punto (nome sheet = label, max 31 char per regola XLSX)
+    Object.entries(_history).forEach(([id, arr]) => {
+      const p = points.find(x => String(x.id) === String(id));
+      const label = p?.label?.replace(/^📍\s*/, '') ?? `point_${id}`;
+      const sheetName = label.replace(/[\\/?*:\[\]]/g, '').slice(0, 31) || `Punto_${id}`;
+      const rows = arr.map(d => ({
+        'Timestamp UTC':      new Date(d.ts).toISOString(),
+        [`Media (${unit})`]:  d.mean !== null ? +d.mean.toFixed(3) : null,
+        [`Min (${unit})`]:    d.min  !== null ? +d.min.toFixed(3)  : null,
+        [`Max (${unit})`]:    d.max  !== null ? +d.max.toFixed(3)  : null,
+        'N° pixel':           d.count ?? 0,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [{wch:24},{wch:13},{wch:13},{wch:13},{wch:10}];
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
 
-    // Larghezze colonne
-    ws['!cols'] = [
-      { wch: 24 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }
-    ];
-
-    // Foglio info prodotto
+    // Foglio info
     const infoRows = [
       { Campo: 'Prodotto',   Valore: _productType },
       { Campo: 'Unità',      Valore: unit },
@@ -219,10 +246,7 @@ const ChartPanel = (() => {
       { Campo: 'Generato',   Valore: new Date().toISOString() },
       { Campo: 'Fonte dati', Valore: 'Radar DPC — Protezione Civile Italiana' },
     ];
-    const wsInfo = XLSX.utils.json_to_sheet(infoRows);
-
-    XLSX.utils.book_append_sheet(wb, ws,     'Dati radar');
-    XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(infoRows), 'Info');
 
     XLSX.writeFile(wb, `radar_${_productType}_${Date.now()}.xlsx`);
     showToast('Excel scaricato ✅', 'success', 2500);
