@@ -101,7 +101,7 @@
   },
   "panna:forecast:CUM3:alarm": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-05-26T23:22:02Z",
     "last_trigger_utc": "2026-05-26T20:25:14Z"
   },
   "panna:forecast:CUM3:emergency": {
