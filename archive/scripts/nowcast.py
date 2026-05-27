@@ -11,6 +11,7 @@ Gira ogni 60 minuti (workflow nowcast.yml). Per ogni area monitorata:
   6. Stima vettore di spostamento confrontando 2 frame SRI consecutivi
   7. Stima probabilità di arrivo sul bacino (direzione del moto vs posizione)
   8. Se trigger: invia email + Telegram, logga in events.csv (level nowcast_*)
+  9. SEMPRE: salva osservazioni in last_observations.json (heartbeat)
 
 Soglie (uguali per tutte le aree):
   SRI (mm/h):  warning 10, alarm 15, emergency 25
@@ -195,7 +196,7 @@ def estimate_motion(tiff_now, tiff_prev, geom_tm, dt_minutes):
     """
     Stima direzione + velocità del moto confrontando il baricentro di riflettività
     di 2 frame SRI consecutivi dentro la geom buffer.
-    Ritorna (bearing_deg, speed_kmh, compass_from→to) o None.
+    Ritorna dict con bearing_deg, speed_kmh, compass oppure None.
     """
     def centroid_weighted(tiff):
         gj = mapping(geom_tm)
@@ -267,7 +268,7 @@ def arrival_probability(cell_xy_tm, motion, centroid_latlon, buffer_outer_km):
     return int(max(0, min(100, prob)))
 
 
-# ─── Notifiche (riuso semplificato) ──────────────────────────────────────────
+# ─── Notifiche ───────────────────────────────────────────────────────────────
 def send_email(subject, text, html=None):
     h, port = os.environ.get('SMTP_HOST'), int(os.environ.get('SMTP_PORT', '587'))
     u, pw, to = os.environ.get('SMTP_USER'), os.environ.get('SMTP_PASS'), os.environ.get('SMTP_TO')
@@ -310,6 +311,17 @@ def save_state(f, st):
     f.write_text(json.dumps(st, indent=2, sort_keys=True))
 
 
+# ─── Osservazioni (heartbeat — scritto ad OGNI run) ───────────────────────
+def update_nowcast_obs(file, all_obs):
+    """
+    Salva last_observations.json con le letture radar di OGNI area ad OGNI run.
+    Questo file fa da heartbeat: se il timestamp non si aggiorna, il sistema è fermo.
+    """
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(all_obs, indent=2, sort_keys=True, ensure_ascii=False))
+    log.info(f'  last_observations.json aggiornato ({len(all_obs) - 4} aree)')
+
+
 # ─── Composizione messaggi ───────────────────────────────────────────────────
 def compose(area, product, trigger, signal, motion, prob, buffer_km):
     label, lvl, icon = area['label'], trigger['level'], trigger['icon']
@@ -349,14 +361,27 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
 
 # ─── Elaborazione per area ───────────────────────────────────────────────────
 def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tiff, cum3_tiff):
-    """Valuta i buffer per un'area usando i tiff già scaricati (condivisi)."""
+    """
+    Valuta i buffer per un'area usando i tiff già scaricati (condivisi).
+    Ritorna un dict con le osservazioni per last_observations.json.
+    """
     centroid = area['centroid']
     channels = set(area.get('monitoring', {}).get('channels', ['email', 'telegram']))
-    triggered_any = False
+    triggered = False
+
+    # Raccolta osservazioni per heartbeat
+    obs = {
+        'timestamp_utc': now_iso,
+        'triggered': False,
+        'buffers': {},
+        'motion': None,
+    }
 
     for buf_km in BUFFERS_KM:
         inner = 0 if buf_km == BUFFERS_KM[0] else BUFFERS_KM[0]
         geom = ring_buffer_tm(area['polygon'], inner, buf_km)
+
+        buf_obs = {}
 
         # SRI (istantaneo)
         sri_now_ts, sri_now_tiff = sri_frames[0]
@@ -371,8 +396,16 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
             log.info(f'    buf {buf_km}km SRI max={sri_stat["max"]:.1f} mm/h, '
                      f'mean={sri_stat["mean"]:.2f} mm/h'
                      + (f', cum3_max={cum3_stat["max"]:.1f} mm' if cum3_stat else ''))
-            _eval_product(area, 'SRI', SRI_THRESHOLDS, sri_stat, geom, buf_km,
+
+            buf_obs['sri_max'] = round(sri_stat['max'], 2)
+            buf_obs['sri_mean'] = round(sri_stat['mean'], 2)
+            if cum3_stat:
+                buf_obs['cum3_max'] = round(cum3_stat['max'], 2)
+
+            was_triggered = _eval_product(area, 'SRI', SRI_THRESHOLDS, sri_stat, geom, buf_km,
                           sri_frames, centroid, state, now_iso, channels, writer)
+            if was_triggered:
+                triggered = True
 
         # SRT1 (1h)
         if srt1_tiff:
@@ -383,24 +416,48 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                     srt1_stat['cum3_max'] = cum3_stat['max']
                 log.info(f'    buf {buf_km}km SRT1 max={srt1_stat["max"]:.1f} mm/1h, '
                          f'mean={srt1_stat["mean"]:.2f} mm/1h')
-                _eval_product(area, 'SRT1', SRT1_THRESHOLDS, srt1_stat, geom, buf_km,
+
+                buf_obs['srt1_max'] = round(srt1_stat['max'], 2)
+                buf_obs['srt1_mean'] = round(srt1_stat['mean'], 2)
+
+                was_triggered = _eval_product(area, 'SRT1', SRT1_THRESHOLDS, srt1_stat, geom, buf_km,
                               None, centroid, state, now_iso, channels, writer)
+                if was_triggered:
+                    triggered = True
+
+        obs['buffers'][f'{buf_km}km'] = buf_obs
+
+    # Stima moto (sul buffer esterno) — per le osservazioni
+    if len(sri_frames) >= 2:
+        outer_geom = ring_buffer_tm(area['polygon'], 0, BUFFERS_KM[-1])
+        dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
+        motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], outer_geom, dt_min)
+        if motion:
+            obs['motion'] = {
+                'compass': motion['compass'],
+                'speed_kmh': motion['speed_kmh'],
+                'bearing_deg': motion.get('bearing_deg'),
+            }
+
+    obs['triggered'] = triggered
+    return obs
 
 
 def _eval_product(area, product, thresholds, signal, geom, buf_km,
                   sri_frames, centroid, state, now_iso, channels, writer):
+    """Valuta soglie. Ritorna True se ha triggerato, False altrimenti."""
     # determina trigger massimo superato
     hit = None
     for th in sorted(thresholds, key=lambda x: x['value']):
         if signal['max'] >= th['value']:
             hit = th
     if not hit:
-        return
+        return False
 
     key = f"{area['name']}:nowcast:{product}:{buf_km}:{hit['level']}"
     st = state.get(key, {'active': False})
     if st.get('active'):
-        return  # anti-spam: già notificato, non ri-notifica finché attivo
+        return True  # già triggerato in precedenza, anti-spam
     state[key] = {'active': True, 'last_trigger_utc': now_iso}
 
     # moto + probabilità (solo per SRI che ha 2 frame)
@@ -425,17 +482,7 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
         'note': f"nowcast buffer={buf_km}km" + (f" moto={motion['compass']}/{motion['speed_kmh']}kmh" if motion and motion.get('bearing_deg') is not None else '') + (f" prob={prob}%" if prob is not None else ''),
     })
     log.info(f"  ✓ nowcast {product}/{hit['level']} buf{buf_km}: {signal['max']:.1f} email={em} tg={tg}")
-
-
-def update_nowcast_obs(file, area_name, signals):
-    data = {}
-    if file.exists():
-        try: data = json.loads(file.read_text())
-        except Exception: data = {}
-    data.setdefault(area_name, {})
-    data[area_name]['nowcast'] = signals
-    file.parent.mkdir(parents=True, exist_ok=True)
-    file.write_text(json.dumps(data, indent=2, sort_keys=True))
+    return True
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -480,7 +527,7 @@ def main():
             srt1_tiff = (srt1_times[0], srt1_bytes)
             log.info(f'    SRT1 → OK ({len(srt1_bytes):,} bytes)')
         else:
-            log.warning(f'    SRT1 → DOWNLOAD FALLITO')
+            log.warning('    SRT1 → DOWNLOAD FALLITO')
 
     # CUM3 — cumulata 3h
     cum3_times = get_last_products('CUM3', n=1)
@@ -491,7 +538,7 @@ def main():
             cum3_tiff = cum3_bytes
             log.info(f'    CUM3 → OK ({len(cum3_bytes):,} bytes)')
         else:
-            log.warning(f'    CUM3 → DOWNLOAD FALLITO')
+            log.warning('    CUM3 → DOWNLOAD FALLITO')
 
     # Riepilogo download
     log.info(f'  Riepilogo: SRI frames={len(sri_frames)}/2, '
@@ -506,6 +553,17 @@ def main():
     state = load_state(state_file)
     now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z')
 
+    # Heartbeat: aggiorna sempre il timestamp dell'ultimo run
+    state['_last_run_utc'] = now_iso
+
+    # Struttura osservazioni (scritto SEMPRE)
+    all_obs = {
+        '_last_run_utc': now_iso,
+        '_sri_frames': len(sri_frames),
+        '_srt1_available': srt1_tiff is not None,
+        '_cum3_available': cum3_tiff is not None,
+    }
+
     events_file = archive_dir / 'data' / 'events.csv'
     write_header = not events_file.exists()
     with open(events_file, 'a', newline='', encoding='utf-8') as f:
@@ -514,12 +572,19 @@ def main():
         for area in enabled:
             log.info(f'[{area["label"]}] nowcast buffer {BUFFERS_KM} km')
             try:
-                process_area(area, archive_dir, writer, state, now_iso,
+                obs = process_area(area, archive_dir, writer, state, now_iso,
                              sri_frames, srt1_tiff, cum3_tiff)
+                all_obs[area['name']] = obs
             except Exception as e:
                 log.error(f'  errore: {e}', exc_info=True)
+                all_obs[area['name']] = {'error': str(e), 'timestamp_utc': now_iso}
 
+    # ── Salva state e osservazioni ──
     save_state(state_file, state)
+
+    obs_file = archive_dir / 'data' / 'last_observations.json'
+    update_nowcast_obs(obs_file, all_obs)
+
     log.info('Done.')
     return 0
 
