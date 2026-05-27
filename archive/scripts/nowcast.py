@@ -11,7 +11,7 @@ Gira ogni 60 minuti (workflow nowcast.yml). Per ogni area monitorata:
   6. Stima vettore di spostamento confrontando 2 frame SRI consecutivi
   7. Stima probabilità di arrivo sul bacino (direzione del moto vs posizione)
   8. Se trigger: invia email + Telegram, logga in events.csv (level nowcast_*)
-  9. SEMPRE: salva osservazioni in last_observations.json (heartbeat)
+  9. SEMPRE: mergia osservazioni nowcast in last_observations.json (heartbeat)
 
 Soglie (uguali per tutte le aree):
   SRI (mm/h):  warning 10, alarm 15, emergency 25
@@ -311,15 +311,45 @@ def save_state(f, st):
     f.write_text(json.dumps(st, indent=2, sort_keys=True))
 
 
-# ─── Osservazioni (heartbeat — scritto ad OGNI run) ───────────────────────
+# ─── Osservazioni (heartbeat — MERGE con dati esistenti ad OGNI run) ──────
 def update_nowcast_obs(file, all_obs):
     """
-    Salva last_observations.json con le letture radar di OGNI area ad OGNI run.
-    Questo file fa da heartbeat: se il timestamp non si aggiorna, il sistema è fermo.
+    Aggiorna last_observations.json MERGENDO i dati nowcast con quelli esistenti.
+
+    Il file è condiviso con altri script (monitor/forecast) che scrivono
+    CUM3, SRT1, forecast, ecc. Il nowcast aggiunge/aggiorna SOLO:
+      - chiavi globali: _nowcast_last_run_utc, _nowcast_sri_frames, ...
+      - per ogni area: area['nowcast'] = { buffers, motion, triggered, ... }
+    Tutto il resto (CUM3, SRT1, forecast) viene preservato.
     """
+    # Leggi dati esistenti
+    existing = {}
+    if file.exists():
+        try:
+            existing = json.loads(file.read_text())
+        except Exception:
+            existing = {}
+
+    # Aggiorna metadati nowcast (prefisso _nowcast_ per non confliggere)
+    existing['_nowcast_last_run_utc'] = all_obs.get('_last_run_utc', '')
+    existing['_nowcast_sri_frames'] = all_obs.get('_sri_frames', 0)
+    existing['_nowcast_srt1_available'] = all_obs.get('_srt1_available', False)
+    existing['_nowcast_cum3_available'] = all_obs.get('_cum3_available', False)
+
+    # Per ogni area, mergia sotto la chiave "nowcast"
+    for key, value in all_obs.items():
+        if key.startswith('_'):
+            continue  # skip metadati, già gestiti sopra
+        # key è il nome area (es. "ruspino", "panna", "cepina")
+        if key not in existing:
+            existing[key] = {}
+        existing[key]['nowcast'] = value
+
+    # Scrivi il file
     file.parent.mkdir(parents=True, exist_ok=True)
-    file.write_text(json.dumps(all_obs, indent=2, sort_keys=True, ensure_ascii=False))
-    log.info(f'  last_observations.json aggiornato ({len(all_obs) - 4} aree)')
+    file.write_text(json.dumps(existing, indent=2, sort_keys=True, ensure_ascii=False))
+    area_count = sum(1 for k in all_obs if not k.startswith('_'))
+    log.info(f'  last_observations.json aggiornato (nowcast per {area_count} aree, dati esistenti preservati)')
 
 
 # ─── Composizione messaggi ───────────────────────────────────────────────────
@@ -556,7 +586,7 @@ def main():
     # Heartbeat: aggiorna sempre il timestamp dell'ultimo run
     state['_last_run_utc'] = now_iso
 
-    # Struttura osservazioni (scritto SEMPRE)
+    # Struttura osservazioni nowcast (verrà mergiata nel file esistente)
     all_obs = {
         '_last_run_utc': now_iso,
         '_sri_frames': len(sri_frames),
