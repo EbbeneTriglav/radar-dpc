@@ -125,8 +125,8 @@
     "last_trigger_utc": null
   },
   "panna:forecast:SRT1:warning": {
-    "active": true,
-    "last_below_utc": "2026-05-27T10:54:51Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-05-26T18:08:09Z"
   },
   "panna:warning": {
@@ -190,8 +190,8 @@
     "last_trigger_utc": null
   },
   "ruspino:forecast:SRT1:warning": {
-    "active": true,
-    "last_below_utc": "2026-05-27T10:54:48Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-05-27T10:18:51Z"
   }
 }
