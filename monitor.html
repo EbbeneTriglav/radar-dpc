@@ -343,6 +343,21 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
     valueHtml = `<div class="mon-na">In attesa primo aggiornamento dal workflow…</div>`;
   }
 
+  // Riga forecast: OpenMeteo + MET Norway (dal last_observations.forecast)
+  let fcHtml = '';
+  const fc = _lastObs[area.name]?.forecast;
+  if (fc) {
+    const key = prod === 'SRT1' ? 'max_1h' : 'max_3h';
+    const om = fc.openmeteo?.[key];
+    const mt = fc.metno?.[key];
+    const fmt = v => (v == null ? '—' : v.toFixed(1));
+    const both = (om != null && mt != null);
+    fcHtml = `<div class="mon-subtle" style="margin-top:4px">
+      🔮 forecast ${prod === 'SRT1' ? '1h' : '3h'}: OM <b>${fmt(om)}</b> · MET <b>${fmt(mt)}</b> mm
+      ${both ? '<span style="color:#82b1ff">· 2 modelli ✓</span>' : '<span style="color:#888">· in attesa MET</span>'}
+    </div>`;
+  }
+
   const tags = thresholds.map(t => {
     const active = recentEvents.some(e => e.product === prod && e.level.replace('forecast_','') === t.level);
     return `<span class="mon-thresh-tag ${active?'active':''}">${t.icon} ${t.level} ≥ ${t.value_mm}</span>`;
@@ -359,6 +374,7 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
     <div class="mon-panel">
       <h3>${prod} <span class="pill">${prod === 'SRT1' ? '1h reali' : '3h reali'}</span></h3>
       ${valueHtml}
+      ${fcHtml}
       <div class="mon-thresh-list">${tags}</div>
       ${isEditing ? `<div class="mon-edit-row">${editor}</div>` : ''}
     </div>
