@@ -24,6 +24,7 @@ import io
 import json
 import logging
 import os
+import re
 import smtplib
 import sys
 import time
@@ -74,6 +75,7 @@ _session = requests.Session()
 _session.headers.update({'User-Agent': UA, 'Accept': '*/*'})
 
 
+# ─── HTTP helper ─────────────────────────────────────────────────────────────
 def _http(method, url, **kw):
     kw.setdefault('timeout', HTTP_TIMEOUT)
     for attempt in range(3):
@@ -87,31 +89,72 @@ def _http(method, url, **kw):
     return None
 
 
+# ─── Prodotti radar DPC ──────────────────────────────────────────────────────
 def get_last_products(product_type, n=2):
-    """Ritorna gli ultimi n timestamp (ms) disponibili per il prodotto."""
-    r = _http('GET', f'{DPC_API}/findLastProductByType', params={'type': product_type})
+    """
+    Ritorna gli ultimi n timestamp (ms) disponibili per il prodotto.
+
+    L'API DPC (findLastProductByType) restituisce solo l'ULTIMO prodotto.
+    Per ottenere n frame calcoliamo i timestamp precedenti usando il periodo
+    di aggiornamento del prodotto (es. PT5M per SRI → ogni 5 minuti).
+    """
+    r = _http('GET', f'{DPC_API}/findLastProductByType',
+              params={'type': product_type})
     if not r or not r.ok:
+        log.warning(f'  findLastProductByType({product_type}) fallito: '
+                    f'status={r.status_code if r else "None"}')
         return []
-    items = r.json().get('lastProducts', [])
-    times = sorted([it['time'] for it in items], reverse=True)
-    return times[:n]
+
+    data = r.json()
+    items = data.get('lastProducts', [])
+    if not items:
+        log.warning(f'  findLastProductByType({product_type}): nessun prodotto')
+        return []
+
+    latest_ts = items[0]['time']
+    period_str = items[0].get('period', 'PT5M')
+
+    # Parsing ISO-8601 durata → minuti  (PT5M → 5, PT1H → 60, PT60M → 60)
+    m_h = re.search(r'(\d+)H', period_str)
+    m_m = re.search(r'(\d+)M', period_str)
+    step_min = (int(m_h.group(1)) * 60 if m_h else 0) + \
+               (int(m_m.group(1)) if m_m else 0)
+    if step_min == 0:
+        step_min = 5  # fallback SRI default
+
+    step_ms = step_min * 60 * 1000
+    timestamps = [latest_ts - i * step_ms for i in range(n)]
+
+    ts_labels = [datetime.fromtimestamp(t / 1000, tz=timezone.utc).strftime('%H:%M:%S') for t in timestamps]
+    log.info(f'  {product_type}: ultimo={ts_labels[0]}, periodo={period_str}, '
+             f'timestamps richiesti={ts_labels}')
+
+    return timestamps
 
 
 def download_tiff(product_type, ts_ms):
+    """Scarica il GeoTIFF per un prodotto e timestamp specifici."""
     r = _http('POST', f'{DPC_API}/downloadProduct',
               json={'productType': product_type, 'productDate': ts_ms},
               headers={'Content-Type': 'application/json'})
     if not r or not r.ok:
+        log.warning(f'  downloadProduct({product_type}, {ts_ms}) → '
+                    f'HTTP {r.status_code if r else "None"}')
         return None
     url = r.json().get('url')
     if not url:
+        log.warning(f'  downloadProduct({product_type}, {ts_ms}) → nessun URL nella risposta')
         return None
     rr = _http('GET', url)
     if not rr or not rr.ok or len(rr.content) < 256:
+        log.warning(f'  download GeoTIFF {product_type} {ts_ms} → '
+                    f'status={rr.status_code if rr else "None"}, '
+                    f'size={len(rr.content) if rr else 0}')
         return None
     return rr.content
 
 
+# ─── Geometria ───────────────────────────────────────────────────────────────
 def ring_buffer_tm(polygon_latlon, inner_km, outer_km):
     """Anello buffer (corona) tra inner_km e outer_km dal bordo, in coordinate TM."""
     poly_wgs = Polygon([(lon, lat) for lat, lon in polygon_latlon])
@@ -147,6 +190,7 @@ def stats_in_geom_tm(tiff_bytes, geom_tm):
             'max_lat': lat, 'max_lon': lon, 'max_xy_tm': (x_tm, y_tm)}
 
 
+# ─── Stima moto ─────────────────────────────────────────────────────────────
 def estimate_motion(tiff_now, tiff_prev, geom_tm, dt_minutes):
     """
     Stima direzione + velocità del moto confrontando il baricentro di riflettività
@@ -266,6 +310,7 @@ def save_state(f, st):
     f.write_text(json.dumps(st, indent=2, sort_keys=True))
 
 
+# ─── Composizione messaggi ───────────────────────────────────────────────────
 def compose(area, product, trigger, signal, motion, prob, buffer_km):
     label, lvl, icon = area['label'], trigger['level'], trigger['icon']
     thr, val = trigger['value'], signal['max']
@@ -302,6 +347,7 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
     return subject, text, md
 
 
+# ─── Elaborazione per area ───────────────────────────────────────────────────
 def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tiff, cum3_tiff):
     """Valuta i buffer per un'area usando i tiff già scaricati (condivisi)."""
     centroid = area['centroid']
@@ -322,6 +368,9 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
             sri_stat['ts_iso'] = datetime.fromtimestamp(sri_now_ts/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
             if cum3_stat:
                 sri_stat['cum3_max'] = cum3_stat['max']
+            log.info(f'    buf {buf_km}km SRI max={sri_stat["max"]:.1f} mm/h, '
+                     f'mean={sri_stat["mean"]:.2f} mm/h'
+                     + (f', cum3_max={cum3_stat["max"]:.1f} mm' if cum3_stat else ''))
             _eval_product(area, 'SRI', SRI_THRESHOLDS, sri_stat, geom, buf_km,
                           sri_frames, centroid, state, now_iso, channels, writer)
 
@@ -332,6 +381,8 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                 srt1_stat['ts_iso'] = datetime.fromtimestamp(srt1_tiff[0]/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
                 if cum3_stat:
                     srt1_stat['cum3_max'] = cum3_stat['max']
+                log.info(f'    buf {buf_km}km SRT1 max={srt1_stat["max"]:.1f} mm/1h, '
+                         f'mean={srt1_stat["mean"]:.2f} mm/1h')
                 _eval_product(area, 'SRT1', SRT1_THRESHOLDS, srt1_stat, geom, buf_km,
                               None, centroid, state, now_iso, channels, writer)
 
@@ -387,6 +438,7 @@ def update_nowcast_obs(file, area_name, signals):
     file.write_text(json.dumps(data, indent=2, sort_keys=True))
 
 
+# ─── Main ────────────────────────────────────────────────────────────────────
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -404,21 +456,52 @@ def main():
     if not enabled:
         log.info('Nessuna area attiva.'); return 0
 
-    # Scarica i prodotti UNA volta (condivisi tra tutte le aree)
+    # ── Scarica i prodotti UNA volta (condivisi tra tutte le aree) ──
     log.info('Download prodotti radar (SRI×2, SRT1, CUM3)…')
+
+    # SRI — 2 frame per stima moto
     sri_times = get_last_products('SRI', n=2)
-    sri_frames = [(t, download_tiff('SRI', t)) for t in sri_times]
-    sri_frames = [(t, b) for t, b in sri_frames if b]
+    sri_frames = []
+    for t in sri_times:
+        tiff = download_tiff('SRI', t)
+        ts_label = datetime.fromtimestamp(t / 1000, tz=timezone.utc).strftime('%H:%M:%S')
+        if tiff:
+            sri_frames.append((t, tiff))
+            log.info(f'    SRI {ts_label} → OK ({len(tiff):,} bytes)')
+        else:
+            log.warning(f'    SRI {ts_label} → DOWNLOAD FALLITO')
+
+    # SRT1 — cumulata 1h
     srt1_times = get_last_products('SRT1', n=1)
-    srt1_tiff = (srt1_times[0], download_tiff('SRT1', srt1_times[0])) if srt1_times else None
-    if srt1_tiff and not srt1_tiff[1]: srt1_tiff = None
+    srt1_tiff = None
+    if srt1_times:
+        srt1_bytes = download_tiff('SRT1', srt1_times[0])
+        if srt1_bytes:
+            srt1_tiff = (srt1_times[0], srt1_bytes)
+            log.info(f'    SRT1 → OK ({len(srt1_bytes):,} bytes)')
+        else:
+            log.warning(f'    SRT1 → DOWNLOAD FALLITO')
+
+    # CUM3 — cumulata 3h
     cum3_times = get_last_products('CUM3', n=1)
-    cum3_tiff = download_tiff('CUM3', cum3_times[0]) if cum3_times else None
+    cum3_tiff = None
+    if cum3_times:
+        cum3_bytes = download_tiff('CUM3', cum3_times[0])
+        if cum3_bytes:
+            cum3_tiff = cum3_bytes
+            log.info(f'    CUM3 → OK ({len(cum3_bytes):,} bytes)')
+        else:
+            log.warning(f'    CUM3 → DOWNLOAD FALLITO')
+
+    # Riepilogo download
+    log.info(f'  Riepilogo: SRI frames={len(sri_frames)}/2, '
+             f'SRT1={"OK" if srt1_tiff else "MANCANTE"}, '
+             f'CUM3={"OK" if cum3_tiff else "MANCANTE"}')
 
     if not sri_frames:
         log.warning('Nessun frame SRI disponibile, esco.'); return 0
-    log.info(f'  SRI frames: {len(sri_frames)}, SRT1: {bool(srt1_tiff)}, CUM3: {bool(cum3_tiff)}')
 
+    # ── Elaborazione aree ──
     state_file = archive_dir / 'state' / 'nowcast_state.json'
     state = load_state(state_file)
     now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z')
