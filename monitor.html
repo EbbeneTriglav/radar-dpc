@@ -400,16 +400,33 @@ async function loadChart(area){
     omSeries = times.map((t, i) => ({ ts: new Date(t + 'Z').getTime(), v: prec[i] || 0 }));
   } catch (e) { console.warn('OM fetch err', area.name, e); }
 
+  // MET Norway forecast (granularità oraria)
+  let metSeries = [];
+  try {
+    const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact` +
+      `?lat=${area.centroid.lat.toFixed(4)}&lon=${area.centroid.lon.toFixed(4)}`, { cache: 'no-cache' });
+    const data = await r.json();
+    const ts = data.properties?.timeseries || [];
+    metSeries = ts.map(e => {
+      const det = e.data?.next_1_hours?.details;
+      if (!det || det.precipitation_amount == null) return null;
+      return { ts: new Date(e.time).getTime(), v: det.precipitation_amount };
+    }).filter(Boolean);
+  } catch (e) { console.warn('MET fetch err', area.name, e); }
+
   // Unifica timeline
   const allTs = new Set();
   dpcSeries.forEach(d => allTs.add(d.ts));
   omSeries.forEach(d => allTs.add(d.ts));
+  metSeries.forEach(d => allTs.add(d.ts));
   const tsList = [...allTs].sort((a, b) => a - b);
   const labels = tsList.map(t => Timezone.formatShort(t));
   const dpcMap = new Map(dpcSeries.map(d => [d.ts, d.v]));
   const omMap  = new Map(omSeries.map(d => [d.ts, d.v]));
+  const metMap = new Map(metSeries.map(d => [d.ts, d.v]));
   const dpcData = tsList.map(t => dpcMap.has(t) ? dpcMap.get(t) : null);
   const omData  = tsList.map(t => omMap.has(t) ? omMap.get(t) : null);
+  const metData = tsList.map(t => metMap.has(t) ? metMap.get(t) : null);
   const nowMs = Date.now();
 
   if (_charts[area.name]) _charts[area.name].destroy();
@@ -426,6 +443,9 @@ async function loadChart(area){
             borderDash: ctx => (tsList[ctx.p1DataIndex] > nowMs) ? [5, 4] : undefined,
           },
         },
+        { type: 'line', label: 'MET Norway (forecast)',
+          data: metData, borderColor: '#ff9f6b', backgroundColor: 'transparent',
+          tension: 0.3, pointRadius: 2, borderDash: [3, 3], fill: false, spanGaps: true },
       ],
     },
     options: {
