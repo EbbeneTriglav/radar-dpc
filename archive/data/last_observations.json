@@ -1,0 +1,86 @@
+{
+  "cepina": {
+    "CUM3": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:30:00Z",
+      "updated_at_utc": "2026-05-27T10:59:37Z"
+    },
+    "SRT1": {
+      "count": 1,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:50:00Z",
+      "updated_at_utc": "2026-05-27T10:59:37Z"
+    },
+    "forecast": {
+      "horizon_hours": 6,
+      "metno": {
+        "max_1h": 1.8,
+        "max_3h": 2.8
+      },
+      "openmeteo": {
+        "max_1h": 0.8,
+        "max_3h": 1.2
+      },
+      "updated_at_utc": "2026-05-27T10:59:36Z"
+    }
+  },
+  "panna": {
+    "CUM3": {
+      "count": 13,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:30:00Z",
+      "updated_at_utc": "2026-05-27T10:59:36Z"
+    },
+    "SRT1": {
+      "count": 1,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:50:00Z",
+      "updated_at_utc": "2026-05-27T10:59:36Z"
+    },
+    "forecast": {
+      "horizon_hours": 6,
+      "metno": {
+        "max_1h": 0.1,
+        "max_3h": 0.1
+      },
+      "openmeteo": {
+        "max_1h": 1.3,
+        "max_3h": 2.2
+      },
+      "updated_at_utc": "2026-05-27T10:59:35Z"
+    }
+  },
+  "ruspino": {
+    "CUM3": {
+      "count": 16,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:30:00Z",
+      "updated_at_utc": "2026-05-27T10:59:34Z"
+    },
+    "SRT1": {
+      "count": 1,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-05-27T10:50:00Z",
+      "updated_at_utc": "2026-05-27T10:59:34Z"
+    },
+    "forecast": {
+      "horizon_hours": 6,
+      "metno": {
+        "max_1h": 0.0,
+        "max_3h": 0.0
+      },
+      "openmeteo": {
+        "max_1h": 1.7,
+        "max_3h": 1.8
+      },
+      "updated_at_utc": "2026-05-27T10:59:32Z"
+    }
+  }
+}
