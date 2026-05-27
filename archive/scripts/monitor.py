@@ -475,6 +475,25 @@ def update_last_observation(file, area_name, product, ts_iso, stats):
     file.write_text(json.dumps(data, indent=2, sort_keys=True))
 
 
+def update_forecast_observation(file, area_name, forecast, forecast_metno, now_iso):
+    """Salva i forecast OpenMeteo + MET Norway per il frontend."""
+    data = {}
+    if file.exists():
+        try: data = json.loads(file.read_text())
+        except Exception: data = {}
+    data.setdefault(area_name, {})
+    data[area_name]['forecast'] = {
+        'openmeteo':  {'max_1h': (forecast or {}).get('max_1h_next'),
+                       'max_3h': (forecast or {}).get('max_3h_next')},
+        'metno':      {'max_1h': (forecast_metno or {}).get('max_1h_next'),
+                       'max_3h': (forecast_metno or {}).get('max_3h_next')},
+        'horizon_hours': (forecast or forecast_metno or {}).get('horizon_hours', 6),
+        'updated_at_utc': now_iso,
+    }
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(data, indent=2, sort_keys=True))
+
+
 def update_storm_observation(file, area_name, summary):
     """Aggiunge il nowcasting VMI all'osservazione last per il frontend."""
     data = {}
@@ -511,17 +530,21 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
     for product, fc_om, fc_metno, horizon in pairs:
         if fc_om is None or product not in products_cfg:
             continue
-        for th in sorted(products_cfg[product]['thresholds'], key=lambda x: x['value_mm']):
+        ths = sorted(products_cfg[product]['thresholds'], key=lambda x: x['value_mm'])
+        # Livello più alto superato da ENTRAMBI i modelli (doppia conferma)
+        highest = None
+        for th in ths:
+            both = (fc_om >= th['value_mm']) and (fc_metno is not None and fc_metno >= th['value_mm'])
+            if both:
+                highest = th
+        # Gestione stato per ciascun livello (riarmo) ma trigger SOLO per il più alto
+        for th in ths:
             key = f"{area['name']}:forecast:{product}:{th['level']}"
             st = state.get(key, {'active': False, 'last_trigger_utc': None, 'last_below_utc': None})
-            threshold_mm = th['value_mm']
-            rearm_value  = threshold_mm * rearm_pct / 100.0
+            rearm_value = th['value_mm'] * rearm_pct / 100.0
+            is_this_highest = (highest is not None and th['level'] == highest['level'])
 
-            # DOPPIA CONFERMA: entrambi i modelli devono superare la soglia.
-            # Se MET Norway non disponibile (None), per prudenza NON triggera (evita falsi positivi).
-            both_confirm = (fc_om >= threshold_mm) and (fc_metno is not None and fc_metno >= threshold_mm)
-
-            if both_confirm:
+            if is_this_highest:
                 if not st['active']:
                     st['active'] = True
                     st['last_trigger_utc'] = now_iso
@@ -529,8 +552,9 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
                     triggers.append({**th, 'forecast': True, 'product': product,
                                      'horizon': horizon, 'forecast_value': fc_om,
                                      'forecast_metno': fc_metno})
-            elif fc_om < rearm_value:
-                if st['active']:
+            else:
+                # livelli non-massimi: gestisci solo il riarmo, niente trigger
+                if fc_om < rearm_value and st['active']:
                     if not st['last_below_utc']:
                         st['last_below_utc'] = now_iso
                     else:
@@ -539,8 +563,8 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
                         if (now_dt - last_below).total_seconds() >= anti_spam_min * 60:
                             st['active'] = False
                             st['last_below_utc'] = None
-            else:
-                st['last_below_utc'] = None
+                elif fc_om >= rearm_value:
+                    st['last_below_utc'] = None
             state[key] = st
     return triggers
 
@@ -843,6 +867,10 @@ def process_area(area, archive_dir, events_writer):
         forecast_metno = fetch_forecast_metno(area['centroid']['lat'], area['centroid']['lon'],
                                   hours=mon['forecast'].get('lookahead_hours', 6))
         forecast_done = True
+
+    # Salva i forecast (OpenMeteo + MET Norway) in last_observations per il frontend
+    if forecast or forecast_metno:
+        update_forecast_observation(last_obs_file, area['name'], forecast, forecast_metno, now_iso)
 
     if forecast:
         fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct)
