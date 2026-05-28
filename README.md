@@ -1,129 +1,184 @@
-# 📡 Radar DPC — Visualizzatore Meteo
+# 🌧️ Radar DPC — Piattaforma di monitoraggio e allertamento piogge
 
-Piattaforma web open source per la visualizzazione e l'analisi dei dati radar meteorologici della **Protezione Civile Italiana**, basata sull'[API REST DPC](https://dpc-radar.readthedocs.io/it/latest/).
+Piattaforma web per la visualizzazione dei dati radar della Protezione Civile
+Italiana (DPC), l'archiviazione storica e l'allertamento automatico via
+**email + Telegram** per aree di studio specifiche (bacini sorgentiferi).
 
-🔗 **Demo live**: `https://<tuo-username>.github.io/radar-dpc/`
-
----
-
-## ✨ Funzionalità
-
-### 🗺 Mappa Live (`index.html`)
-- **Overlay radar** su mappa interattiva (Leaflet + tile CARTO)
-- **20+ prodotti** disponibili: VMI, SRI, CUM3/6/12/24, CAPPI 1–10 km, VIL, ETM, POH, TEMP
-- **Animazione temporale** con play/pausa, slider, velocità regolabile
-- **Pre-fetch in background** degli ultimi 24 fotogrammi
-- **Scala colori** interpolata per ogni prodotto (dBZ, mm/h, mm, °C, …) con legenda dinamica
-- **Opacità** overlay regolabile
-
-### 📍 Punti di interesse
-- **Ricerca geocoding** via OpenStreetMap Nominatim (no API key)
-- **Inserimento coordinate** dirette (lat, lon)
-- **Click su mappa** per aggiungere punti (max 3 contemporanei)
-- **Buffer 2 km** — media statistica dei pixel nel raggio (Haversine)
-- Visualizzazione **statistiche** (media, min, max, numero pixel)
-
-### 📈 Grafico serie temporale
-- Confronto fino a **3 punti** sullo stesso grafico (Chart.js)
-- Export **CSV** dei dati estratti
-- Storico accumulato durante la navigazione
-
-### 🔔 Sistema allerte
-- **Soglie configurabili** warn/danger per prodotto (es. SRI >30 mm/h)
-- Notifiche visive nel pannello allerte
-- **Browser Notifications** (con consenso utente)
-- Log storico degli eventi
-
-### 📊 Storico dati (`storico.html`)
-- Selezione **range date** (max 90 giorni)
-- Download **CUM24 giornaliero** per i punti selezionati
-- Export **CSV** con data, media, min, max per ogni punto
-- Log di esecuzione in tempo reale
+🔗 **Live**: https://ebbenetriglav.github.io/radar-dpc/
 
 ---
 
-## 🚀 Deploy su GitHub Pages
+## Cosa fa
 
-### 1. Fork / Clone
-```bash
-git clone https://github.com/<tu>/radar-dpc.git
-cd radar-dpc
-```
+1. **Visualizza** i prodotti radar DPC in tempo reale su mappa interattiva.
+2. **Archivia** ogni giorno i dati di pioggia delle aree di studio, costruendo
+   un database storico nel repository.
+3. **Allerta** automaticamente quando la pioggia osservata o prevista supera
+   soglie configurabili, via email e Telegram.
 
-### 2. Abilita GitHub Pages
-- Vai su **Settings** → **Pages**
-- Seleziona **Source: GitHub Actions**
-- La pipeline `.github/workflows/pages.yml` si occupa del deploy automatico
-
-### 3. Push
-```bash
-git push origin main
-```
-
-Il sito sarà disponibile a `https://<username>.github.io/radar-dpc/` dopo qualche minuto.
+Gira **gratis** su GitHub Pages (frontend) + GitHub Actions (backend
+schedulato) + un Cloudflare Worker (proxy CORS per i dati S3 del DPC).
 
 ---
 
-## 🏗 Architettura
+## Le 4 pagine web
+
+| Pagina | File | Cosa mostra |
+|--------|------|-------------|
+| 🗺 **Mappa Live** | `index.html` | Overlay radar, player temporale, grafici per punto, export CSV/XLSX. Le 3 aree pre-caricate come punti. |
+| 📊 **Storico** | `storico.html` | Visualizzazione storica dei prodotti radar. |
+| 🗄 **Archivio** | `archivio.html` | Grafici CUM24/CUM3 archiviati, mini-mappa con arealizzazione IDW, overlay forecast OpenMeteo. |
+| 🚨 **Monitor** | `monitor.html` | Stato real-time aree: ultima osservazione, soglie editabili, grafici DPC+OpenMeteo+MET Norway, eventi. |
+
+---
+
+## Aree monitorate
+
+| Area | Località | Prodotti |
+|------|----------|----------|
+| **Ruspino** | Val Cavallina (BG), Lombardia | SRT1, CUM3 |
+| **Panna** | Mugello (FI), Toscana | SRT1, CUM3 + ensemble 24h |
+| **Cepina (Levissima)** | Valtellina (SO), Lombardia | SRT1, CUM3 |
+
+Definite in `archive/areas.json` con poligono del bacino, 5 vertici campione e
+configurazione `monitoring`.
+
+---
+
+## I 4 sistemi di allertamento
+
+### 1. 🔴 Monitoraggio osservato (`monitor.py`) — ogni 15 min
+Scarica ultimo **SRT1** (1h) e **CUM3** (3h), media sul poligono vs soglie.
+Allerta sulla pioggia **già caduta**.
+
+| Area | SRT1 (1h) warn/alarm/emerg | CUM3 (3h) warn/alarm/emerg |
+|------|-----------|-----------|
+| Ruspino | 10 / 20 / 30 | 15 / 30 / 50 |
+| Panna | 5 / 10 / 15 | 10 / 15 / 20 |
+| Cepina | 5 / 15 / 30 | 10 / 15 / 40 |
+
+Soglie editabili dal Monitor (**Modifica soglie**); per attivarle sulle
+notifiche, esportarle e committarle in `areas.json`.
+
+### 2. 🔮 Forecast 6h con doppia conferma (`monitor.py`)
+Confronta **OpenMeteo** e **MET Norway**. Alert solo se **ENTRAMBI** superano
+la soglia (1h→SRT1, 3h→CUM3): elimina i falsi positivi da singolo modello.
+Se più livelli scattano insieme, notifica solo il **più alto**.
+
+### 3. ⛈️ Nowcasting radar (`nowcast.py`) — ogni 60 min
+Il più affidabile per il preavviso immediato: usa **dati radar osservati**.
+Due anelli buffer (**5 km e 10 km dal bordo del poligono**) per rilevare celle
+in avvicinamento.
+- Soglie (tutte le aree): SRI 10/15/25 mm/h · SRT1 8/15/20 mm/1h
+- Calcola posizione cella, **direzione di moto** (8 punti cardinali) +
+  **velocità km/h** (2 frame SRI), **probabilità di arrivo** sul bacino.
+- Riporta intensità mm/h e cumulata 3h nel buffer.
+
+### 4. 📊 Ensemble forecast 24h pesato (`forecast_ensemble_alert.py`) — ogni 6h
+Specifico per **Panna**. Media pesata di **5 modelli** (ICON DWD, IFS ECMWF,
+GFS NOAA, ARPEGE, AROME Météo-France) su **11 punti** con pesi per
+quota/esposizione. Allerta se la cumulata prevista **prossime 24h** supera
+10 / 15 / 20 mm.
+
+---
+
+## Architettura
+
+Il browser **non può** chiamare direttamente S3 (manca CORS): passa dal
+**Cloudflare Worker** (`cloudflare-worker/worker.js`) che aggiunge i CORS e
+inoltra. Gli script Python in Actions chiamano il DPC direttamente.
 
 ```
 radar-dpc/
-├── index.html          # Pagina principale (mappa live)
-├── storico.html        # Download storico dati
-├── css/
-│   └── style.css       # Stili completi (dark theme)
-├── js/
-│   ├── config.js       # Prodotti, scale colori, costanti
-│   ├── api.js          # Wrapper API REST DPC + geocoding
-│   ├── colormap.js     # Interpolazione colori e legenda
-│   ├── georaster-utils.js  # GeoTIFF → Leaflet + estrazione buffer
-│   ├── player.js       # Animazione e time controls
-│   ├── location.js     # Ricerca località, marker, buffer
-│   ├── chart-panel.js  # Grafico serie temporale (Chart.js)
-│   ├── alerts.js       # Sistema allerte soglie
-│   ├── main.js         # Orchestrazione pagina principale
-│   └── storico.js      # Logica pagina storico
-└── .github/workflows/
-    └── pages.yml       # Deploy automatico GitHub Pages
+├── index.html, storico.html, archivio.html, monitor.html
+├── css/style.css
+├── js/                        # config, api, georaster-utils, colormap,
+│   └── ...                     #   player, location, chart-panel, alerts,
+│                               #   timezone, basemap-picker, archive-tab, main
+├── archive/
+│   ├── areas.json             # poligoni, vertici, soglie
+│   ├── scripts/
+│   │   ├── collect.py                  # archiviazione
+│   │   ├── monitor.py                  # osservato + forecast 6h
+│   │   ├── nowcast.py                  # nowcasting radar buffer
+│   │   ├── forecast_ensemble_alert.py  # ensemble 24h Panna
+│   │   └── requirements.txt
+│   ├── data/                  # CSV/XLSX + events.csv + last_observations.json
+│   └── state/                 # stati anti-spam
+├── .github/workflows/
+│   ├── pages.yml  archive-daily.yml  monitor.yml  nowcast.yml  forecast-alert.yml
+└── cloudflare-worker/worker.js
 ```
 
-### Librerie utilizzate (tutte via CDN, no build step)
-| Libreria | Versione | Uso |
-|---|---|---|
-| [Leaflet](https://leafletjs.com/) | 1.9.4 | Mappa interattiva |
-| [geotiff.js](https://geotiffjs.github.io/) | 2.1.3 | Parsing GeoTIFF |
-| [georaster](https://github.com/GeoTIFF/georaster) | 1.6.1 | Wrapper GeoRaster |
-| [georaster-layer-for-leaflet](https://github.com/GeoTIFF/georaster-layer-for-leaflet) | 0.9.0 | Rendering GeoTIFF su Leaflet |
-| [Chart.js](https://www.chartjs.org/) | 4.4.0 | Grafici serie temporale |
-| [Font Awesome](https://fontawesome.com/) | 6.4.2 | Icone |
+---
+
+## Workflow automatici (GitHub Actions)
+
+| Workflow | Frequenza | Cosa fa |
+|----------|-----------|---------|
+| `archive-daily.yml` | ogni 6h | Archivia CUM24 + CUM3 |
+| `monitor.yml` | ogni 15 min | Osservato + forecast 6h doppia conferma |
+| `nowcast.yml` | ogni 60 min | Celle radar buffer 5/10km + moto + probabilità |
+| `forecast-alert.yml` | ogni 6h (xx:30) | Ensemble 24h pesato Panna |
+
+Cron best-effort (possibili ritardi 5-15 min). Lanciabili a mano da
+**Actions → [workflow] → Run workflow** (molti hanno `dry_run`). I dati
+prodotti vengono committati automaticamente dal bot e letti dal frontend come
+file statici.
 
 ---
 
-## ⚠️ Note tecniche
+## Setup notifiche
 
-### CORS
-L'API `radar-api.protezionecivile.it` ha CORS abilitato per `POST` e `OPTIONS`.
-Le pre-signed URL S3 generalmente sono accessibili da browser. In caso di errori CORS
-sui file GeoTIFF, il messaggio verrà mostrato nel pannello di stato.
+7 secrets in **Settings → Secrets and variables → Actions**:
 
-### Proiezione
-I file GeoTIFF DPC sono tipicamente in WGS84 (EPSG:4326) o UTM32N.
-`georaster-layer-for-leaflet` gestisce la riproiezione automaticamente.
+| Secret | Valore |
+|--------|--------|
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | Gmail mittente |
+| `SMTP_PASS` | App Password Gmail (16 char, serve 2FA) |
+| `SMTP_TO` | destinatari separati da virgola |
+| `TELEGRAM_TOKEN` | token bot @BotFather |
+| `TELEGRAM_CHAT_ID` | chat ID (da `getUpdates`) |
 
-### Rate limiting
-Nominatim (geocoding) accetta max 1 richiesta/secondo.
-Il modulo storico rispetta un delay di 1.1s tra le richieste giornaliere.
+Guida: `archive/SETUP-NOTIFICHE.md`. Per aggiungere destinatari, aggiornare
+`SMTP_TO` reinserendo la lista completa (il valore salvato non è visibile).
+
+**Anti-spam**: ogni soglia notifica una sola volta alla salita; si riarma
+quando il valore scende sotto il 50% per 30 min. Stato in `archive/state/`.
 
 ---
 
-## 📄 Licenza
+## Struttura dei dati
 
-MIT — Dati radar © [Dipartimento della Protezione Civile](https://www.protezionecivile.gov.it/)
+**CSV archivio** (long format, 1 riga per osservazione area/vertice):
+`timestamp_utc, product, area_name, location_type, location_name, lat, lon,
+value, mean, min, max, pixel_count, fetched_at_utc`
+
+**XLSX** `{area}.xlsx`: sheet `*_raw` (long) + `*_pivot` (wide, pronto da
+graficare).
+
+**`events.csv`**: log eventi (osservati/forecast/nowcast) con livello, soglia,
+valori, stato invio email/Telegram.
+
+**`last_observations.json`**: snapshot per le dashboard (ultime osservazioni,
+forecast OpenMeteo+MET Norway, heartbeat nowcast).
 
 ---
 
-## 🙏 Crediti
+## Note tecniche
 
-- Dati radar: **DPC — Dipartimento della Protezione Civile Italiana**
-- API documentazione: [dpc-radar.readthedocs.io](https://dpc-radar.readthedocs.io/it/latest/)
-- Geocoding: OpenStreetMap / Nominatim
+- **Proiezioni**: prodotti istantanei (VMI/SRI/SRT1…) in TM custom
+  (`lat_0=42, lon_0=12.5`); cumulate (CUM3/CUM24…) in WGS84. Frontend
+  riproietta con proj4; Python con rasterio/pyproj.
+- **API DPC**: solo ~7 giorni rolling; lo storico oltre esiste solo grazie a
+  questo archivio.
+- **Bucket S3**: il nome può cambiare lato DPC; il Worker usa whitelist a
+  pattern `*dpc-radar*.amazonaws.com`.
+- **Fonti**: radar/cumulate © Protezione Civile; forecast OpenMeteo (15-min) e
+  MET Norway (orario); ensemble 24h da OpenMeteo multi-model.
+
+---
+
+*Dati radar e cumulate: © Dipartimento della Protezione Civile.*
