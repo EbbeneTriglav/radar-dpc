@@ -5,3 +5,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-05-26T20:25:14Z,panna,forecast_alarm,15,,,CUM3,,16.06,true,true,forecast 3h prossime 6h
 2026-05-26T22:00:42Z,panna,forecast_alarm,10,,,SRT1,,13.10,true,true,forecast 1h prossime 6h
 2026-05-27T10:18:51Z,ruspino,forecast_warning,10,,,SRT1,,10.40,true,true,forecast 1h prossime 6h
+2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,2.44,18.51,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=5km
+2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,0.63,15.43,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=10km

@@ -1,3 +1,11 @@
 {
-  "_last_run_utc": "2026-05-28T14:30:13Z"
+  "_last_run_utc": "2026-05-28T17:57:45Z",
+  "ruspino:nowcast:SRT1:10:alarm": {
+    "active": true,
+    "last_trigger_utc": "2026-05-28T17:57:45Z"
+  },
+  "ruspino:nowcast:SRT1:5:alarm": {
+    "active": true,
+    "last_trigger_utc": "2026-05-28T17:57:45Z"
+  }
 }
