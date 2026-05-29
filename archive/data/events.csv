@@ -7,3 +7,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-05-27T10:18:51Z,ruspino,forecast_warning,10,,,SRT1,,10.40,true,true,forecast 1h prossime 6h
 2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,2.44,18.51,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=5km
 2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,0.63,15.43,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=10km
+2026-05-29T05:07:01Z,panna,nowcast_warning,10,0.49,13.12,SRI,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km moto=SW/3.4kmh prob=7%
+2026-05-29T05:07:01Z,panna,nowcast_warning,8,0.51,10.34,SRT1,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km
