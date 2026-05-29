@@ -13,15 +13,15 @@
       "count": 11,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:00:00Z",
-      "updated_at_utc": "2026-05-28T23:42:02Z"
+      "timestamp_utc": "2026-05-29T01:00:00Z",
+      "updated_at_utc": "2026-05-29T01:34:45Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:35:00Z",
-      "updated_at_utc": "2026-05-28T23:42:01Z"
+      "timestamp_utc": "2026-05-29T01:25:00Z",
+      "updated_at_utc": "2026-05-29T01:34:44Z"
     },
     "buffers": {
       "10km": {
@@ -44,10 +44,10 @@
         "max_3h": 0.0
       },
       "openmeteo": {
-        "max_1h": 0.1,
-        "max_3h": 0.1
+        "max_1h": 1.6,
+        "max_3h": 2.8
       },
-      "updated_at_utc": "2026-05-28T23:42:01Z"
+      "updated_at_utc": "2026-05-29T01:34:44Z"
     },
     "motion": null,
     "nowcast": {
@@ -77,15 +77,15 @@
       "count": 13,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:00:00Z",
-      "updated_at_utc": "2026-05-28T23:42:00Z"
+      "timestamp_utc": "2026-05-29T01:00:00Z",
+      "updated_at_utc": "2026-05-29T01:34:44Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:35:00Z",
-      "updated_at_utc": "2026-05-28T23:42:00Z"
+      "timestamp_utc": "2026-05-29T01:25:00Z",
+      "updated_at_utc": "2026-05-29T01:34:43Z"
     },
     "buffers": {
       "10km": {
@@ -111,7 +111,7 @@
         "max_1h": 10.1,
         "max_3h": 10.1
       },
-      "updated_at_utc": "2026-05-28T23:41:59Z"
+      "updated_at_utc": "2026-05-29T01:34:43Z"
     },
     "forecast_24h": {
       "mean_ensemble": 2.73,
@@ -149,15 +149,15 @@
       "count": 16,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:00:00Z",
-      "updated_at_utc": "2026-05-28T23:41:58Z"
+      "timestamp_utc": "2026-05-29T01:00:00Z",
+      "updated_at_utc": "2026-05-29T01:34:42Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-05-28T23:35:00Z",
-      "updated_at_utc": "2026-05-28T23:41:57Z"
+      "timestamp_utc": "2026-05-29T01:25:00Z",
+      "updated_at_utc": "2026-05-29T01:34:41Z"
     },
     "buffers": {
       "10km": {
@@ -183,7 +183,7 @@
         "max_1h": 0.0,
         "max_3h": 0.0
       },
-      "updated_at_utc": "2026-05-28T23:41:55Z"
+      "updated_at_utc": "2026-05-29T01:34:40Z"
     },
     "motion": {
       "bearing_deg": 159.9723234761482,
