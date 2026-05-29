@@ -3,7 +3,7 @@
   "_forecast24h_last_run_utc": "2026-05-29T10:28:52Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-05-29T09:37:52Z",
+  "_nowcast_last_run_utc": "2026-05-29T12:42:36Z",
   "_nowcast_sri_frames": 2,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -66,7 +66,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-05-29T09:37:52Z",
+      "timestamp_utc": "2026-05-29T12:42:36Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -138,7 +138,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-05-29T09:37:52Z",
+      "timestamp_utc": "2026-05-29T12:42:36Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -206,7 +206,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-05-29T09:37:52Z",
+      "timestamp_utc": "2026-05-29T12:42:36Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
