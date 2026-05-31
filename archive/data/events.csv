@@ -14,3 +14,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-05-31T17:59:53Z,ruspino,nowcast_alarm,15,1.07,19.59,SRI,2026-05-31T17:50:00Z,,true,true,nowcast buffer=10km moto=E/33.4kmh prob=1%
 2026-05-31T19:22:27Z,ruspino,nowcast_alarm,15,0.64,17.66,SRI,2026-05-31T19:15:00Z,,true,true,nowcast buffer=5km moto=E/3.9kmh prob=28%
 2026-05-31T19:47:57Z,panna,forecast24h_warning,10,6.50,10.50,ensemble_24h,,10.50,true,true,mean=6.5 worst=10.5 metno=15.57
+2026-05-31T21:51:42Z,ruspino,nowcast_emergency,25,3.59,35.70,SRI,2026-05-31T21:45:00Z,,true,true,nowcast buffer=10km moto=E/17.3kmh prob=3%
