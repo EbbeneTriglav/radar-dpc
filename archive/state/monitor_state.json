@@ -175,9 +175,9 @@
     "last_trigger_utc": null
   },
   "ruspino:forecast:CUM3:warning": {
-    "active": false,
+    "active": true,
     "last_below_utc": null,
-    "last_trigger_utc": null
+    "last_trigger_utc": "2026-06-02T07:17:57Z"
   },
   "ruspino:forecast:SRT1:alarm": {
     "active": false,
