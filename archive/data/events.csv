@@ -20,3 +20,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-02T05:09:18Z,panna,forecast24h_warning,10,11.27,38.99,ensemble_24h,,38.99,true,true,mean=11.3 worst=39.0 metno=6.04
 2026-06-02T07:17:57Z,ruspino,forecast_warning,15,,,CUM3,,21.30,true,true,forecast 3h prossime 6h
 2026-06-02T10:06:33Z,ruspino,nowcast_emergency,25,7.68,25.75,SRI,2026-06-02T09:55:00Z,,true,true,nowcast buffer=5km moto=SE/15.6kmh prob=31%
+2026-06-02T11:03:16Z,panna,forecast24h_alarm,15,15.15,58.33,ensemble_24h,,58.33,true,true,mean=15.2 worst=58.3 metno=10.11
