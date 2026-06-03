@@ -61,17 +61,17 @@
   },
   "panna:CUM3:alarm": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-06-03T10:06:19Z",
     "last_trigger_utc": "2026-06-03T05:13:53Z"
   },
   "panna:CUM3:emergency": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-06-03T10:06:19Z",
     "last_trigger_utc": "2026-06-03T05:13:53Z"
   },
   "panna:CUM3:warning": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-06-03T10:06:19Z",
     "last_trigger_utc": "2026-06-03T05:13:53Z"
   },
   "panna:SRT1:alarm": {
