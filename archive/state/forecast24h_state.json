@@ -1,12 +1,10 @@
 {
-  "_last_run_utc": "2026-06-02T21:29:23Z",
+  "_last_run_utc": "2026-06-03T05:24:22Z",
   "panna:forecast_24h:alarm": {
-    "active": true,
-    "last_trigger_utc": "2026-06-02T11:03:16Z"
+    "active": false
   },
   "panna:forecast_24h:emergency": {
-    "active": true,
-    "last_trigger_utc": "2026-06-02T21:29:23Z"
+    "active": false
   },
   "panna:forecast_24h:warning": {
     "active": true,
