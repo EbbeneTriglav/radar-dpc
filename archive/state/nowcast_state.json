@@ -1,12 +1,20 @@
 {
-  "_last_run_utc": "2026-06-02T23:28:06Z",
+  "_last_run_utc": "2026-06-03T02:52:38Z",
   "panna:nowcast:SRI:10:warning": {
     "active": true,
     "last_trigger_utc": "2026-05-29T05:07:01Z"
   },
+  "panna:nowcast:SRT1:10:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-03T02:52:38Z"
+  },
   "panna:nowcast:SRT1:10:warning": {
     "active": true,
     "last_trigger_utc": "2026-05-29T05:07:01Z"
+  },
+  "panna:nowcast:SRT1:5:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-03T02:52:38Z"
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": true,
