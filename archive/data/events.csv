@@ -26,3 +26,6 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-02T21:29:23Z,panna,forecast24h_emergency,20,25.13,97.73,ensemble_24h,,97.73,true,true,mean=25.1 worst=97.7 metno=8.47
 2026-06-03T02:52:38Z,panna,nowcast_emergency,20,6.83,21.72,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=5km
 2026-06-03T02:52:38Z,panna,nowcast_emergency,20,4.42,22.56,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=10km
+2026-06-03T05:13:53Z,panna,warning,10,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-03T05:13:53Z,panna,alarm,15,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-03T05:13:53Z,panna,emergency,20,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
