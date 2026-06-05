@@ -1,6 +1,6 @@
 {
   "_cum3_available": true,
-  "_forecast24h_last_run_utc": "2026-06-05T15:33:25Z",
+  "_forecast24h_last_run_utc": "2026-06-05T20:22:40Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_nowcast_cum3_available": true,
   "_nowcast_last_run_utc": "2026-06-05T18:55:14Z",
@@ -118,7 +118,7 @@
       "metno_weighted": 0.0,
       "n_models": 5,
       "n_points": 11,
-      "updated_at_utc": "2026-06-05T15:33:25Z",
+      "updated_at_utc": "2026-06-05T20:22:40Z",
       "worst_case": 0.0
     },
     "motion": null,
