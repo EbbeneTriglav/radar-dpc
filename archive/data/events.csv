@@ -29,3 +29,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-03T05:13:53Z,panna,warning,10,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
 2026-06-03T05:13:53Z,panna,alarm,15,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
 2026-06-03T05:13:53Z,panna,emergency,20,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-05T02:34:43Z,cepina,nowcast_emergency,25,2.23,39.94,SRI,2026-06-05T02:25:00Z,,true,true,nowcast buffer=10km moto=NW/7.4kmh prob=2%
