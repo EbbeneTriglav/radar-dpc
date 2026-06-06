@@ -156,6 +156,10 @@
               }
             ]
           }
+        },
+        "recipients": {
+          "email": [],
+          "telegram_chat_ids": []
         }
       }
     },
@@ -314,6 +318,10 @@
               }
             ]
           }
+        },
+        "recipients": {
+          "email": [],
+          "telegram_chat_ids": []
         }
       }
     },
@@ -468,6 +476,10 @@
               }
             ]
           }
+        },
+        "recipients": {
+          "email": [],
+          "telegram_chat_ids": []
         }
       }
     }
