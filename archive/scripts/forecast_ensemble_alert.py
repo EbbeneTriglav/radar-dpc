@@ -223,11 +223,16 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120):
     return triggers
 
 
-def send_email(subject, text, html=None):
+def send_email(subject, text, html=None, to=None):
     h, port = os.environ.get('SMTP_HOST'), int(os.environ.get('SMTP_PORT', '587'))
-    u, pw, to = os.environ.get('SMTP_USER'), os.environ.get('SMTP_PASS'), os.environ.get('SMTP_TO')
+    u, pw = os.environ.get('SMTP_USER'), os.environ.get('SMTP_PASS')
+    if to:
+        if isinstance(to, (list, tuple)):
+            to = ','.join(to)
+    else:
+        to = os.environ.get('SMTP_TO')
     if not (h and u and pw and to):
-        log.info('  email: secrets mancanti, skip')
+        log.info('  email: secrets/destinatari mancanti, skip')
         return 'skipped'
     try:
         msg = MIMEMultipart('alternative')
@@ -237,23 +242,49 @@ def send_email(subject, text, html=None):
         with smtplib.SMTP(h, port, timeout=20) as s:
             s.starttls(); s.login(u, pw)
             s.sendmail(u, [x.strip() for x in to.split(',')], msg.as_string())
-        log.info('  email inviata')
+        log.info(f'  email inviata a {to}')
         return 'true'
     except Exception as e:
         log.warning(f'  email fail: {e}'); return 'false'
 
 
-def send_telegram(md):
-    tok, chat = os.environ.get('TELEGRAM_TOKEN'), os.environ.get('TELEGRAM_CHAT_ID')
-    if not (tok and chat):
-        log.info('  telegram: secrets mancanti, skip')
+def send_telegram(md, chat_ids=None):
+    tok = os.environ.get('TELEGRAM_TOKEN')
+    if chat_ids:
+        if isinstance(chat_ids, str):
+            chat_ids = [c.strip() for c in chat_ids.split(',') if c.strip()]
+    else:
+        d = os.environ.get('TELEGRAM_CHAT_ID')
+        chat_ids = [d] if d else []
+    if not (tok and chat_ids):
+        log.info('  telegram: secrets/chat_ids mancanti, skip')
         return 'skipped'
+    n_ok = 0
+    for chat in chat_ids:
+        try:
+            r = _http('POST', f'https://api.telegram.org/bot{tok}/sendMessage',
+                      json={'chat_id': chat, 'text': md, 'parse_mode': 'Markdown', 'disable_web_page_preview': True})
+            if r and r.ok: n_ok += 1
+        except Exception:
+            pass
+    return 'true' if n_ok else 'false'
+
+
+def _panna_recipients():
+    """Carica recipients di Panna da areas.json. Ritorna (email_list, tg_list)
+    o (None, None) se assenti → fallback a env defaults."""
     try:
-        r = _http('POST', f'https://api.telegram.org/bot{tok}/sendMessage',
-                  json={'chat_id': chat, 'text': md, 'parse_mode': 'Markdown', 'disable_web_page_preview': True})
-        return 'true' if (r and r.ok) else 'false'
-    except Exception:
-        return 'false'
+        import json
+        from pathlib import Path
+        areas_file = Path(__file__).resolve().parents[1] / 'areas.json'
+        d = json.loads(areas_file.read_text())
+        for a in d['areas']:
+            if a['name'] == 'panna':
+                rcpt = a.get('monitoring', {}).get('recipients', {}) or {}
+                return (rcpt.get('email') or None, rcpt.get('telegram_chat_ids') or None)
+    except Exception as e:
+        log.warning(f'  panna recipients lookup failed: {e}')
+    return (None, None)
 
 
 def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm):
@@ -371,8 +402,9 @@ def run_test_alert():
             'om_mean': 13.5, 'om_worst': 18.3, 'metno': 11.8}],
     }
     subject, text, html, md = compose_24h(fake_trigger, fake_ensemble, prefix='[TEST] ')
-    em = send_email(subject, text, html)
-    tg = send_telegram(md)
+    rcpt_email, rcpt_tg = _panna_recipients()
+    em = send_email(subject, text, html, to=rcpt_email)
+    tg = send_telegram(md, chat_ids=rcpt_tg)
     log.info(f'TEST alert inviato: email={em} telegram={tg}')
     log.info('Se hai ricevuto email + Telegram con [TEST], il sistema funziona!')
     return 0
@@ -416,8 +448,9 @@ def run_test_radar():
         '<p style="font-size:11px;color:#888">Dati simulati — non reali</p>'
         '</div></div>'
     )
-    em = send_email(subject, text, html)
-    tg = send_telegram(md)
+    rcpt_email, rcpt_tg = _panna_recipients()
+    em = send_email(subject, text, html, to=rcpt_email)
+    tg = send_telegram(md, chat_ids=rcpt_tg)
     log.info(f'TEST radar inviato: email={em} telegram={tg}')
     log.info('Se hai ricevuto email + Telegram con [TEST] radar, il sistema funziona!')
     return 0
@@ -472,8 +505,9 @@ def main():
             if write_header: writer.writeheader()
             for tr in triggers:
                 subject, text, html, md = compose_24h(tr, ensemble)
-                em = send_email(subject, text, html)
-                tg = send_telegram(md)
+                rcpt_email, rcpt_tg = _panna_recipients()
+                em = send_email(subject, text, html, to=rcpt_email)
+                tg = send_telegram(md, chat_ids=rcpt_tg)
                 writer.writerow({
                     'event_timestamp_utc': now_iso,
                     'area_name': 'panna',

@@ -269,9 +269,14 @@ def arrival_probability(cell_xy_tm, motion, centroid_latlon, buffer_outer_km):
 
 
 # ─── Notifiche ───────────────────────────────────────────────────────────────
-def send_email(subject, text, html=None):
+def send_email(subject, text, html=None, to=None):
     h, port = os.environ.get('SMTP_HOST'), int(os.environ.get('SMTP_PORT', '587'))
-    u, pw, to = os.environ.get('SMTP_USER'), os.environ.get('SMTP_PASS'), os.environ.get('SMTP_TO')
+    u, pw = os.environ.get('SMTP_USER'), os.environ.get('SMTP_PASS')
+    if to:
+        if isinstance(to, (list, tuple)):
+            to = ','.join(to)
+    else:
+        to = os.environ.get('SMTP_TO')
     if not (h and u and pw and to):
         return 'skipped'
     try:
@@ -287,16 +292,25 @@ def send_email(subject, text, html=None):
         log.warning(f'  email fail: {e}'); return 'false'
 
 
-def send_telegram(md):
-    tok, chat = os.environ.get('TELEGRAM_TOKEN'), os.environ.get('TELEGRAM_CHAT_ID')
-    if not (tok and chat):
+def send_telegram(md, chat_ids=None):
+    tok = os.environ.get('TELEGRAM_TOKEN')
+    if chat_ids:
+        if isinstance(chat_ids, str):
+            chat_ids = [c.strip() for c in chat_ids.split(',') if c.strip()]
+    else:
+        d = os.environ.get('TELEGRAM_CHAT_ID')
+        chat_ids = [d] if d else []
+    if not (tok and chat_ids):
         return 'skipped'
-    try:
-        r = _http('POST', f'https://api.telegram.org/bot{tok}/sendMessage',
-                  json={'chat_id': chat, 'text': md, 'parse_mode': 'Markdown', 'disable_web_page_preview': True})
-        return 'true' if (r and r.ok) else 'false'
-    except Exception:
-        return 'false'
+    n_ok = 0
+    for chat in chat_ids:
+        try:
+            r = _http('POST', f'https://api.telegram.org/bot{tok}/sendMessage',
+                      json={'chat_id': chat, 'text': md, 'parse_mode': 'Markdown', 'disable_web_page_preview': True})
+            if r and r.ok: n_ok += 1
+        except Exception:
+            pass
+    return 'true' if n_ok else 'false'
 
 
 # ─── State anti-spam ─────────────────────────────────────────────────────────
@@ -396,7 +410,11 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
     Ritorna un dict con le osservazioni per last_observations.json.
     """
     centroid = area['centroid']
-    channels = set(area.get('monitoring', {}).get('channels', ['email', 'telegram']))
+    mon_cfg = area.get('monitoring', {})
+    channels = set(mon_cfg.get('channels', ['email', 'telegram']))
+    rcpt = mon_cfg.get('recipients', {}) or {}
+    rcpt_email = rcpt.get('email') or None
+    rcpt_tg    = rcpt.get('telegram_chat_ids') or None
     triggered = False
 
     # Raccolta osservazioni per heartbeat
@@ -433,7 +451,8 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                 buf_obs['cum3_max'] = round(cum3_stat['max'], 2)
 
             was_triggered = _eval_product(area, 'SRI', SRI_THRESHOLDS, sri_stat, geom, buf_km,
-                          sri_frames, centroid, state, now_iso, channels, writer)
+                          sri_frames, centroid, state, now_iso, channels, writer,
+                          rcpt_email=rcpt_email, rcpt_tg=rcpt_tg)
             if was_triggered:
                 triggered = True
 
@@ -451,7 +470,8 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                 buf_obs['srt1_mean'] = round(srt1_stat['mean'], 2)
 
                 was_triggered = _eval_product(area, 'SRT1', SRT1_THRESHOLDS, srt1_stat, geom, buf_km,
-                              None, centroid, state, now_iso, channels, writer)
+                              None, centroid, state, now_iso, channels, writer,
+                              rcpt_email=rcpt_email, rcpt_tg=rcpt_tg)
                 if was_triggered:
                     triggered = True
 
@@ -474,7 +494,8 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
 
 
 def _eval_product(area, product, thresholds, signal, geom, buf_km,
-                  sri_frames, centroid, state, now_iso, channels, writer):
+                  sri_frames, centroid, state, now_iso, channels, writer,
+                  rcpt_email=None, rcpt_tg=None):
     """Valuta soglie. Ritorna True se ha triggerato, False altrimenti."""
     # determina trigger massimo superato
     hit = None
@@ -499,8 +520,8 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
             prob = arrival_probability(signal['max_xy_tm'], motion, centroid, buf_km)
 
     subject, text, md = compose(area, product, hit, signal, motion, prob, buf_km)
-    em = send_email(subject, text) if 'email' in channels else 'skipped'
-    tg = send_telegram(md) if 'telegram' in channels else 'skipped'
+    em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
+    tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
 
     writer.writerow({
         'event_timestamp_utc': now_iso, 'area_name': area['name'],

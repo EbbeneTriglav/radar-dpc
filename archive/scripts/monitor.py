@@ -390,14 +390,21 @@ def fetch_forecast_metno(lat, lon, hours=6):
 
 # ─── Notifiche: Email + Telegram ─────────────────────────────────────────────
 
-def send_email(subject, body_text, body_html=None):
+def send_email(subject, body_text, body_html=None, to=None):
+    """Invia email. Se `to` (lista o stringa con virgole) viene passato,
+    override del default SMTP_TO. Permette destinatari per-area."""
     host = os.environ.get('SMTP_HOST')
     port = int(os.environ.get('SMTP_PORT', '587'))
     user = os.environ.get('SMTP_USER')
     pwd  = os.environ.get('SMTP_PASS')
-    to   = os.environ.get('SMTP_TO')
+    # Override: lista o stringa "a@x,b@y" → fallback a SMTP_TO
+    if to:
+        if isinstance(to, (list, tuple)):
+            to = ','.join(to)
+    else:
+        to = os.environ.get('SMTP_TO')
     if not (host and user and pwd and to):
-        log.info('  email: secrets mancanti, skip')
+        log.info('  email: secrets/destinatari mancanti, skip')
         return 'skipped'
     try:
         msg = MIMEMultipart('alternative')
@@ -411,34 +418,46 @@ def send_email(subject, body_text, body_html=None):
             s.starttls()
             s.login(user, pwd)
             s.sendmail(user, [x.strip() for x in to.split(',')], msg.as_string())
-        log.info('  email inviata')
+        log.info(f'  email inviata a {to}')
         return 'true'
     except Exception as e:
         log.warning(f'  email fallita: {e}')
         return 'false'
 
 
-def send_telegram(text_markdown):
+def send_telegram(text_markdown, chat_ids=None):
+    """Invia Telegram. Se `chat_ids` (lista o stringa CSV) viene passato,
+    override del default TELEGRAM_CHAT_ID. Invia ad ognuno; se uno fallisce
+    continua con gli altri. Ritorna 'true' se almeno uno OK."""
     token = os.environ.get('TELEGRAM_TOKEN')
-    chat  = os.environ.get('TELEGRAM_CHAT_ID')
-    if not (token and chat):
-        log.info('  telegram: secrets mancanti, skip')
+    if chat_ids:
+        if isinstance(chat_ids, str):
+            chat_ids = [c.strip() for c in chat_ids.split(',') if c.strip()]
+    else:
+        default = os.environ.get('TELEGRAM_CHAT_ID')
+        chat_ids = [default] if default else []
+    if not (token and chat_ids):
+        log.info('  telegram: secrets/chat_ids mancanti, skip')
         return 'skipped'
-    try:
-        r = _http('POST', f'https://api.telegram.org/bot{token}/sendMessage', json={
-            'chat_id': chat,
-            'text': text_markdown,
-            'parse_mode': 'Markdown',
-            'disable_web_page_preview': True,
-        })
-        if r and r.ok:
-            log.info('  telegram inviato')
-            return 'true'
-        log.warning(f'  telegram HTTP {r.status_code if r else "?"}')
-        return 'false'
-    except Exception as e:
-        log.warning(f'  telegram fallito: {e}')
-        return 'false'
+    n_ok = 0
+    for chat in chat_ids:
+        try:
+            r = _http('POST', f'https://api.telegram.org/bot{token}/sendMessage', json={
+                'chat_id': chat,
+                'text': text_markdown,
+                'parse_mode': 'Markdown',
+                'disable_web_page_preview': True,
+            })
+            if r and r.ok:
+                n_ok += 1
+            else:
+                log.warning(f'  telegram chat {chat}: HTTP {r.status_code if r else "?"}')
+        except Exception as e:
+            log.warning(f'  telegram chat {chat} fallito: {e}')
+    if n_ok:
+        log.info(f'  telegram inviato a {n_ok}/{len(chat_ids)} chat')
+        return 'true'
+    return 'false'
 
 
 # ─── Stato anti-spam ─────────────────────────────────────────────────────────
@@ -791,6 +810,9 @@ def process_area(area, archive_dir, events_writer):
     forecast_metno = None
     forecast_done = False
     channels = set(mon.get('channels', []))
+    recipients = mon.get('recipients', {}) or {}
+    rcpt_email = recipients.get('email') or None
+    rcpt_tg    = recipients.get('telegram_chat_ids') or None
 
     for product, prod_cfg in products_cfg.items():
         thresholds = prod_cfg.get('thresholds', [])
@@ -840,8 +862,8 @@ def process_area(area, archive_dir, events_writer):
 
         for th in triggers:
             subject, text, html, md = compose_messages(area, product, th, stats, ts_iso, forecast)
-            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
-            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+            email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
+            tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
             events_writer.writerow({
                 'event_timestamp_utc':        now_iso,
                 'area_name':                  area['name'],
@@ -876,8 +898,8 @@ def process_area(area, archive_dir, events_writer):
         fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct)
         for tr in fc_triggers:
             subject, text, html, md = compose_messages_forecast(area, tr, forecast, forecast_metno)
-            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
-            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+            email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
+            tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
             events_writer.writerow({
                 'event_timestamp_utc':       now_iso,
                 'area_name':                 area['name'],
@@ -912,8 +934,8 @@ def process_area(area, archive_dir, events_writer):
                         wind = fetch_wind(area['centroid']['lat'], area['centroid']['lon'])
                         for tr in fc_triggers:
                             subject, text, html, md = compose_messages_storm(area, tr, storm_summary, wind)
-                            email_status = send_email(subject, text, html) if 'email' in channels else 'skipped'
-                            tg_status    = send_telegram(md) if 'telegram' in channels else 'skipped'
+                            email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
+                            tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
                             events_writer.writerow({
                                 'event_timestamp_utc':       now_iso,
                                 'area_name':                 area['name'],
