@@ -1,18 +1,18 @@
 {
   "archive": {
     "down": false,
-    "last_check_age_h": 1.82
+    "last_check_age_h": 0.6
   },
   "arpa": {
     "down": false,
-    "last_check_age_h": 0.01
+    "last_check_age_h": 0.99
   },
   "monitor": {
     "down": false,
-    "last_check_age_h": 0.94
+    "last_check_age_h": 0.08
   },
   "nowcast": {
     "down": false,
-    "last_check_age_h": 0.08
+    "last_check_age_h": 0.73
   }
 }
