@@ -1,0 +1,1 @@
+forecast_made_at_utc,area_name,source,horizon,forecast_mm,observed_mm,observed_at_utc,bias_mm,abs_error_mm,hit_warning,missed_warning,false_alarm_warning
