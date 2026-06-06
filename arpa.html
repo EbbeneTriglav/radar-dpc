@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARPA Lombardia — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css?v=20260529arpa">
+  <style>
+    .arpa-layout { display: grid; grid-template-rows: auto 1fr; gap: 12px; height: 100%; padding: 16px 20px; overflow: auto; }
+    .arpa-header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .arpa-header h1 { font-family: var(--mono); font-size: 22px; font-weight: 400; }
+    .arpa-header h1 .badge { font-size: 11px; padding: 2px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-left: 8px; color: var(--text2); }
+    .arpa-info { background: rgba(135,206,250,0.08); border-left: 3px solid #87cefa; padding: 8px 12px; font-size: 12px; color: var(--text2); border-radius: 4px; margin-bottom: 8px; line-height: 1.4; }
+    .arpa-info b { color: var(--text); }
+    .arpa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 1100px) { .arpa-grid { grid-template-columns: 1fr; } }
+    .arpa-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .arpa-card h2 { font-family: var(--mono); font-size: 15px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+    .arpa-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .arpa-stat { background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; padding: 8px; text-align: center; }
+    .arpa-stat .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .arpa-stat .value { font-family: var(--mono); font-size: 18px; color: var(--text); margin-top: 3px; }
+    .arpa-stat .sub { font-size: 10px; color: var(--text2); margin-top: 1px; }
+    .arpa-stat.warning .value { color: var(--warn); }
+    .arpa-stat.danger .value { color: var(--danger); }
+    .arpa-chart-wrap { position: relative; height: 220px; }
+    #arpa-map { width: 100%; height: 380px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .arpa-meta { font-size: 11px; color: var(--text3); margin-top: 6px; font-family: var(--mono); }
+    .arpa-empty { padding: 40px; text-align: center; color: var(--text3); }
+    .arpa-compare-row { display: flex; gap: 14px; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border2); }
+    .arpa-compare-row:last-child { border-bottom: none; }
+    .arpa-compare-row .lbl { color: var(--text2); min-width: 110px; }
+    .arpa-compare-row .vals { display: flex; gap: 14px; flex: 1; }
+    .arpa-compare-row .vals span { font-family: var(--mono); }
+    .arpa-compare-row .delta { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--text3); }
+    .leaflet-popup-content { font-family: var(--mono); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav id="topbar">
+  <div class="logo">
+    <i class="fa fa-broadcast-tower"></i>
+    RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link">📊 Storico</a>
+    <a href="archivio.html" class="nav-link">🗄 Archivio</a>
+    <a href="monitor.html" class="nav-link">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link active">📡 ARPA Lombardia</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
+</nav>
+
+<div id="app" style="height:calc(100vh - 48px)">
+  <div class="arpa-layout">
+
+    <div class="arpa-header">
+      <h1>📡 Radar ARPA Lombardia <span class="badge" id="arpa-count-badge">…</span></h1>
+    </div>
+
+    <div class="arpa-info">
+      Mosaico radar <b>ARPA Lombardia</b> (Desio MB + Flero BS). Riflettività massima sulla verticale (MAX) in <b>dBZ</b>, scansioni ogni 5 minuti.
+      Conversione in mm/h tramite relazione di <b>Marshall-Palmer</b> (Z = 200·R<sup>1.6</sup>).<br>
+      Confronto con dati <b>DPC</b> per verifica di attendibilità. Solo aree <b>Ruspino</b> e <b>Cepina</b> sono in copertura radar lombardo. <i>Nessun alert attivo su questi dati.</i>
+    </div>
+
+    <div class="arpa-grid">
+
+      <!-- Card Ruspino -->
+      <div class="arpa-card">
+        <h2><i class="fa fa-map-marker-alt" style="color:#4ade80"></i> Ruspino <span style="font-weight:400;font-size:11px;color:var(--text3)">(Bergamo)</span></h2>
+        <div id="ruspino-stats"><div class="arpa-empty">Caricamento…</div></div>
+        <div class="arpa-chart-wrap"><canvas id="ruspino-chart"></canvas></div>
+        <div class="arpa-meta" id="ruspino-meta"></div>
+        <div id="ruspino-compare" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Card Cepina -->
+      <div class="arpa-card">
+        <h2><i class="fa fa-map-marker-alt" style="color:#60a5fa"></i> Cepina <span style="font-weight:400;font-size:11px;color:var(--text3)">(Valtellina)</span></h2>
+        <div id="cepina-stats"><div class="arpa-empty">Caricamento…</div></div>
+        <div class="arpa-chart-wrap"><canvas id="cepina-chart"></canvas></div>
+        <div class="arpa-meta" id="cepina-meta"></div>
+        <div id="cepina-compare" style="margin-top:10px"></div>
+      </div>
+
+    </div>
+
+    <!-- Mappa con focus aree -->
+    <div class="arpa-card">
+      <h2><i class="fa fa-map"></i> Mappa aree monitorate</h2>
+      <div id="arpa-map"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const AREAS_URL = 'archive/areas.json';
+const ARPA_AREAS = ['ruspino', 'cepina'];
+const ARPA_COLORS = { ruspino: '#4ade80', cepina: '#60a5fa' };
+
+// ── Tema ─────────────────────────────────────────────────────────────────
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t) {
+  document.body.classList.toggle('light-theme', t === 'light');
+  themeBtn.innerHTML = t === 'light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+  localStorage.setItem('theme', t);
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+themeBtn.onclick = () => applyTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
+
+// ── CSV parsing minimo ───────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const cells = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = cells[i] !== undefined ? cells[i].trim() : '');
+    return obj;
+  });
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── Data loader ──────────────────────────────────────────────────────────
+async function loadAreasGeo() {
+  const r = await fetch(AREAS_URL, { cache: 'no-cache' });
+  const cfg = await r.json();
+  const out = {};
+  for (const a of cfg.areas) {
+    if (ARPA_AREAS.includes(a.name)) out[a.name] = a;
+  }
+  return out;
+}
+
+async function loadArpaCSV(area) {
+  // ARPA CSV (solo righe area-wide)
+  const r = await fetch(`archive/data/${area}_arpa.csv?_=${Date.now()}`);
+  if (!r.ok) return [];
+  const rows = parseCSV(await r.text())
+    .filter(x => x.location_type === 'area')
+    .map(x => ({
+      ts:        x.timestamp_utc,
+      max_dbz:   parseFloat(x.max_dbz),
+      mean_dbz:  parseFloat(x.mean_dbz),
+      max_mmh:   parseFloat(x.max_mmh),
+      mean_mmh:  parseFloat(x.mean_mmh),
+      pixel_count: parseInt(x.pixel_count, 10),
+    }));
+  rows.sort((a, b) => a.ts < b.ts ? -1 : 1);
+  return rows;
+}
+
+async function loadDpcCSV(area) {
+  // Per confronto: <area>_cum3.csv DPC (mm/3h)
+  const r = await fetch(`archive/data/${area}_cum3.csv?_=${Date.now()}`);
+  if (!r.ok) return [];
+  const rows = parseCSV(await r.text())
+    .filter(x => x.location_type === 'area')
+    .map(x => ({ ts: x.timestamp_utc, mean: parseFloat(x.mean), max: parseFloat(x.max) }));
+  rows.sort((a, b) => a.ts < b.ts ? -1 : 1);
+  return rows;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderStats(area, rows) {
+  const stub = document.getElementById(`${area}-stats`);
+  if (!rows.length) {
+    stub.innerHTML = '<div class="arpa-empty">Nessun dato ARPA disponibile.<br><small>Il workflow <code>arpa-collect</code> deve aver girato almeno una volta.</small></div>';
+    return;
+  }
+  const last = rows[rows.length - 1];
+  // Classifica intensità mm/h
+  const cls = last.max_mmh >= 20 ? 'danger' : last.max_mmh >= 5 ? 'warning' : '';
+  stub.innerHTML = `
+    <div class="arpa-stats">
+      <div class="arpa-stat ${cls}">
+        <div class="label">max mm/h</div>
+        <div class="value">${last.max_mmh.toFixed(2)}</div>
+        <div class="sub">${last.max_dbz.toFixed(1)} dBZ</div>
+      </div>
+      <div class="arpa-stat">
+        <div class="label">mean mm/h</div>
+        <div class="value">${last.mean_mmh.toFixed(3)}</div>
+        <div class="sub">${last.mean_dbz.toFixed(1)} dBZ</div>
+      </div>
+      <div class="arpa-stat">
+        <div class="label">pixel</div>
+        <div class="value">${last.pixel_count}</div>
+        <div class="sub">nel poligono</div>
+      </div>
+      <div class="arpa-stat">
+        <div class="label">campioni</div>
+        <div class="value">${rows.length}</div>
+        <div class="sub">in CSV</div>
+      </div>
+    </div>`;
+  document.getElementById(`${area}-meta`).textContent =
+    `Ultimo campione: ${fmtDate(last.ts)} · Range: ${fmtDate(rows[0].ts)} → ${fmtDate(last.ts)}`;
+}
+
+function renderChart(area, rows) {
+  const canvas = document.getElementById(`${area}-chart`);
+  if (!rows.length) {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = '';
+  // Prendi le ultime 24h (288 campioni × 5min)
+  const recent = rows.slice(-288);
+  const color = ARPA_COLORS[area];
+  const labels = recent.map(r => fmtDate(r.ts));
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'max mm/h',  data: recent.map(r => r.max_mmh),  borderColor: color, backgroundColor: color+'20', tension: 0.2, pointRadius: 0, borderWidth: 1.5, yAxisID: 'y' },
+        { label: 'mean mm/h', data: recent.map(r => r.mean_mmh), borderColor: color+'90', backgroundColor: color+'10', borderDash:[4,4], tension: 0.2, pointRadius: 0, borderWidth: 1, yAxisID: 'y' },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { font: { size: 11 } } }, tooltip: { intersect: false } },
+      scales: {
+        x: { display: true, ticks: { maxTicksLimit: 8, autoSkip: true, font: { size: 10 } } },
+        y: { beginAtZero: true, title: { display: true, text: 'mm/h', font: { size: 11 } }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderCompare(area, arpaRows, dpcRows) {
+  const stub = document.getElementById(`${area}-compare`);
+  if (!arpaRows.length || !dpcRows.length) { stub.innerHTML = ''; return; }
+
+  // Per il confronto: aggrega ARPA su 3h e confronta con DPC CUM3
+  // Strategia: per ogni timestamp DPC, calcola la somma stimata mm di ARPA nelle 3h precedenti
+  // ARPA = mean_mmh * (Δt/60) per ogni campione (campionamento ~5 min)
+  function arpaCum3At(ts) {
+    const target = new Date(ts).getTime();
+    const start  = target - 3 * 3600 * 1000;
+    let sum = 0;
+    for (const a of arpaRows) {
+      const t = new Date(a.ts).getTime();
+      if (t > start && t <= target && isFinite(a.mean_mmh)) {
+        // 5-min sample → mm = mean_mmh × (5/60)
+        sum += a.mean_mmh * (5 / 60);
+      }
+    }
+    return sum;
+  }
+
+  // Mostra ultimi 5 punti DPC con confronto ARPA stimato
+  const lastDpc = dpcRows.slice(-5).reverse();
+  if (!lastDpc.length) { stub.innerHTML = ''; return; }
+  stub.innerHTML = `
+    <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+      Confronto DPC CUM3 vs ARPA aggregato 3h
+    </div>
+    ${lastDpc.map(d => {
+      const arpaSum = arpaCum3At(d.ts);
+      const dpcVal = isFinite(d.mean) ? d.mean : 0;
+      const delta = arpaSum - dpcVal;
+      const deltaColor = Math.abs(delta) < 0.5 ? 'var(--success)' : delta > 0 ? 'var(--warn)' : 'var(--accent)';
+      return `<div class="arpa-compare-row">
+        <span class="lbl">${fmtDate(d.ts)}</span>
+        <span class="vals">
+          <span>DPC: ${dpcVal.toFixed(2)} mm</span>
+          <span>ARPA: ${arpaSum.toFixed(2)} mm</span>
+        </span>
+        <span class="delta" style="color:${deltaColor}">Δ ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</span>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function renderMap(areas) {
+  const map = L.map('arpa-map', { zoomControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 18,
+  }).addTo(map);
+  // CartoDB Voyager Labels (più scuro/elegante)
+  if (document.body.classList.contains('light-theme') === false) {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CARTO', maxZoom: 19,
+    }).addTo(map);
+  }
+
+  const allBounds = [];
+  for (const area of ARPA_AREAS) {
+    const a = areas[area];
+    if (!a) continue;
+    const color = ARPA_COLORS[area];
+    const poly = a.polygon.map(p => [p[0], p[1]]);
+    const polyLayer = L.polygon(poly, { color, weight: 2, fillOpacity: 0.18, fillColor: color }).addTo(map);
+    if (a.centroid) {
+      L.marker([a.centroid.lat, a.centroid.lon], {
+        icon: L.divIcon({
+          className: 'arpa-pin',
+          html: `<div style="background:${color};color:#000;padding:4px 8px;border-radius:4px;font-family:monospace;font-size:11px;font-weight:600;border:1px solid rgba(0,0,0,0.3);white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3)">${a.label || a.name}</div>`,
+          iconSize: null,
+          iconAnchor: [50, 12],
+        }),
+      }).bindPopup(`<b>${a.label || a.name}</b><br>${a.centroid.lat.toFixed(4)}, ${a.centroid.lon.toFixed(4)}<br><i>${a.description || ''}</i>`).addTo(map);
+    }
+    allBounds.push(polyLayer.getBounds());
+  }
+  // Aggiungi marker indicativi dei radar ARPA (Desio MB + Flero BS)
+  const radarSites = [
+    { name: 'Radar Desio',  lat: 45.6189, lon: 9.2056, color: '#fbbf24' },
+    { name: 'Radar Flero',  lat: 45.4914, lon: 10.1872, color: '#fbbf24' },
+  ];
+  for (const s of radarSites) {
+    L.circleMarker([s.lat, s.lon], {
+      radius: 7, color: s.color, fillColor: s.color, fillOpacity: 0.8, weight: 2,
+    }).bindPopup(`<b>${s.name}</b><br>Radar meteorologico ARPA Lombardia`).addTo(map);
+  }
+  // Fit bounds includendo anche i radar
+  if (allBounds.length) {
+    const combined = allBounds.reduce((acc, b) => acc ? acc.extend(b) : b, null);
+    radarSites.forEach(s => combined.extend([s.lat, s.lon]));
+    map.fitBounds(combined, { padding: [40, 40] });
+  } else {
+    map.setView([45.85, 9.8], 8);
+  }
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const areas = await loadAreasGeo();
+    let totalSamples = 0;
+    for (const area of ARPA_AREAS) {
+      const [arpaRows, dpcRows] = await Promise.all([
+        loadArpaCSV(area),
+        loadDpcCSV(area),
+      ]);
+      totalSamples += arpaRows.length;
+      renderStats(area, arpaRows);
+      renderChart(area, arpaRows);
+      renderCompare(area, arpaRows, dpcRows);
+    }
+    document.getElementById('arpa-count-badge').textContent =
+      totalSamples > 0 ? `${totalSamples} campioni` : 'in attesa primo fetch';
+    renderMap(areas);
+  } catch (e) {
+    console.error('arpa init error:', e);
+    document.getElementById('arpa-count-badge').textContent = 'errore';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

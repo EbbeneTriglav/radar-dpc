@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eventi — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css?v=20260528h">
+  <style>
+    .eventi-layout { padding: 16px 24px; height: 100%; overflow: auto; }
+    .eventi-header { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .eventi-header h1 { font-family: var(--mono); font-size: 22px; font-weight: 400; }
+    .eventi-header h1 .badge { font-size: 11px; padding: 2px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-left: 8px; color: var(--text2); }
+    .filters { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+    .filters select, .filters input { font-family: var(--mono); font-size: 12px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
+    .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-family: var(--mono); font-size: 22px; color: var(--text); margin-top: 4px; }
+    .stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .stat-value.warn { color: var(--warn); }
+    .stat-value.danger { color: var(--danger); }
+    .stat-value.success { color: var(--success); }
+    table.events { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    table.events th, table.events td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border2); white-space: nowrap; }
+    table.events th { background: var(--bg3); color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.events tr:hover td { background: var(--bg2); }
+    .level-warning  { color: var(--warn);    font-weight: 600; }
+    .level-alarm    { color: var(--danger);  font-weight: 600; }
+    .level-emergency{ color: var(--danger);  font-weight: 700; }
+    .level-forecast { color: var(--accent2); font-style: italic; }
+    .level-storm    { color: #c084fc;        font-weight: 600; }
+    .empty { padding: 40px; text-align: center; color: var(--text3); }
+    .section-title { font-family: var(--mono); font-size: 13px; color: var(--text2); margin: 24px 0 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .bias-pos { color: var(--warn); }
+    .bias-neg { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Bar ─────────────────────────────────────────── -->
+<nav id="topbar">
+  <div class="logo">
+    <i class="fa fa-broadcast-tower"></i>
+    RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link">📊 Storico</a>
+    <a href="archivio.html" class="nav-link">🗄 Archivio</a>
+    <a href="monitor.html" class="nav-link">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link active">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link">📡 ARPA</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
+</nav>
+
+<div id="app" style="height:calc(100vh - 48px)">
+  <div class="eventi-layout">
+
+    <div class="eventi-header">
+      <h1>Registro Eventi <span class="badge" id="count-badge">0</span></h1>
+      <div class="filters">
+        <select id="filter-area"><option value="">Tutte le aree</option></select>
+        <select id="filter-level">
+          <option value="">Tutti i livelli</option>
+          <option value="warning">warning</option>
+          <option value="alarm">alarm</option>
+          <option value="emergency">emergency</option>
+          <option value="forecast_">forecast (predittivo)</option>
+          <option value="storm_">storm (nowcast VMI)</option>
+        </select>
+        <select id="filter-days">
+          <option value="7">Ultimi 7 giorni</option>
+          <option value="30" selected>Ultimi 30 giorni</option>
+          <option value="90">Ultimi 90 giorni</option>
+          <option value="0">Tutti</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Verifica forecast: tile statistiche -->
+    <div class="section-title">Accuratezza forecast (lookback ultimi 7 giorni)</div>
+    <div class="stats-grid" id="verify-stats">
+      <div class="stat-card"><div class="stat-label">In caricamento…</div></div>
+    </div>
+
+    <!-- Tabella eventi -->
+    <div class="section-title">Eventi notificati</div>
+    <div id="events-container">
+      <div class="empty">Caricamento…</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const EVENTS_CSV   = 'archive/data/events.csv';
+const VERIFY_CSV   = 'archive/data/forecast_verification.csv';
+
+// ---- Tema (riusa logica condivisa se presente) -----------------------------
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t) {
+  document.body.classList.toggle('light-theme', t === 'light');
+  themeBtn.innerHTML = t === 'light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+  localStorage.setItem('theme', t);
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+themeBtn.onclick = () => applyTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
+
+// ---- CSV parser semplice (events.csv è ben formato) ------------------------
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    // gestione naive: nessuna virgola dentro i campi negli events.csv attuale
+    const cells = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = cells[i] !== undefined ? cells[i] : '');
+    return obj;
+  });
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function levelClass(level) {
+  if (!level) return '';
+  if (level.startsWith('forecast_')) return 'level-forecast';
+  if (level.startsWith('storm_'))    return 'level-storm';
+  return 'level-' + level;
+}
+
+function num(s, def='') {
+  if (s === '' || s === undefined || s === null) return def;
+  const n = parseFloat(s);
+  return isNaN(n) ? def : n;
+}
+
+// ---- Carica eventi + verifica in parallelo ---------------------------------
+let allEvents = [];
+let allVerify = [];
+
+async function load() {
+  const [eRes, vRes] = await Promise.allSettled([
+    fetch(EVENTS_CSV + '?_=' + Date.now()),
+    fetch(VERIFY_CSV + '?_=' + Date.now()),
+  ]);
+  if (eRes.status === 'fulfilled' && eRes.value.ok) {
+    allEvents = parseCSV(await eRes.value.text());
+  }
+  if (vRes.status === 'fulfilled' && vRes.value.ok) {
+    allVerify = parseCSV(await vRes.value.text());
+  }
+  populateAreas();
+  render();
+  renderVerify();
+}
+
+function populateAreas() {
+  const sel = document.getElementById('filter-area');
+  const areas = [...new Set(allEvents.map(e => e.area_name).filter(Boolean))].sort();
+  for (const a of areas) {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    sel.appendChild(opt);
+  }
+}
+
+function filteredEvents() {
+  const area  = document.getElementById('filter-area').value;
+  const level = document.getElementById('filter-level').value;
+  const days  = parseInt(document.getElementById('filter-days').value, 10);
+  const cutoff = days > 0 ? Date.now() - days * 86400 * 1000 : 0;
+  return allEvents.filter(e => {
+    if (area && e.area_name !== area) return false;
+    if (level) {
+      if (level.endsWith('_')) { if (!e.level.startsWith(level)) return false; }
+      else if (e.level !== level) return false;
+    }
+    if (cutoff > 0) {
+      const t = new Date(e.event_timestamp_utc).getTime();
+      if (isNaN(t) || t < cutoff) return false;
+    }
+    return true;
+  }).sort((a,b) => (a.event_timestamp_utc < b.event_timestamp_utc ? 1 : -1));
+}
+
+function render() {
+  const ev = filteredEvents();
+  document.getElementById('count-badge').textContent = ev.length;
+  const c = document.getElementById('events-container');
+  if (ev.length === 0) {
+    c.innerHTML = '<div class="empty">Nessun evento corrisponde ai filtri.</div>';
+    return;
+  }
+  const rows = ev.map(e => `
+    <tr>
+      <td>${fmtDate(e.event_timestamp_utc)}</td>
+      <td>${e.area_name || '—'}</td>
+      <td class="${levelClass(e.level)}">${e.level || '—'}</td>
+      <td>${e.product || '—'}</td>
+      <td>${e.threshold_mm || '—'}</td>
+      <td>${e.observed_mm_mean || '—'}</td>
+      <td>${e.observed_mm_max  || '—'}</td>
+      <td>${e.forecast_max_6h_mm || '—'}</td>
+      <td>${e.notified_email === 'true' ? '✓' : e.notified_email === 'false' ? '✗' : '–'} / ${e.notified_telegram === 'true' ? '✓' : e.notified_telegram === 'false' ? '✗' : '–'}</td>
+      <td style="color:var(--text3);font-size:11px">${e.note || ''}</td>
+    </tr>`).join('');
+  c.innerHTML = `<table class="events">
+    <thead><tr>
+      <th>Quando</th><th>Area</th><th>Livello</th><th>Prod</th>
+      <th>Soglia</th><th>Oss. mean</th><th>Oss. max</th><th>Forecast</th>
+      <th>Mail/TG</th><th>Note</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderVerify() {
+  const grid = document.getElementById('verify-stats');
+  if (allVerify.length === 0) {
+    grid.innerHTML = `<div class="stat-card"><div class="stat-label">Verifica forecast</div>
+      <div class="stat-sub">Nessun dato disponibile (lo script <code>forecast_verify.py</code> non ha ancora prodotto output)</div></div>`;
+    return;
+  }
+  // Limita agli ultimi 7 giorni
+  const cutoff = Date.now() - 7 * 86400 * 1000;
+  const recent = allVerify.filter(v => {
+    const t = new Date(v.forecast_made_at_utc).getTime();
+    return !isNaN(t) && t >= cutoff;
+  });
+  if (recent.length === 0) {
+    grid.innerHTML = `<div class="stat-card"><div class="stat-label">Verifica forecast</div>
+      <div class="stat-sub">Nessuna verifica negli ultimi 7 giorni</div></div>`;
+    return;
+  }
+  // Aggrega per source × horizon
+  const groups = {};
+  for (const v of recent) {
+    const key = `${v.source}|${v.horizon}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(v);
+  }
+  const cards = Object.entries(groups).map(([key, rows]) => {
+    const [source, horizon] = key.split('|');
+    const mae  = rows.reduce((s,r) => s + Math.abs(num(r.abs_error_mm, 0)), 0) / rows.length;
+    const bias = rows.reduce((s,r) => s + num(r.bias_mm, 0), 0) / rows.length;
+    const hits     = rows.reduce((s,r) => s + parseInt(r.hit_warning || 0, 10), 0);
+    const missed   = rows.reduce((s,r) => s + parseInt(r.missed_warning || 0, 10), 0);
+    const fa       = rows.reduce((s,r) => s + parseInt(r.false_alarm_warning || 0, 10), 0);
+    const biasClass = bias > 0.5 ? 'warn' : bias < -0.5 ? 'danger' : 'success';
+    return `
+      <div class="stat-card">
+        <div class="stat-label">${source} · ${horizon}</div>
+        <div class="stat-value">MAE ${mae.toFixed(2)} mm</div>
+        <div class="stat-sub">Bias <span class="${bias>=0?'bias-pos':'bias-neg'}">${bias>=0?'+':''}${bias.toFixed(2)}</span> · ${rows.length} confronti</div>
+        <div class="stat-sub">Hit ${hits} · Miss ${missed} · FA ${fa}</div>
+      </div>`;
+  }).join('');
+  grid.innerHTML = cards;
+}
+
+['filter-area','filter-level','filter-days'].forEach(id => {
+  document.getElementById(id).addEventListener('change', render);
+});
+
+load();
+</script>
+</body>
+</html>

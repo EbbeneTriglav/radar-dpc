@@ -35,6 +35,14 @@
 
     .mon-prod-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
     @media (max-width: 900px) { .mon-prod-row { grid-template-columns: 1fr; } }
+    .mon-recipients { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; font-size: 11px; font-family: var(--mono); color: var(--text2); }
+    .mon-recipients-label { font-weight: 600; color: var(--text); }
+    .mon-recipients-item { padding: 2px 6px; background: var(--surface); border-radius: 3px; }
+    .mon-recipients-item i { font-style: italic; color: var(--text3); }
+    .mon-recipients-hint { margin-left: auto; color: var(--text3); cursor: help; }
+    .mon-rcpt-edit-row { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .mon-rcpt-edit-row label { font-weight: 600; color: var(--text); font-size: 11px; }
+    .mon-rcpt-textarea { font-family: var(--mono); font-size: 11px; padding: 6px 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 4px; resize: vertical; min-height: 40px; }
 
     .mon-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
     .mon-panel h3 { margin: 0 0 6px; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
@@ -88,6 +96,8 @@
     <a href="storico.html" class="nav-link">📊 Storico</a>
     <a href="archivio.html" class="nav-link">🗄 Archivio</a>
     <a href="monitor.html" class="nav-link active">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link">📡 ARPA</a>
   </div>
   <div class="spacer"></div>
   <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
@@ -121,12 +131,13 @@
 
 <div class="mon-modal-bg" id="export-modal">
   <div class="mon-modal">
-    <h3><i class="fa fa-download"></i> Esporta configurazione soglie</h3>
+    <h3><i class="fa fa-download"></i> Esporta configurazione (soglie + destinatari)</h3>
     <p style="font-size:12px;color:var(--text2)">
-      Copia il blocco JSON e incollalo in <code>archive/areas.json</code> nel repo. Commit + push per attivare le modifiche sul workflow di notifiche.
+      Scarica il file aggiornato (oppure copia il JSON) e sostituiscilo in <code>archive/areas.json</code>. Commit + push per attivare le modifiche sui workflow.
     </p>
     <pre id="export-json"></pre>
     <div class="mon-modal-actions">
+      <button class="btn-sm" id="btn-download"><i class="fa fa-file-download"></i> Scarica areas.json</button>
       <button class="btn-sm" id="btn-copy"><i class="fa fa-copy"></i> Copia</button>
       <button class="btn-sm" id="btn-modal-close">Chiudi</button>
     </div>
@@ -144,6 +155,7 @@ const EVENTS_URL   = 'archive/data/events.csv';
 const LAST_OBS_URL = 'archive/data/last_observations.json';
 const OM_URL       = 'https://api.open-meteo.com/v1/forecast';
 const LS_PREFIX    = 'radar-dpc.monitor.thresholds.';
+const LS_PREFIX_RCPT = 'radar-dpc.monitor.recipients.';
 
 let _areas = [];
 let _events = [];
@@ -156,8 +168,35 @@ let _timing = 3;        // ore selezionate
 // ── Override storage ──────────────────────────────────────────────────────
 function loadOverrides(n){ try{return JSON.parse(localStorage.getItem(LS_PREFIX+n)||'null');}catch{return null;} }
 function saveOverrides(n,p){ localStorage.setItem(LS_PREFIX+n, JSON.stringify(p)); refreshOverridesBadge(); }
-function clearAllOverrides(){ _areas.forEach(a => localStorage.removeItem(LS_PREFIX+a.name)); refreshOverridesBadge(); }
-function hasAnyOverride(){ return _areas.some(a => localStorage.getItem(LS_PREFIX+a.name)); }
+function clearAllOverrides(){ _areas.forEach(a => { localStorage.removeItem(LS_PREFIX+a.name); localStorage.removeItem(LS_PREFIX_RCPT+a.name); }); refreshOverridesBadge(); }
+function hasAnyOverride(){ return _areas.some(a => localStorage.getItem(LS_PREFIX+a.name) || localStorage.getItem(LS_PREFIX_RCPT+a.name)); }
+
+// Recipients (mailing list per area) — stesso pattern di override
+function loadRecipients(n){ try{return JSON.parse(localStorage.getItem(LS_PREFIX_RCPT+n)||'null');}catch{return null;} }
+function saveRecipientsLS(n,p){ localStorage.setItem(LS_PREFIX_RCPT+n, JSON.stringify(p)); refreshOverridesBadge(); }
+function effectiveRecipients(area){
+  return loadRecipients(area.name) || area.monitoring?.recipients || {email:[], telegram_chat_ids:[]};
+}
+function saveRecipients(name){
+  // Legge i textarea con dataset.area === name e salva in localStorage
+  const emTa = document.querySelector(`textarea.mon-rcpt-textarea[data-area="${name}"][data-kind="email"]`);
+  const tgTa = document.querySelector(`textarea.mon-rcpt-textarea[data-area="${name}"][data-kind="tg"]`);
+  if (!emTa || !tgTa) return;
+  const splitLines = s => s.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const r = {
+    email: splitLines(emTa.value),
+    telegram_chat_ids: splitLines(tgTa.value),
+  };
+  // Validazione basilare email
+  const badEmails = r.email.filter(e => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  if (badEmails.length) {
+    alert(`Email non valide:\n  ${badEmails.join('\n  ')}\n\nCorreggi e riprova.`);
+    return;
+  }
+  saveRecipientsLS(name, r);
+  alert(`✓ Destinatari salvati per ${name}.\nUsa "Esporta config" per generare il nuovo areas.json da committare.`);
+}
+window.saveRecipients = saveRecipients;
 function refreshOverridesBadge(){
   document.getElementById('overrides-badge').style.display    = hasAnyOverride() ? '' : 'none';
   document.getElementById('btn-reset-overrides').style.display = hasAnyOverride() ? '' : 'none';
@@ -185,6 +224,15 @@ async function init(){
     const b = document.getElementById('btn-copy');
     b.innerHTML = '<i class="fa fa-check"></i> Copiato';
     setTimeout(() => b.innerHTML = '<i class="fa fa-copy"></i> Copia', 1500);
+  };
+  document.getElementById('btn-download').onclick = () => {
+    const txt = document.getElementById('export-json').textContent;
+    const blob = new Blob([txt], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'areas.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
   };
   document.getElementById('btn-reset-overrides').onclick = () => {
     if (confirm('Cancella le modifiche locali e ripristina default?')) { clearAllOverrides(); render(); }
@@ -311,6 +359,38 @@ function renderAreaCard(area){
       </div>
 
       <div class="mon-prod-row">${productCards}</div>
+
+      <div class="mon-recipients">
+        <span class="mon-recipients-label">📬 Destinatari notifiche:</span>
+        ${(function(){
+          const eff = effectiveRecipients(area);
+          const em = eff.email || [];
+          const tg = eff.telegram_chat_ids || [];
+          if (isEditing) {
+            return `
+              <div class="mon-rcpt-edit-row">
+                <label>✉️ Email (uno per riga):</label>
+                <textarea class="mon-rcpt-textarea" data-area="${area.name}" data-kind="email"
+                          rows="2" placeholder="(vuoto = usa SMTP_TO globale)">${em.join('\n')}</textarea>
+              </div>
+              <div class="mon-rcpt-edit-row">
+                <label>💬 Telegram chat ID (uno per riga):</label>
+                <textarea class="mon-rcpt-textarea" data-area="${area.name}" data-kind="tg"
+                          rows="2" placeholder="(vuoto = usa TELEGRAM_CHAT_ID globale)">${tg.join('\n')}</textarea>
+              </div>
+              <button class="btn-sm" onclick="saveRecipients('${area.name}')">
+                <i class="fa fa-save"></i> Salva localmente
+              </button>`;
+          }
+          const emTxt = em.length ? em.join(', ') : '<i>default globale (SMTP_TO)</i>';
+          const tgTxt = tg.length ? `${tg.length} chat ID` : '<i>default globale (TELEGRAM_CHAT_ID)</i>';
+          return `<span class="mon-recipients-item">✉️ ${emTxt}</span>
+                  <span class="mon-recipients-item">💬 ${tgTxt}</span>`;
+        })()}
+        <span class="mon-recipients-hint" title="Modifica con 'Modifica soglie', poi usa 'Esporta config' per generare areas.json">
+          <i class="fa fa-info-circle"></i>
+        </span>
+      </div>
 
       <div class="mon-prod-row" style="margin-top:10px">
         <div class="mon-panel">
@@ -534,6 +614,8 @@ async function openExportModal(){
   for (const a of cfg.areas) {
     const ov = loadOverrides(a.name);
     if (ov && a.monitoring) a.monitoring.products = ov;
+    const rcpt = loadRecipients(a.name);
+    if (rcpt && a.monitoring) a.monitoring.recipients = rcpt;
   }
   document.getElementById('export-json').textContent = JSON.stringify(cfg, null, 2);
   document.getElementById('export-modal').classList.add('open');
