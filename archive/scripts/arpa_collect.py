@@ -30,10 +30,15 @@ import gzip
 import io
 import json
 import logging
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# Usa i parametri EPSG ufficiali (silenzia il warning sui GeoTIFF ARPA, che
+# hanno chiavi CRS leggermente diverse dal registro EPSG ma sono pur sempre 4326).
+os.environ.setdefault('GTIFF_SRS_SOURCE', 'EPSG')
 
 import numpy as np
 import rasterio
@@ -54,6 +59,12 @@ ARPA_BASE = 'https://radarlive.arpalombardia.it/CMP'
 ARPA_AREAS = {'ruspino', 'cepina'}        # solo queste sono coperte
 USER_AGENT = 'Mozilla/5.0 (radar-dpc-arpa/1.0)'
 
+# Soglia minima di riflettività per considerare "pioggia". Sotto questo valore
+# mm/h = 0. Serve a eliminare il rumore di fondo: la formula Marshall-Palmer
+# applicata a 0 dBZ darebbe ~0.036 mm/h anche col sereno. 5 dBZ ≈ 0.07 mm/h,
+# convenzione prudente per non scartare pioggia debole reale ma azzerare il rumore.
+MIN_DBZ_RAIN = 5.0
+
 # CSV: una colonna per area, location_type=area (mean) e vertex (per ogni vertice poligono)
 CSV_FIELDS = [
     'timestamp_utc', 'area_name', 'location_type', 'location_name',
@@ -69,17 +80,17 @@ log = logging.getLogger('arpa')
 
 def dbz_to_mmh(dbz: float) -> float:
     """Marshall-Palmer: Z=200·R^1.6 → R=(10^(dBZ/10)/200)^(1/1.6).
-    Valori sotto soglia rumore (dBZ < 0) restituiscono 0."""
-    if dbz is None or not np.isfinite(dbz) or dbz < 0:
+    Sotto MIN_DBZ_RAIN restituisce 0 (rumore di fondo / no rain)."""
+    if dbz is None or not np.isfinite(dbz) or dbz < MIN_DBZ_RAIN:
         return 0.0
     z_linear = 10.0 ** (dbz / 10.0)
     return float((z_linear / 200.0) ** (1.0 / 1.6))
 
 
 def dbz_arr_to_mmh(arr: np.ndarray) -> np.ndarray:
-    """Vettoriale: array di dBZ → array di mm/h."""
+    """Vettoriale: array di dBZ → array di mm/h. Sotto MIN_DBZ_RAIN → 0."""
     out = np.zeros_like(arr, dtype=np.float32)
-    valid = np.isfinite(arr) & (arr >= 0)
+    valid = np.isfinite(arr) & (arr >= MIN_DBZ_RAIN)
     z_linear = np.power(10.0, arr[valid] / 10.0)
     out[valid] = np.power(z_linear / 200.0, 1.0 / 1.6)
     return out
