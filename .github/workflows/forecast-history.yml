@@ -1,0 +1,50 @@
+name: Forecast History
+
+# Storicizza i forecast salvati in last_observations.json in un append-only
+# JSONL (archive/data/forecast_history.jsonl). Schedulato ogni ora, sfasato
+# rispetto a monitor/nowcast per evitare collisioni di push.
+
+on:
+  schedule:
+    - cron: '10 * * * *'    # ogni ora al minuto :10
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-history
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run forecast_history
+        run: python archive/scripts/forecast_history.py
+
+      - name: Commit history
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/data/forecast_history.jsonl 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No history changes."
+          else
+            git commit -m "forecast-history: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            for i in 1 2 3; do
+              if git push; then break; fi
+              echo "Push fallito, retry $i/3..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
+          fi

@@ -24,6 +24,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Cache-bust assets with SHA
+        run: |
+          SHA="${GITHUB_SHA:0:8}"
+          echo "Riscrivo ?v=... in tutti gli HTML con SHA=$SHA"
+          find . -maxdepth 2 -name '*.html' -not -path './node_modules/*' -print0 | \
+            xargs -0 sed -i -E "s/\\?v=[0-9a-zA-Z]+/?v=${SHA}/g"
+
       - name: Bypass Jekyll
         run: touch .nojekyll
 
