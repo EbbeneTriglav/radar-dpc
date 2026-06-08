@@ -33,3 +33,6 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-05T22:10:05Z,ruspino,nowcast_emergency,20,2.10,20.63,SRT1,2026-06-05T22:00:00Z,,true,true,nowcast buffer=5km
 2026-06-05T22:10:05Z,ruspino,nowcast_emergency,20,1.69,22.78,SRT1,2026-06-05T22:00:00Z,,true,true,nowcast buffer=10km
 2026-06-07T19:23:25Z,cepina,nowcast_warning,10,0.22,12.03,SRI,2026-06-07T19:15:00Z,,true,true,nowcast buffer=10km moto=SE/16.2kmh prob=1%
+2026-06-08T20:02:41Z,ruspino,nowcast_emergency,25,1.44,25.73,SRI,2026-06-08T19:55:00Z,,true,true,nowcast buffer=5km moto=NE/9.1kmh prob=2%
+2026-06-08T20:02:41Z,ruspino,nowcast_warning,8,2.14,11.38,SRT1,2026-06-08T19:55:00Z,,true,true,nowcast buffer=5km
+2026-06-08T20:02:41Z,ruspino,nowcast_emergency,25,1.93,32.47,SRI,2026-06-08T19:55:00Z,,true,true,nowcast buffer=10km moto=E/16.5kmh prob=3%
