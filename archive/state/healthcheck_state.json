@@ -1,22 +1,25 @@
 {
   "archive": {
     "down": false,
-    "last_check_age_h": 0.49
+    "last_check_age_h": 8.54
   },
   "arpa": {
-    "down": false,
-    "recovered_at": "2026-06-08T20:37:14.111887Z"
+    "age_h": 3.2,
+    "down": true,
+    "since": "2026-06-09T04:40:44.356076Z"
   },
   "forecast": {
-    "down": false,
-    "last_check_age_h": 18.64
+    "age_h": 26.69,
+    "down": true,
+    "since": "2026-06-09T04:40:44.356156Z"
   },
   "monitor": {
-    "down": false,
-    "recovered_at": "2026-06-08T20:37:14.111722Z"
+    "age_h": 3.17,
+    "down": true,
+    "since": "2026-06-09T04:40:44.355864Z"
   },
   "nowcast": {
     "down": false,
-    "recovered_at": "2026-06-08T20:37:14.111774Z"
+    "last_check_age_h": 1.24
   }
 }
