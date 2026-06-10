@@ -73,6 +73,57 @@ THRESHOLDS_24H = [
     {'level': 'emergency', 'value_mm': 20, 'icon': '⚡'},
 ]
 
+# ─── Config multi-area: soglie 24h per area ───
+# Panna: soglie storiche; Ruspino: matrice 3×3 dashboard, orizzonte 24h
+# (Attenzione 30 / Critico 50 / Estremo 80); Cepina: come Ruspino (provvisorio).
+AREAS_24H = {
+    'panna':   {'thresholds': THRESHOLDS_24H, 'points': 'CONTROL_POINTS'},
+    'ruspino': {'thresholds': [
+        {'level': 'warning',   'value_mm': 30, 'icon': '🌧️'},
+        {'level': 'alarm',     'value_mm': 50, 'icon': '⛈️'},
+        {'level': 'emergency', 'value_mm': 80, 'icon': '⚡'},
+    ], 'points': 'auto'},
+    'cepina':  {'thresholds': [
+        {'level': 'warning',   'value_mm': 30, 'icon': '🌧️'},
+        {'level': 'alarm',     'value_mm': 50, 'icon': '⛈️'},
+        {'level': 'emergency', 'value_mm': 80, 'icon': '⚡'},
+    ], 'points': 'auto'},
+}
+
+
+def _area_points(area_name):
+    """Punti di controllo: Panna usa gli 11 pesati; altre aree centroide+vertici
+    da areas.json con pesi uniformi."""
+    if AREAS_24H[area_name]['points'] == 'CONTROL_POINTS':
+        return CONTROL_POINTS
+    areas_file = Path(__file__).resolve().parents[1] / 'areas.json'
+    d = json.loads(areas_file.read_text())
+    area = next(a for a in d['areas'] if a['name'] == area_name)
+    pts = [{'id': 'C', 'name': 'Centroide', 'lat': area['centroid']['lat'],
+            'lon': area['centroid']['lon'], 'elev': 0, 'weight': 1.0}]
+    for v in area.get('sample_vertices', []):
+        pts.append({'id': v['id'], 'name': v['id'], 'lat': v['lat'],
+                    'lon': v['lon'], 'elev': 0, 'weight': 1.0})
+    # normalizza pesi
+    w = 1.0 / len(pts)
+    for pt in pts:
+        pt['weight'] = w
+    return pts
+
+
+def _area_recipients(area_name):
+    """Recipients per-area da areas.json (fallback None → env default)."""
+    try:
+        areas_file = Path(__file__).resolve().parents[1] / 'areas.json'
+        d = json.loads(areas_file.read_text())
+        for a in d['areas']:
+            if a['name'] == area_name:
+                rcpt = a.get('monitoring', {}).get('recipients', {}) or {}
+                return (rcpt.get('email') or None, rcpt.get('telegram_chat_ids') or None)
+    except Exception as e:
+        log.warning(f'  {area_name} recipients lookup failed: {e}')
+    return (None, None)
+
 EVENT_HEADERS = [
     'event_timestamp_utc', 'area_name', 'level', 'threshold_mm',
     'observed_mm_mean', 'observed_mm_max', 'product', 'observation_timestamp_utc',
@@ -143,16 +194,18 @@ def fetch_metno_24h(lat, lon):
         return None
 
 
-def compute_weighted_ensemble():
+def compute_weighted_ensemble(points=None):
+    if points is None:
+        points = CONTROL_POINTS
     """Calcola cumulata 24h pesata per mean, worst-case e MET Norway."""
-    total_weight = sum(p["weight"] for p in CONTROL_POINTS)
+    total_weight = sum(p["weight"] for p in points)
     weighted_mean = 0.0
     weighted_worst = 0.0
     weighted_metno = 0.0
     metno_ok = True
     points_details = []
 
-    for pt in CONTROL_POINTS:
+    for pt in points:
         log.info(f'  [{pt["id"]}] {pt["name"]} ({pt["lat"]}, {pt["lon"]}) w={pt["weight"]}')
         w = pt['weight'] / total_weight
 
@@ -191,7 +244,10 @@ def compute_weighted_ensemble():
     }
 
 
-def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120):
+def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
+                            area_name='panna', thresholds=None):
+    if thresholds is None:
+        thresholds = THRESHOLDS_24H
     """
     Trigger se worst_case >= soglia E (mean >= soglia OPPURE metno >= soglia).
     Anti-spam: non ri-notifica finche lo stato e attivo.
@@ -201,9 +257,9 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120):
     worst_val = ensemble['worst_case']
     metno_val = ensemble.get('metno_weighted')
 
-    for th in sorted(THRESHOLDS_24H, key=lambda x: x['value_mm']):
+    for th in sorted(thresholds, key=lambda x: x['value_mm']):
         mm = th['value_mm']
-        key = f"panna:forecast_24h:{th['level']}"
+        key = f"{area_name}:forecast_24h:{th['level']}"
         st = state.get(key, {'active': False})
 
         worst_ok = worst_val >= mm
@@ -292,7 +348,7 @@ def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_m
     return (
         '<div style="font-family:Arial,sans-serif;max-width:600px">'
         '<div style="background:' + color + ';color:white;padding:12px 18px;border-radius:6px 6px 0 0">'
-        '<h2 style="margin:0">' + prefix + icon + ' Sorgenti Panna \u2014 ' + lvl.upper()
+        '<h2 style="margin:0">' + prefix + icon + ' ' + area_label + ' \u2014 ' + lvl.upper()
         + ' <span style="font-size:14px;font-weight:normal">(forecast 24h)</span></h2>'
         '</div>'
         '<div style="border:1px solid #ddd;border-top:0;padding:18px;border-radius:0 0 6px 6px">'
@@ -307,7 +363,7 @@ def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_m
     )
 
 
-def compose_24h(trigger, ensemble, prefix=""):
+def compose_24h(trigger, ensemble, prefix="", area_label='Sorgenti Panna'):
     lvl = trigger['level']
     icon = trigger['icon']
     mm = trigger['value_mm']
@@ -326,7 +382,7 @@ def compose_24h(trigger, ensemble, prefix=""):
             models_str += f'  \u2022 {label}: {mv:.1f} mm\n'
 
     text = (
-        f'{prefix}{icon} PREVISIONE 24H \u2014 Sorgenti Panna \u2014 {lvl.upper()}\n\n'
+        f'{prefix}{icon} PREVISIONE 24H \u2014 {area_label} \u2014 {lvl.upper()}\n\n'
         f'Ensemble pesato su {n_pts} punti \u00d7 {n_mod} modelli:\n'
         f'  \u2022 Media ensemble: {mean_v:.1f} mm (soglia {mm} mm)\n'
         f'  \u2022 Worst-case:     {worst_v:.1f} mm\n'
@@ -348,7 +404,7 @@ def compose_24h(trigger, ensemble, prefix=""):
     color = {"warning": "#e0a800", "alarm": "#e85e2c", "emergency": "#c41e3a"}.get(lvl, "#888")
     html = _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm)
 
-    subject = f'{prefix}{icon} Panna \u2014 FORECAST 24H {lvl.upper()} ({worst_v:.1f} mm worst-case)'
+    subject = f'{prefix}{icon} {area_label} \u2014 FORECAST 24H {lvl.upper()} ({worst_v:.1f} mm worst-case)'
     return subject, text, html, md
 
 
@@ -363,7 +419,7 @@ def save_state(f, st):
     f.write_text(json.dumps(st, indent=2, sort_keys=True))
 
 
-def update_observations(file, ensemble, now_iso):
+def update_observations(file, ensemble, now_iso, area_name='panna'):
     """Mergia forecast_24h in last_observations.json."""
     data = {}
     if file.exists():
@@ -371,8 +427,8 @@ def update_observations(file, ensemble, now_iso):
         except Exception: data = {}
 
     data['_forecast24h_last_run_utc'] = now_iso
-    data.setdefault('panna', {})
-    data['panna']['forecast_24h'] = {
+    data.setdefault(area_name, {})
+    data[area_name]['forecast_24h'] = {
         'mean_ensemble': ensemble['mean_ensemble'],
         'worst_case': ensemble['worst_case'],
         'metno_weighted': ensemble.get('metno_weighted'),
@@ -481,36 +537,50 @@ def main():
 
     now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00','Z')
 
-    log.info('Calcolo ensemble pesato Panna (11 punti \u00d7 5 modelli + MET Norway)...')
-    ensemble = compute_weighted_ensemble()
-
-    log.info(f'  \u2500\u2500 RIEPILOGO \u2500\u2500')
-    log.info(f'  Media ensemble 24h: {ensemble["mean_ensemble"]:.1f} mm')
-    log.info(f'  Worst-case 24h:     {ensemble["worst_case"]:.1f} mm')
-    log.info(f'  MET Norway 24h:     {ensemble.get("metno_weighted", "N/D")} mm')
-    log.info(f'  Punti OK: {ensemble["n_points"]}/11')
-
-    update_observations(obs_file, ensemble, now_iso)
-
     state = load_state(state_file)
     state['_last_run_utc'] = now_iso
-    triggers = evaluate_24h_thresholds(ensemble, state, now_iso)
 
-    if not triggers:
-        log.info('  Nessuna soglia 24h superata.')
-    else:
-        write_header = not events_file.exists()
-        with open(events_file, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=EVENT_HEADERS)
-            if write_header: writer.writeheader()
+    # Labels per i messaggi
+    AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina (Levissima)'}
+
+    write_header = not events_file.exists()
+    with open(events_file, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=EVENT_HEADERS)
+        if write_header: writer.writeheader()
+
+        for area_name, cfg in AREAS_24H.items():
+            label = AREA_LABELS.get(area_name, area_name)
+            try:
+                points = _area_points(area_name)
+            except Exception as e:
+                log.warning(f'[{label}] punti non disponibili: {e}'); continue
+
+            log.info(f'[{label}] ensemble {len(points)} punti \u00d7 5 modelli + MET Norway...')
+            try:
+                ensemble = compute_weighted_ensemble(points)
+            except Exception as e:
+                log.warning(f'[{label}] ensemble fallito: {e}'); continue
+
+            log.info(f'  mean={ensemble["mean_ensemble"]:.1f} worst={ensemble["worst_case"]:.1f} '
+                     f'metno={ensemble.get("metno_weighted","N/D")} punti_ok={ensemble["n_points"]}/{len(points)}')
+
+            update_observations(obs_file, ensemble, now_iso, area_name=area_name)
+
+            triggers = evaluate_24h_thresholds(ensemble, state, now_iso,
+                                               area_name=area_name,
+                                               thresholds=cfg['thresholds'])
+            if not triggers:
+                log.info('  nessuna soglia 24h superata')
+                continue
+
+            rcpt_email, rcpt_tg = _area_recipients(area_name)
             for tr in triggers:
-                subject, text, html, md = compose_24h(tr, ensemble)
-                rcpt_email, rcpt_tg = _panna_recipients()
+                subject, text, html, md = compose_24h(tr, ensemble, area_label=label)
                 em = send_email(subject, text, html, to=rcpt_email)
                 tg = send_telegram(md, chat_ids=rcpt_tg)
                 writer.writerow({
                     'event_timestamp_utc': now_iso,
-                    'area_name': 'panna',
+                    'area_name': area_name,
                     'level': f"forecast24h_{tr['level']}",
                     'threshold_mm': tr['value_mm'],
                     'observed_mm_mean': f"{ensemble['mean_ensemble']:.2f}",

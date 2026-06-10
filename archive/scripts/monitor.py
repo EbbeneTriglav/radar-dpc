@@ -701,6 +701,37 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
     return subject, text, html, md
 
 
+def arpa_confirmation(area_name, archive_dir=None, max_age_min=20):
+    """Legge l'ultimo record ARPA (<area>_arpa.csv). Se fresco (<max_age_min),
+    ritorna stringa di conferma incrociata da inserire nei messaggi.
+    Ritorna '' se area non coperta da ARPA, file assente o dato vecchio."""
+    if area_name not in ('ruspino', 'cepina'):
+        return ''
+    try:
+        base = archive_dir if archive_dir else Path(__file__).resolve().parents[1]
+        f = Path(base) / 'data' / f'{area_name}_arpa.csv'
+        if not f.exists():
+            return ''
+        last = None
+        with f.open() as fh:
+            rdr = csv.DictReader(fh)
+            for row in rdr:
+                if row.get('location_type') == 'area':
+                    last = row
+        if not last:
+            return ''
+        ts = datetime.fromisoformat(last['timestamp_utc'].replace('Z', '+00:00'))
+        age_min = (datetime.now(tz=timezone.utc) - ts).total_seconds() / 60
+        if age_min > max_age_min:
+            return ''
+        mmh = float(last['max_mmh'])
+        if mmh >= 0.5:
+            return f"Radar ARPA Lombardia CONFERMA: {mmh:.1f} mm/h max in area ({age_min:.0f} min fa)\n"
+        return f"Radar ARPA Lombardia: nessuna pioggia rilevata in area ({age_min:.0f} min fa) — verifica discordanza\n"
+    except Exception:
+        return ''
+
+
 def compose_messages(area, product, threshold, stats, observation_ts_iso, forecast):
     label = area['label']
     lvl   = threshold['level']
@@ -730,6 +761,7 @@ def compose_messages(area, product, threshold, stats, observation_ts_iso, foreca
         fc_line = f"Forecast prossime {forecast['horizon_hours']}h (OpenMeteo): max cumulata 1h prevista {forecast['max_1h_next']:.1f} mm — totale periodo {forecast['total_period']:.1f} mm.\n"
 
     obs_label = {'SRT1': 'Cumulata oraria (SRT1)', 'CUM3': 'Cumulata 3h (CUM3)'}.get(product, product)
+    arpa_line = arpa_confirmation(area['name'])
 
     # Plaintext
     text = (
@@ -740,6 +772,7 @@ def compose_messages(area, product, threshold, stats, observation_ts_iso, foreca
         f"Soglia superata: {val_mm} {unit_label}\n"
         f"Ora osservazione: {obs_str}\n\n"
         f"{fc_line}"
+        f"{arpa_line}"
         f"Dati: API Protezione Civile — radar-api.protezionecivile.it\n"
     )
 
@@ -755,6 +788,8 @@ def compose_messages(area, product, threshold, stats, observation_ts_iso, foreca
     )
     if forecast:
         md += f"\nForecast {forecast['horizon_hours']}h: max 1h *{forecast['max_1h_next']:.1f} mm*"
+    if arpa_line:
+        md += f"\n{arpa_line.strip()}"
 
     # Email HTML (più leggibile in client moderni)
     color = {'warning': '#e0a800', 'alarm': '#e85e2c', 'emergency': '#c41e3a'}.get(lvl, '#888')
@@ -772,6 +807,7 @@ def compose_messages(area, product, threshold, stats, observation_ts_iso, foreca
         <p>Soglia superata: <b>{val_mm} mm</b><br>
            Ora osservazione: <i>{obs_str}</i></p>
         {f'<p style="background:#f4f4f4;padding:8px;border-radius:4px">{fc_line.strip()}</p>' if fc_line else ''}
+        {f'<p style="background:#eef7ee;padding:8px;border-radius:4px">{arpa_line.strip()}</p>' if arpa_line else ''}
         <p style="font-size:11px;color:#888">Dati: API Protezione Civile</p>
       </div>
     </div>
@@ -997,6 +1033,16 @@ def main():
             except Exception as e:
                 log.error(f'[{area["label"]}] errore inatteso: {e}', exc_info=True)
                 continue
+
+    # Heartbeat: lo script ha girato (anche se il DPC non ha pubblicato dati nuovi).
+    # Letto dall'healthcheck per distinguere "script fermo" da "dati DPC in ritardo".
+    try:
+        hb_file = archive_dir / 'data' / 'last_observations.json'
+        hb = json.loads(hb_file.read_text()) if hb_file.exists() else {}
+        hb['_monitor_last_run_utc'] = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+        hb_file.write_text(json.dumps(hb, indent=2, sort_keys=True))
+    except Exception as e:
+        log.warning(f'heartbeat write failed: {e}')
 
     log.info('Done.')
     return 0

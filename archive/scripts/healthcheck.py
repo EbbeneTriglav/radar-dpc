@@ -29,12 +29,16 @@ DATA  = ROOT / 'data'
 STATE = ROOT / 'state' / 'healthcheck_state.json'
 
 MAX_AGE = {  # ore
-    'monitor':  1,
-    'nowcast':  2,
-    'archive':  14,
-    'arpa':     1,
-    'forecast': 26,
+    'monitor':       2.5,   # dati DPC (la latenza DPC è frequente, tolleranza ampia)
+    'monitor_run':   1,     # heartbeat script (se fermo QUI è un problema vero)
+    'nowcast':       3,
+    'archive':       14,
+    'arpa':          2,
+    'forecast':      30,
 }
+
+# Isteresi: alert solo dopo N check consecutivi oltre soglia (un check ogni 6h)
+CONSECUTIVE_FAILS = 2
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 log = logging.getLogger('hc')
@@ -111,6 +115,19 @@ def get_monitor_age() -> float | None:
     return min(ages) if ages else None
 
 
+def get_monitor_run_age() -> float | None:
+    """Età heartbeat script monitor (_monitor_last_run_utc)."""
+    p = DATA / 'last_observations.json'
+    if not p.exists():
+        return None
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        return None
+    t = d.get('_monitor_last_run_utc')
+    return age_hours(t) if t else None
+
+
 def get_nowcast_age() -> float | None:
     p = DATA / 'last_observations.json'
     if not p.exists():
@@ -173,27 +190,60 @@ def save_state(s: dict) -> None:
     STATE.write_text(json.dumps(s, indent=2, sort_keys=True))
 
 
+def _fmt_age(h: float) -> str:
+    hh = int(h); mm = int(round((h - hh) * 60))
+    return f'{hh}h {mm:02d}min'
+
+
+# Descrizioni leggibili per i messaggi
+LABELS = {
+    'monitor':     ('Dati radar DPC',         'possibile ritardo lato DPC'),
+    'monitor_run': ('Script monitor',          'lo script non gira: controlla Actions'),
+    'nowcast':     ('Nowcast celle',           'ritardo cron o script fermo'),
+    'archive':     ('Archivio storico',        'workflow archivio fermo'),
+    'arpa':        ('Dati radar ARPA',         'workflow arpa-collect fermo o sito ARPA giù'),
+    'forecast':    ('Verifica forecast',       'workflow giornaliero in ritardo'),
+}
+
+
 def check(name: str, age: float | None, max_age: float, state: dict) -> tuple[bool, str]:
-    """Ritorna (changed, status_message). Aggiorna state in place."""
-    prev = state.get(name, {'down': False})
-    was_down = prev.get('down', False)
+    """Isteresi: segnala 'fermo' solo dopo CONSECUTIVE_FAILS check oltre soglia.
+    Recovery immediato. Ritorna (changed, status_message)."""
+    label, hint = LABELS.get(name, (name, ''))
+    prev = state.get(name, {})
+    was_down  = prev.get('down', False)
+    fail_cnt  = prev.get('fail_count', 0)
+
     if age is None:
-        # Subsystem opzionale (arpa/forecast) o mai eseguito → no alert
         log.info(f'  {name}: dato non disponibile (opzionale o mai eseguito)')
-        return (False, f'{name}: n/a')
-    is_down = age > max_age
-    msg = f'{name}: età {age:.1f}h (limite {max_age}h)'
-    if is_down and not was_down:
-        state[name] = {'down': True, 'since': now_utc().isoformat().replace('+00:00','Z'),
-                       'age_h': round(age, 2)}
-        log.warning(f'  🔴 {msg} → ALERT')
-        return (True, f'🔴 {msg} → fermo')
-    if not is_down and was_down:
-        state[name] = {'down': False, 'recovered_at': now_utc().isoformat().replace('+00:00','Z')}
-        log.info(f'  🟢 {msg} → RECOVERY')
-        return (True, f'🟢 {msg} → ripreso')
-    state[name] = {'down': is_down, 'last_check_age_h': round(age, 2)}
-    log.info(f'  {("🟡" if is_down else "✓")} {msg}')
+        return (False, f'{label}: n/d')
+
+    over = age > max_age
+    age_s = _fmt_age(age)
+
+    if over:
+        fail_cnt += 1
+    else:
+        fail_cnt = 0
+
+    msg = f'{label}: nessun aggiornamento da {age_s} (atteso entro {max_age}h)'
+
+    # DOWN: solo dopo N check consecutivi falliti
+    if over and not was_down and fail_cnt >= CONSECUTIVE_FAILS:
+        state[name] = {'down': True, 'fail_count': fail_cnt,
+                       'since': now_utc().isoformat().replace('+00:00','Z')}
+        log.warning(f'  🔴 {msg}')
+        return (True, f'🔴 {msg} — {hint}')
+    # RECOVERY: immediato
+    if not over and was_down:
+        state[name] = {'down': False, 'fail_count': 0,
+                       'recovered_at': now_utc().isoformat().replace('+00:00','Z')}
+        log.info(f'  🟢 {label}: tornato regolare (ultimo agg. {age_s} fa)')
+        return (True, f'🟢 {label}: tornato regolare (ultimo agg. {age_s} fa)')
+    # Pending (1° fail) o stato invariato
+    state[name] = {'down': was_down, 'fail_count': fail_cnt}
+    icon = '🟡' if over else '✓'
+    log.info(f'  {icon} {msg if over else f"{label}: OK ({age_s} fa)"}')
     return (False, msg)
 
 
@@ -201,8 +251,9 @@ def main() -> int:
     state = load_state()
 
     ages = {
-        'monitor':  get_monitor_age(),
-        'nowcast':  get_nowcast_age(),
+        'monitor':      get_monitor_age(),
+        'monitor_run':  get_monitor_run_age(),
+        'nowcast':      get_nowcast_age(),
         'archive':  get_archive_age(),
         'arpa':     get_arpa_age(),
         'forecast': get_forecast_age(),

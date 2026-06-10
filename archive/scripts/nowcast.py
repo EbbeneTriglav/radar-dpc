@@ -367,10 +367,50 @@ def update_nowcast_obs(file, all_obs):
 
 
 # ─── Composizione messaggi ───────────────────────────────────────────────────
+def _arpa_confirm(area_name, max_age_min=20):
+    """Conferma incrociata ARPA per i messaggi nowcast (solo ruspino/cepina)."""
+    if area_name not in ('ruspino', 'cepina'):
+        return ''
+    try:
+        f = Path(__file__).resolve().parents[1] / 'data' / f'{area_name}_arpa.csv'
+        if not f.exists():
+            return ''
+        last = None
+        with f.open() as fh:
+            rdr = csv.DictReader(fh)
+            for row in rdr:
+                if row.get('location_type') == 'area':
+                    last = row
+        if not last:
+            return ''
+        ts = datetime.fromisoformat(last['timestamp_utc'].replace('Z', '+00:00'))
+        age_min = (datetime.now(timezone.utc) - ts).total_seconds() / 60
+        if age_min > max_age_min:
+            return ''
+        mmh = float(last['max_mmh'])
+        if mmh >= 0.5:
+            return f"ARPA Lombardia conferma: {mmh:.1f} mm/h ({age_min:.0f} min fa)"
+        return f"ARPA Lombardia: nessuna pioggia in area ({age_min:.0f} min fa)"
+    except Exception:
+        return ''
+
+
+def _ts_local(ts_iso):
+    """ISO UTC → stringa locale Europe/Rome leggibile."""
+    try:
+        from zoneinfo import ZoneInfo
+        dt = datetime.fromisoformat(ts_iso.replace('Z', '+00:00'))
+        loc = dt.astimezone(ZoneInfo('Europe/Rome'))
+        return loc.strftime('%d/%m %H:%M') + (' CEST' if loc.dst() else ' CET')
+    except Exception:
+        return ts_iso
+
+
 def compose(area, product, trigger, signal, motion, prob, buffer_km):
     label, lvl, icon = area['label'], trigger['level'], trigger['icon']
     thr, val = trigger['value'], signal['max']
     unit = 'mm/h' if product == 'SRI' else 'mm/1h'
+    ts_local = _ts_local(signal['ts_iso'])
     cell_pos = ''
     if signal.get('max_lat'):
         cell_pos = f"Cella max: {signal['max_lat']:.3f}, {signal['max_lon']:.3f}\n"
@@ -388,8 +428,9 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
         f"Rilevata entro {buffer_km} km dal bacino (radar DPC):\n"
         f"  • {product} max: {val:.1f} {unit} (soglia {thr})\n"
         f"  • {cum3_str}"
-        f"{cell_pos}{mot}{prob_str}\n"
-        f"Timestamp: {signal['ts_iso']}\n"
+        f"{cell_pos}{mot}{prob_str}"
+        + (f"  • {_arpa}\n" if (_arpa := _arpa_confirm(area['name'])) else '')
+        + f"\nRilevazione: {ts_local} (ora italiana)\n"
     )
     md = (
         f"{icon} *CELLA RADAR — {label}*\n"
@@ -398,9 +439,140 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
         + (f"Cumulata 3h: *{signal.get('cum3_max',0):.1f} mm*\n" if 'cum3_max' in signal else '')
         + (f"Moto: {motion['compass']} {motion['speed_kmh']}km/h\n" if motion and motion.get('bearing_deg') is not None else '')
         + (f"Prob. arrivo: *{prob}%*\n" if prob is not None else '')
+        + (f"{_arpa}\n" if _arpa else '')
+        + f"_{ts_local}_\n"
     )
     subject = f"{icon} {label} — CELLA {lvl.upper()} {product} {val:.0f}{unit} entro {buffer_km}km"
     return subject, text, md
+
+
+def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
+                       channels, writer, rcpt_email=None, rcpt_tg=None,
+                       sri_threshold=10.0):
+    """CELLA SULL'AREA: SRI max dentro il poligono >= soglia.
+    Stima permanenza (estensione cella / velocità moto) e pioggia attesa al suolo.
+    Quando la cella esce (SRI scende sotto il 50% soglia), invia messaggio di chiusura
+    con la cumulata effettivamente caduta. Ritorna True se in stato attivo."""
+    name = area['name']
+    key = f"{name}:nowcast:cell_on_area"
+    st = state.get(key, {'active': False})
+
+    # Geometria dell'area pura (no buffer)
+    geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)  # ~poligono puro
+    sri_now_ts, sri_now_tiff = sri_frames[0]
+    sri_stat = stats_in_geom_tm(sri_now_tiff, geom_area)
+    if not sri_stat:
+        return st.get('active', False)
+    sri_max = sri_stat['max']
+    ts_iso = datetime.fromtimestamp(sri_now_ts/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
+
+    # Cumulate attuali dentro l'area (per stima pioggia caduta)
+    srt1_in = stats_in_geom_tm(srt1_tiff[1], geom_area) if srt1_tiff else None
+    cum3_in = stats_in_geom_tm(cum3_tiff, geom_area) if cum3_tiff else None
+
+    # ── CHIUSURA: cella era attiva e ora SRI è sceso ──
+    if st.get('active') and sri_max < sri_threshold * 0.5:
+        dur_min = None
+        try:
+            t0 = datetime.fromisoformat(st['since'].replace('Z','+00:00'))
+            dur_min = int((datetime.now(timezone.utc) - t0).total_seconds() / 60)
+        except Exception:
+            pass
+        cum_fallen = cum3_in['max'] if cum3_in else (srt1_in['max'] if srt1_in else None)
+        label = area['label']
+        text = (
+            f"🌤 CELLA TRANSITATA — {label}\n\n"
+            f"La cella temporalesca ha lasciato l'area.\n"
+            + (f"  • Permanenza sull'area: ~{dur_min} min\n" if dur_min is not None else '')
+            + (f"  • Pioggia caduta (cum. 3h max in area): {cum_fallen:.1f} mm\n" if cum_fallen is not None else '')
+            + f"  • SRI attuale: {sri_max:.1f} mm/h\n"
+            f"\nRilevazione: {_ts_local(ts_iso)} (ora italiana)\n"
+        )
+        md = (
+            f"🌤 *CELLA TRANSITATA — {label}*\n"
+            + (f"Permanenza: ~*{dur_min} min*\n" if dur_min is not None else '')
+            + (f"Pioggia caduta: *{cum_fallen:.1f} mm* (cum. 3h)\n" if cum_fallen is not None else '')
+            + f"SRI attuale: {sri_max:.1f} mm/h\n_{_ts_local(ts_iso)}_"
+        )
+        subject = f"🌤 {label} — cella transitata" + (f" (~{dur_min} min, {cum_fallen:.0f} mm)" if dur_min is not None and cum_fallen is not None else '')
+        em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
+        tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+        writer.writerow({
+            'event_timestamp_utc': now_iso, 'area_name': name,
+            'level': 'storm_cleared', 'threshold_mm': sri_threshold,
+            'observed_mm_mean': f"{sri_stat.get('mean',0):.2f}", 'observed_mm_max': f"{sri_max:.2f}",
+            'product': 'SRI', 'observation_timestamp_utc': ts_iso,
+            'forecast_max_6h_mm': '',
+            'notified_email': em, 'notified_telegram': tg,
+            'note': f"cella uscita dopo ~{dur_min}min, caduti {cum_fallen if cum_fallen is not None else '?'}mm",
+        })
+        state[key] = {'active': False, 'cleared_utc': now_iso}
+        log.info(f"  ✓ cell_on_area CLEARED: durata~{dur_min}min, cum={cum_fallen}")
+        return False
+
+    # ── APERTURA: cella sopra soglia e non già attiva ──
+    if sri_max >= sri_threshold and not st.get('active'):
+        # Stima permanenza: estensione cella lungo la direzione di moto / velocità
+        motion, dwell_min, rain_est = None, None, None
+        if len(sri_frames) >= 2:
+            dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
+            motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], geom_area, dt_min)
+        if motion and motion.get('speed_kmh') and motion['speed_kmh'] > 1:
+            # Estensione approssimata: diametro equivalente dell'area dei pixel > soglia
+            # proxy semplice: sqrt(area poligono) + 4 km (dimensione tipica cella)
+            import math
+            area_km2 = geom_area.area / 1e6
+            ext_km = math.sqrt(area_km2) + 4.0
+            dwell_min = int(round(ext_km / motion['speed_kmh'] * 60))
+            dwell_min = max(5, min(dwell_min, 180))  # clamp 5..180 min
+            rain_est = sri_stat['mean'] * dwell_min / 60  # mm = mm/h × h
+        elif motion and motion.get('compass') == 'stazionaria':
+            dwell_min = None  # stazionaria: permanenza indefinita
+            rain_est = None
+
+        label = area['label']
+        dwell_str = (f"  • Permanenza stimata: ~{dwell_min} min\n" if dwell_min
+                     else "  • Cella STAZIONARIA: permanenza prolungata possibile\n" if motion and motion.get('compass') == 'stazionaria'
+                     else '')
+        rain_str = f"  • Pioggia attesa al suolo: ~{rain_est:.0f} mm\n" if rain_est else ''
+        fallen_str = f"  • Già caduti (cum. 3h): {cum3_in['max']:.1f} mm\n" if cum3_in else ''
+        mot_str = (f"  • Moto: {motion['compass']} a {motion['speed_kmh']} km/h\n"
+                   if motion and motion.get('bearing_deg') is not None else '')
+
+        text = (
+            f"⛈️ CELLA SULL'AREA — {label}\n\n"
+            f"Cella temporalesca SOPRA il bacino (radar DPC):\n"
+            f"  • SRI max in area: {sri_max:.1f} mm/h (soglia {sri_threshold})\n"
+            f"{mot_str}{dwell_str}{rain_str}{fallen_str}"
+            f"\nRilevazione: {_ts_local(ts_iso)} (ora italiana)\n"
+            f"Riceverai un messaggio quando la cella avrà lasciato l'area.\n"
+        )
+        md = (
+            f"⛈️ *CELLA SULL'AREA — {label}*\n"
+            f"SRI max: *{sri_max:.1f} mm/h* (soglia {sri_threshold})\n"
+            + (f"Moto: {motion['compass']} {motion['speed_kmh']}km/h\n" if motion and motion.get('bearing_deg') is not None else '')
+            + (f"Permanenza stimata: ~*{dwell_min} min*\n" if dwell_min else ('*Cella stazionaria*\n' if motion and motion.get('compass')=='stazionaria' else ''))
+            + (f"Pioggia attesa: ~*{rain_est:.0f} mm*\n" if rain_est else '')
+            + (f"Già caduti: {cum3_in['max']:.1f} mm (3h)\n" if cum3_in else '')
+            + f"_{_ts_local(ts_iso)}_"
+        )
+        subject = f"⛈️ {label} — CELLA SULL'AREA {sri_max:.0f}mm/h" + (f" ~{dwell_min}min" if dwell_min else '')
+        em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
+        tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+        writer.writerow({
+            'event_timestamp_utc': now_iso, 'area_name': name,
+            'level': 'storm_on_area', 'threshold_mm': sri_threshold,
+            'observed_mm_mean': f"{sri_stat.get('mean',0):.2f}", 'observed_mm_max': f"{sri_max:.2f}",
+            'product': 'SRI', 'observation_timestamp_utc': ts_iso,
+            'forecast_max_6h_mm': '',
+            'notified_email': em, 'notified_telegram': tg,
+            'note': f"cella su area" + (f" dwell~{dwell_min}min rain~{rain_est:.0f}mm" if dwell_min and rain_est else ''),
+        })
+        state[key] = {'active': True, 'since': now_iso}
+        log.info(f"  ✓ cell_ON_AREA: SRI={sri_max:.1f} dwell={dwell_min} rain={rain_est} email={em} tg={tg}")
+        return True
+
+    return st.get('active', False)
 
 
 # ─── Elaborazione per area ───────────────────────────────────────────────────
@@ -476,6 +648,24 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                     triggered = True
 
         obs['buffers'][f'{buf_km}km'] = buf_obs
+
+    # ── CELLA SULL'AREA: SRI dentro il poligono + permanenza + pioggia stimata ──
+    # Soglia = warning SRT1 dell'area (fallback 10 mm/h)
+    try:
+        _srt1_ths = (area.get('monitoring', {}).get('products', {})
+                         .get('SRT1', {}).get('thresholds', []))
+        _cell_thr = next((float(t['value_mm']) for t in _srt1_ths if t.get('level') == 'warning'), 10.0)
+    except Exception:
+        _cell_thr = 10.0
+    try:
+        was_on_area = _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff,
+                                         state, now_iso, channels, writer,
+                                         rcpt_email=rcpt_email, rcpt_tg=rcpt_tg,
+                                         sri_threshold=_cell_thr)
+        if was_on_area:
+            triggered = True
+    except Exception as e:
+        log.warning(f'  cell_on_area errore: {e}')
 
     # Stima moto (sul buffer esterno) — per le osservazioni
     if len(sri_frames) >= 2:
