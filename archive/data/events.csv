@@ -42,3 +42,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-10T02:35:01Z,ruspino,nowcast_warning,10,0.18,14.70,SRI,2026-06-10T02:25:00Z,,true,true,nowcast buffer=10km moto=NE/21.1kmh prob=2%
 2026-06-10T07:00:46Z,cepina,nowcast_alarm,15,4.96,16.29,SRT1,2026-06-10T06:50:00Z,,true,true,nowcast buffer=5km
 2026-06-10T14:26:39Z,ruspino,nowcast_warning,10,2.89,10.26,SRI,2026-06-10T14:20:00Z,,true,true,nowcast buffer=5km
+2026-06-10T14:54:54Z,cepina,storm_on_area,5.0,1.90,5.63,SRI,2026-06-10T14:45:00Z,,true,true,cella su area
