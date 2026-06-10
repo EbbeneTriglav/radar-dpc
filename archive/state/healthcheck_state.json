@@ -1,23 +1,28 @@
 {
   "archive": {
     "down": false,
-    "last_check_age_h": 0.78
+    "fail_count": 0
   },
   "arpa": {
     "down": false,
-    "recovered_at": "2026-06-10T10:37:10.239873Z"
+    "fail_count": 1
   },
   "forecast": {
     "down": false,
-    "recovered_at": "2026-06-10T10:37:10.239922Z"
+    "fail_count": 0
   },
   "monitor": {
-    "age_h": 2.0,
-    "down": true,
-    "since": "2026-06-10T10:37:10.239706Z"
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-10T16:11:21.455168Z"
+  },
+  "monitor_run": {
+    "down": false,
+    "fail_count": 0
   },
   "nowcast": {
-    "down": true,
-    "last_check_age_h": 3.61
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-10T16:11:21.455279Z"
   }
 }
