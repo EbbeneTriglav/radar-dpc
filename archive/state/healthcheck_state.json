@@ -5,8 +5,7 @@
   },
   "arpa": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-06-12T15:43:59.930445Z"
+    "fail_count": 1
   },
   "forecast": {
     "down": false,
@@ -14,12 +13,11 @@
   },
   "monitor": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-06-12T15:43:59.930274Z"
+    "fail_count": 0
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 6
+    "fail_count": 7
   },
   "nowcast": {
     "down": false,
