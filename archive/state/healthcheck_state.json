@@ -17,8 +17,7 @@
   },
   "monitor_run": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-06-13T14:32:32.547753Z"
+    "fail_count": 1
   },
   "nowcast": {
     "down": false,
