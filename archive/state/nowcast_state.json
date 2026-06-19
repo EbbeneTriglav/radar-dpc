@@ -1,8 +1,12 @@
 {
-  "_last_run_utc": "2026-06-19T08:58:59Z",
+  "_last_run_utc": "2026-06-19T12:47:07Z",
   "cepina:nowcast:SRI:10:warning": {
     "active": true,
     "last_trigger_utc": "2026-06-07T19:23:25Z"
+  },
+  "cepina:nowcast:SRI:5:warning": {
+    "active": true,
+    "last_trigger_utc": "2026-06-19T12:47:07Z"
   },
   "cepina:nowcast:SRT1:10:alarm": {
     "active": true,
