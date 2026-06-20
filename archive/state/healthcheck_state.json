@@ -17,7 +17,7 @@
   },
   "monitor_run": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "nowcast": {
     "down": false,
