@@ -9,18 +9,20 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 1
+    "fail_count": 0
   },
   "monitor": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-21T10:07:53.073984Z"
   },
   "monitor_run": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-21T10:07:53.074045Z"
   },
   "nowcast": {
     "down": false,
-    "fail_count": 1
+    "fail_count": 0
   }
 }
