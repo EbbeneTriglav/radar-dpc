@@ -12,14 +12,13 @@
     "fail_count": 0
   },
   "monitor": {
-    "down": true,
-    "fail_count": 2,
-    "since": "2026-06-21T10:07:53.073984Z"
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-21T14:35:40.764822Z"
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 2,
-    "since": "2026-06-21T10:07:53.074045Z"
+    "fail_count": 3
   },
   "nowcast": {
     "down": false,
