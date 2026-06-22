@@ -1,8 +1,12 @@
 {
-  "_last_run_utc": "2026-06-22T14:27:47Z",
+  "_last_run_utc": "2026-06-22T18:41:18Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": true,
     "last_trigger_utc": "2026-06-20T17:16:18Z"
+  },
+  "cepina:nowcast:SRI:10:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-22T18:41:18Z"
   },
   "cepina:nowcast:SRI:10:warning": {
     "active": true,
@@ -11,6 +15,10 @@
   "cepina:nowcast:SRI:5:alarm": {
     "active": true,
     "last_trigger_utc": "2026-06-20T17:16:18Z"
+  },
+  "cepina:nowcast:SRI:5:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-22T18:41:18Z"
   },
   "cepina:nowcast:SRI:5:warning": {
     "active": true,
@@ -33,8 +41,8 @@
     "last_trigger_utc": "2026-06-20T17:16:18Z"
   },
   "cepina:nowcast:cell_on_area": {
-    "active": false,
-    "cleared_utc": "2026-06-20T19:10:48Z"
+    "active": true,
+    "since": "2026-06-22T18:41:18Z"
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": true,

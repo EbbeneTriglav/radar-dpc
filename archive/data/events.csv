@@ -54,3 +54,6 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-20T19:10:48Z,cepina,storm_cleared,5.0,0.42,1.52,SRI,2026-06-20T19:00:00Z,,true,true,"cella uscita dopo ~114min, caduti 3.5349998474121094mm"
 2026-06-21T19:16:38Z,ruspino,nowcast_alarm,15,1.68,23.58,SRI,2026-06-21T19:05:00Z,,true,true,nowcast buffer=5km moto=SW/7.0kmh prob=37%
 2026-06-21T19:16:38Z,ruspino,nowcast_warning,8,0.40,14.32,SRT1,2026-06-21T19:05:00Z,,true,true,nowcast buffer=10km
+2026-06-22T18:41:18Z,cepina,nowcast_emergency,25,2.46,27.35,SRI,2026-06-22T18:30:00Z,,true,true,nowcast buffer=5km moto=S/14.6kmh prob=5%
+2026-06-22T18:41:18Z,cepina,nowcast_emergency,25,1.01,25.52,SRI,2026-06-22T18:30:00Z,,true,true,nowcast buffer=10km
+2026-06-22T18:41:18Z,cepina,storm_on_area,5.0,1.04,10.08,SRI,2026-06-22T18:30:00Z,,true,true,cella su area
