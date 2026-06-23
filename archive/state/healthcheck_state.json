@@ -5,7 +5,7 @@
   },
   "arpa": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "forecast": {
     "down": false,
@@ -17,7 +17,7 @@
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 5
+    "fail_count": 6
   },
   "nowcast": {
     "down": false,
