@@ -1,7 +1,8 @@
 {
   "archive": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-26T09:54:17.463087Z"
   },
   "arpa": {
     "down": false,
@@ -9,7 +10,7 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 1
+    "fail_count": 0
   },
   "monitor": {
     "down": false,
@@ -17,10 +18,10 @@
   },
   "monitor_run": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "nowcast": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   }
 }
