@@ -1,8 +1,8 @@
 {
   "archive": {
-    "down": true,
-    "fail_count": 2,
-    "since": "2026-06-26T09:54:17.463087Z"
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-26T15:05:52.369554Z"
   },
   "arpa": {
     "down": false,
@@ -14,14 +14,15 @@
   },
   "monitor": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor_run": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-26T15:05:52.369476Z"
   },
   "nowcast": {
     "down": false,
-    "fail_count": 1
+    "fail_count": 0
   }
 }
