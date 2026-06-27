@@ -9,16 +9,16 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-06-27T09:07:46.300294Z"
+    "fail_count": 0
   },
   "monitor": {
     "down": false,
     "fail_count": 0
   },
   "monitor_run": {
-    "down": true,
-    "fail_count": 5
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-27T14:10:38.590041Z"
   },
   "nowcast": {
     "down": false,
