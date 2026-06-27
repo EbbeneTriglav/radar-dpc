@@ -8,17 +8,17 @@
     "fail_count": 0
   },
   "forecast": {
-    "down": true,
-    "fail_count": 2,
-    "since": "2026-06-27T04:29:38.043757Z"
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-06-27T09:07:46.300294Z"
   },
   "monitor": {
     "down": false,
-    "fail_count": 1
+    "fail_count": 0
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 4
+    "fail_count": 5
   },
   "nowcast": {
     "down": false,
