@@ -8,16 +8,17 @@
     "fail_count": 0
   },
   "forecast": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-27T04:29:38.043757Z"
   },
   "monitor": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 3
+    "fail_count": 4
   },
   "nowcast": {
     "down": false,
