@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-06-29T19:44:03Z",
+  "_last_run_utc": "2026-06-29T21:17:36Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": true,
     "last_trigger_utc": "2026-06-20T17:16:18Z"
@@ -52,9 +52,29 @@
     "active": true,
     "last_trigger_utc": "2026-06-29T19:44:03Z"
   },
+  "panna:nowcast:SRI:10:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-29T21:17:36Z"
+  },
+  "panna:nowcast:SRI:5:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-06-29T21:17:36Z"
+  },
+  "panna:nowcast:SRT1:10:alarm": {
+    "active": true,
+    "last_trigger_utc": "2026-06-29T21:17:36Z"
+  },
   "panna:nowcast:SRT1:10:emergency": {
     "active": true,
     "last_trigger_utc": "2026-06-29T19:44:03Z"
+  },
+  "panna:nowcast:SRT1:5:alarm": {
+    "active": true,
+    "last_trigger_utc": "2026-06-29T21:17:36Z"
+  },
+  "panna:nowcast:cell_on_area": {
+    "active": true,
+    "since": "2026-06-29T21:17:36Z"
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": true,
