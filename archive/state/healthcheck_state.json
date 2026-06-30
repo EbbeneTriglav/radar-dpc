@@ -5,19 +5,20 @@
   },
   "arpa": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "forecast": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor": {
     "down": false,
     "fail_count": 0
   },
   "monitor_run": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-06-30T04:38:31.144760Z"
   },
   "nowcast": {
     "down": false,
