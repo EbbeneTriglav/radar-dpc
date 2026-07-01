@@ -1,7 +1,7 @@
 {
   "cepina:CUM3:alarm": {
-    "active": true,
-    "last_below_utc": "2026-07-01T18:15:01Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-07-01T13:22:28Z"
   },
   "cepina:CUM3:emergency": {
@@ -10,8 +10,8 @@
     "last_trigger_utc": null
   },
   "cepina:CUM3:warning": {
-    "active": true,
-    "last_below_utc": "2026-07-01T18:15:01Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-07-01T13:22:28Z"
   },
   "cepina:SRT1:alarm": {
