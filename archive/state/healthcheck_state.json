@@ -5,22 +5,22 @@
   },
   "arpa": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "forecast": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 13
+    "fail_count": 14
   },
   "nowcast": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   }
 }
