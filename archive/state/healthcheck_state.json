@@ -17,8 +17,7 @@
   },
   "monitor_run": {
     "down": true,
-    "fail_count": 2,
-    "since": "2026-07-14T08:31:10.750791Z"
+    "fail_count": 3
   },
   "nowcast": {
     "down": false,
