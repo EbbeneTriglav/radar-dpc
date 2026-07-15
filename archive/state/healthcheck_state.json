@@ -9,7 +9,7 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "monitor": {
     "down": false,
@@ -17,8 +17,7 @@
   },
   "monitor_run": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-07-14T19:48:22.679886Z"
+    "fail_count": 0
   },
   "nowcast": {
     "down": false,
