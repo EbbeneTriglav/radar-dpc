@@ -56,7 +56,7 @@
   },
   "cepina:forecast:SRT1:warning": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-07-18T00:09:44Z",
     "last_trigger_utc": "2026-07-15T11:49:20Z"
   },
   "panna:CUM3:alarm": {
