@@ -123,7 +123,8 @@
       <span class="legend-chip"><i style="background:#22d3ee"></i>Previsto MET (max 1h)</span>
       <span class="legend-chip"><i style="background:#a78bfa"></i>Nowcast SRI (mm/h)</span>
       <span class="legend-chip"><i style="background:#4ade80"></i>Osservato ARPA (mm/h)</span>
-      <span class="legend-chip"><i style="background:#f87171"></i>Osservato DPC CUM3 (mm/3h)</span>
+      <span class="legend-chip"><i style="background:#f87171"></i>DPC CUM3 max (mm/3h)</span>
+      <span class="legend-chip"><i style="background:#e879f9"></i>Pluviometro a terra (mm/3h)</span>
     </div>
     <canvas id="evChart" height="120"></canvas>
     <p class="vf-note" id="chartNote"></p>
@@ -321,6 +322,38 @@ function renderEvents(){
 
 // ── GRAFICO PER-EVENTO: previsto / nowcast / osservato attorno all'evento ──
 let _chart=null;
+// ── Pluviometri ARPA a terra (verità al suolo, via API Socrata pubblica) ──
+// Il radar sottostima strutturalmente i picchi convettivi: il pluviometro a
+// terra è il riferimento più affidabile. Cornalita (Ruspino) e Oga S.Colombano
+// (Cepina) — stessi sensori usati dalle dashboard idrologiche.
+const SOCRATA='https://www.dati.lombardia.it/resource/647i-nhxk.json';
+const GROUND_SENSORS={ ruspino:{id:2278,name:'Cornalita'}, cepina:{id:8010,name:'Oga S.Colombano'} };
+
+async function fetchGroundRain(area, winStart, winEnd){
+  const s=GROUND_SENSORS[area]; if(!s) return null;
+  try{
+    // Socrata filtra per idsensore; prendo le ultime righe e filtro la finestra.
+    const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$limit=2000&$order=data DESC`);
+    if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
+    const rows=await r.json();
+    // Campi: data (ISO), valore (mm nell'intervallo di misura, tipicamente 10-30min)
+    const pts=[];
+    for(const row of rows){
+      const t=new Date(row.data).getTime(); const v=+row.valore;
+      if(isFinite(t)&&isFinite(v)&&v>=0&&t>=winStart&&t<=winEnd) pts.push({x:t,y:v});
+    }
+    pts.sort((a,b)=>a.x-b.x);
+    // Cumulata mobile 3h (per confronto diretto col CUM3 radar mm/3h)
+    const cum3=[];
+    for(let i=0;i<pts.length;i++){
+      let sum=0; const t0=pts[i].x-3*3600_000;
+      for(let j=0;j<=i;j++) if(pts[j].x>t0) sum+=pts[j].y;
+      cum3.push({x:pts[i].x, y:+sum.toFixed(1)});
+    }
+    return {name:s.name, pts, cum3, total:pts.reduce((a,b)=>a+b.y,0)};
+  }catch(e){ return {name:s.name, err:e.message, pts:[]}; }
+}
+
 async function openChart(ev){
   const area = ev.area_name;
   const evMs = new Date(ev.event_timestamp_utc).getTime();
@@ -349,11 +382,22 @@ async function openChart(ev){
     .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max_mmh||0}))
     .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
 
-  // Serie osservata DPC CUM3 (mm/3h) nella finestra
-  const cum3Pts = ALL.cum3[area]
+  // Serie osservata DPC CUM3 (mm/3h) nella finestra.
+  // MAX = picco nel punto peggiore dell'area (rappresenta la pioggia caduta
+  // dove ha piovuto di più, vicino al reale). MEAN = media sui 16 pixel
+  // (annacqua il picco della cella convettiva). Mostriamo entrambi, il MAX
+  // in evidenza perché più fedele a quanto misurato al pluviometro.
+  const cum3MaxPts = ALL.cum3[area]
+    .filter(r=>r.location_type==='area')
+    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max||0}))
+    .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+  const cum3MeanPts = ALL.cum3[area]
     .filter(r=>r.location_type==='area')
     .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.mean||0}))
     .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+
+  // Pluviometro a terra (verità al suolo) — fetch live da API Socrata ARPA
+  const ground = await fetchGroundRain(area, winStart, winEnd);
 
   // Serie previsto (forecast_history) nelle 6h prima: OM e MET max_1h
   const omPts=[], metPts=[];
@@ -377,7 +421,9 @@ async function openChart(ev){
   if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, borderColor:'#f59e0b', backgroundColor:'#f59e0b', pointRadius:2, tension:.2, borderWidth:2});
   if (metPts.length) ds.push({label:'Previsto MET (max 1h)', data:metPts, borderColor:'#22d3ee', backgroundColor:'#22d3ee', pointRadius:2, tension:.2, borderWidth:2, borderDash:[4,3]});
   if (arpaPts.length) ds.push({label:'Osservato ARPA (mm/h)', data:arpaPts, borderColor:'#4ade80', backgroundColor:'#4ade80', pointRadius:1, tension:.15, borderWidth:2, fill:false});
-  if (cum3Pts.length) ds.push({label:'Osservato DPC CUM3 (mm/3h)', data:cum3Pts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2, borderDash:[2,2], stepped:true});
+  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2.5, stepped:true});
+  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:0, tension:0, borderWidth:1, borderDash:[2,3], stepped:true});
+  if (ground && ground.cum3 && ground.cum3.length) ds.push({label:`Pluviometro ${ground.name} (mm/3h)`, data:ground.cum3, borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:2, tension:.1, borderWidth:2.5, fill:false});
   if (nowPts.length) ds.push({label:'Nowcast SRI (mm/h)', data:nowPts, borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:6, pointStyle:'triangle', showLine:false});
 
   const ctx = document.getElementById('evChart');
@@ -418,7 +464,21 @@ async function openChart(ev){
     note = `Allerta previsionale: soglia ${ev.threshold_mm} mm, valore previsto ${(+ev.forecast_max_6h_mm||0).toFixed(1)} mm. `+
            `Le serie ARPA/DPC mostrano cosa è poi realmente caduto nella finestra.`;
   }
-  if (!arpaPts.length && !cum3Pts.length) note += ' (Nessun dato osservato archiviato in questa finestra.)';
+  // Confronto radar vs pluviometro a terra (verità al suolo)
+  if (ground && ground.total>0){
+    const gmax = ground.cum3.length ? Math.max(...ground.cum3.map(p=>p.y)) : 0;
+    const rmax = cum3MaxPts.length ? Math.max(...cum3MaxPts.map(p=>p.y)) : 0;
+    note += ` Pluviometro ${ground.name}: ${gmax.toFixed(0)} mm max/3h a terra`;
+    if (rmax>0){
+      const sotto = gmax>0 ? (1 - rmax/gmax)*100 : 0;
+      note += ` vs radar DPC ${rmax.toFixed(0)} mm`;
+      if (sotto>=20) note += ` — il radar sottostima del ${sotto.toFixed(0)}% (tipico dei picchi convettivi; il dato a terra è il riferimento).`;
+      else note += '.';
+    } else note += '.';
+  } else if (ground && ground.err){
+    note += ` (Pluviometro ${ground.name} non raggiungibile: ${ground.err}.)`;
+  }
+  if (!arpaPts.length && !cum3MaxPts.length && !(ground&&ground.total>0)) note += ' (Nessun dato osservato in questa finestra.)';
   document.getElementById('chartNote').textContent = note;
 }
 function closeChart(){ document.getElementById('chartModal').style.display='none'; if(_chart){_chart.destroy();_chart=null;} }
