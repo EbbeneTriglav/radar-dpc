@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/style.css?v=20260518j">
   <style>
-    .vf-wrap{max-width:1200px;margin:0 auto;padding:18px}
+    .vf-wrap{max-width:1600px;margin:0 auto;padding:18px 28px}
     .vf-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0 0 18px}
     .vf-card{background:var(--bg2,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:14px 16px}
     .vf-card .k{font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.05em}
@@ -31,11 +31,17 @@
     .miss{color:#f87171;font-weight:600}
     .good{color:#4ade80;font-weight:600}
     #chartModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
-    #chartBox{background:var(--bg,#0f172a);border:1px solid var(--border,#334155);border-radius:14px;padding:18px;width:min(880px,94vw);max-height:90vh;overflow:auto}
-    #chartBox h3{margin:0 0 4px}
+    #chartBox{background:var(--bg,#0f172a);border:1px solid var(--border,#334155);border-radius:14px;padding:20px;width:min(1100px,96vw);max-height:92vh;overflow:auto}
+    #chartBox h3{margin:0 0 4px;font-size:17px}
     .close-x{float:right;cursor:pointer;color:var(--text3,#94a3b8);font-size:20px;border:none;background:none}
-    .legend-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-right:12px}
-    .legend-chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
+    #evLegend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+    .lg-chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;padding:5px 11px;border-radius:8px;
+      border:1px solid var(--border,#334155);cursor:pointer;user-select:none;transition:opacity .15s,background .15s}
+    .lg-chip:hover{background:rgba(148,163,184,.1)}
+    .lg-chip.off{opacity:.4}
+    .lg-chip .sw{width:22px;height:4px;border-radius:2px;flex:none}
+    .lg-chip.dash .sw{height:0;border-top:3px dashed currentColor;background:none!important}
+    .lg-group{font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.05em;width:100%;margin:6px 0 0}
   </style>
 </head>
 <body>
@@ -100,6 +106,7 @@
       <option value="14">Ultimi 14 giorni</option>
       <option value="9999">Tutto</option>
     </select>
+    <button id="dlAll" style="font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);cursor:pointer;margin-left:auto">⬇ Scarica tutti gli eventi (CSV)</button>
   </div>
   <table class="vf">
     <thead><tr>
@@ -118,18 +125,11 @@
     <button class="close-x" onclick="closeChart()">✕</button>
     <h3 id="chartTitle">—</h3>
     <p class="vf-note" id="chartSub"></p>
-    <div style="margin:8px 0">
-      <div style="font-size:11px;color:var(--text3,#94a3b8);margin-bottom:4px">Intensità (mm/h, asse sx):</div>
-      <span class="legend-chip"><i style="background:#34d399"></i>Intensità ARPA</span>
-      <span class="legend-chip"><i style="background:#fbbf24"></i>Previsto OM</span>
-      <span class="legend-chip"><i style="background:#38bdf8"></i>Previsto MET/YR</span>
-      <span class="legend-chip"><i style="background:#a78bfa"></i>Nowcast SRI</span>
-      <div style="font-size:11px;color:var(--text3,#94a3b8);margin:6px 0 4px">Cumulata (mm, asse dx):</div>
-      <span class="legend-chip"><i style="background:#10b981;height:4px"></i>Cumulata evento ARPA (picco d'area)</span>
-      <span class="legend-chip"><i style="background:#f87171"></i>DPC CUM3 max/mean</span>
-      <span class="legend-chip"><i style="background:#e879f9;height:4px"></i>Cumulata pluviometro a terra</span>
+    <div id="evLegend"></div>
+    <div style="display:flex;gap:8px;margin:4px 0 8px">
+      <button id="dlEvent" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);cursor:pointer">⬇ Scarica dati evento (CSV)</button>
     </div>
-    <div style="position:relative;height:340px;margin-top:4px"><canvas id="evChart"></canvas></div>
+    <div style="position:relative;height:400px;margin-top:4px"><canvas id="evChart"></canvas></div>
     <p class="vf-note" id="chartNote"></p>
   </div>
 </div>
@@ -336,7 +336,12 @@ async function populateGroundColumn(events){
     if(!cell || !GROUND_SENSORS[e.area_name]) continue;
     const evMs=new Date(e.event_timestamp_utc).getTime();
     try{
-      const g=await fetchGroundRain(e.area_name, evMs-9*3600_000, evMs+6*3600_000);
+      // Per la colonna uso il GIORNO CIVILE completo dell'evento (totale
+      // giornaliero, coerente col dato che si vede nelle dashboard), non solo
+      // ±ore attorno all'istante.
+      const dayStart=new Date(evMs); dayStart.setUTCHours(0,0,0,0);
+      const dayEnd=new Date(evMs); dayEnd.setUTCHours(23,59,59,0);
+      const g=await fetchGroundRain(e.area_name, dayStart.getTime(), dayEnd.getTime());
       if(g && g.total>0){
         const tot=g.total.toFixed(0);
         const tag = g.type==='sir_daily' ? '(SIR, giorno)' : g.type==='reanalysis' ? '(reanalisi)' : g.name.split(' ')[0];
@@ -352,7 +357,59 @@ async function populateGroundColumn(events){
 }
 
 // ── GRAFICO PER-EVENTO: previsto / nowcast / osservato attorno all'evento ──
-let _chart=null;
+let _chart=null, _lastDs=null, _lastEv=null;
+
+// Legenda interattiva: click su un chip accende/spegne la serie nel grafico.
+function buildInteractiveLegend(ds){
+  const box=document.getElementById('evLegend');
+  const groups={int:{title:'Intensità (mm/h · asse sinistro)', items:[]},
+                cum:{title:'Cumulata (mm · asse destro)', items:[]}};
+  ds.forEach((d,i)=>{ (groups[d._grp]||groups.int).items.push({d,i}); });
+  let html='';
+  for(const g of ['int','cum']){
+    if(!groups[g].items.length) continue;
+    html+=`<div class="lg-group">${groups[g].title}</div>`;
+    for(const {d,i} of groups[g].items){
+      const dash=d.borderDash?'dash':'';
+      const col=d.borderColor;
+      html+=`<span class="lg-chip ${dash}" data-i="${i}" style="color:${col}">`
+        +`<span class="sw" style="background:${col}"></span>`
+        +`<span style="color:var(--text,#e2e8f0)">${d.label}</span></span>`;
+    }
+  }
+  box.innerHTML=html;
+  [...box.querySelectorAll('.lg-chip')].forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const i=+chip.dataset.i;
+      const meta=_chart.getDatasetMeta(i);
+      meta.hidden = meta.hidden===null ? !_chart.data.datasets[i].hidden : !meta.hidden;
+      chip.classList.toggle('off', meta.hidden);
+      _chart.update();
+    });
+  });
+}
+
+// Download CSV dei dati grezzi del singolo evento (tutte le serie del grafico)
+function downloadEventCSV(){
+  if(!_lastDs||!_lastEv) return;
+  const byT={};
+  for(const d of _lastDs){
+    for(const p of d.data){
+      const iso=new Date(p.x).toISOString();
+      (byT[iso] ??= {})[d.label]=p.y;
+    }
+  }
+  const cols=_lastDs.map(d=>d.label);
+  const times=Object.keys(byT).sort();
+  let csv='timestamp_utc;'+cols.map(c=>`"${c}"`).join(';')+'\n';
+  for(const t of times){
+    csv+=t+';'+cols.map(c=>byT[t][c]!=null?byT[t][c]:'').join(';')+'\n';
+  }
+  const name=`evento_${_lastEv.area_name}_${_lastEv.event_timestamp_utc.slice(0,16).replace(/[:T]/g,'-')}.csv`;
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+}
+
 // ── Pluviometri ARPA a terra (verità al suolo, via API Socrata pubblica) ──
 // Il radar sottostima strutturalmente i picchi convettivi: il pluviometro a
 // terra è il riferimento più affidabile. Cornalita (Ruspino) e Oga S.Colombano
@@ -378,7 +435,12 @@ async function fetchGroundRain(area, winStart, winEnd){
   try{
     let pts=[];
     if(s.type==='arpa'){
-      const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$limit=2000&$order=data DESC`);
+      // Filtro TEMPORALE su Socrata (non $limit generico): prendo esattamente
+      // la finestra dell'evento, così funziona anche per eventi di settimane fa
+      // (con $limit=2000 gli eventi oltre ~14 giorni cadevano fuori → 0 mm, bug).
+      const iso=t=>new Date(t).toISOString().slice(0,19);  // YYYY-MM-DDTHH:MM:SS
+      const where=`data >= '${iso(winStart)}' AND data <= '${iso(winEnd)}'`;
+      const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`);
       if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
       const rows=await r.json();
       for(const row of rows){
@@ -527,36 +589,38 @@ async function openChart(ev){
   }
 
   const ds = [];
+  // Palette a COLORI UNIVOCI. Intensità (asse sx, linee sottili/area) vs
+  // cumulate (asse dx, linee spesse) — nessun colore ripetuto tra serie.
   // ── Intensità (asse Y sinistro, mm/h) ──
-  if (arpaPts.length) ds.push({label:'Intensità ARPA (mm/h)', data:arpaPts, yAxisID:'y',
-    borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.14)', pointRadius:0, tension:.3,
+  if (arpaPts.length) ds.push({label:'Intensità ARPA (mm/h)', data:arpaPts, yAxisID:'y', _grp:'int',
+    borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.12)', pointRadius:0, tension:.3,
     borderWidth:1.5, fill:true});
-  if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, yAxisID:'y',
-    borderColor:'#fbbf24', backgroundColor:'#fbbf24', pointRadius:0, tension:.3, borderWidth:1.5});
-  if (metPts.length) ds.push({label:'Previsto MET/YR (max 1h)', data:metPts, yAxisID:'y',
-    borderColor:'#38bdf8', backgroundColor:'#38bdf8', pointRadius:0, tension:.3, borderWidth:1.5, borderDash:[5,4]});
-  if (nowPts.length) ds.push({label:'Nowcast SRI (picco)', data:nowPts, yAxisID:'y',
-    borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:7, pointStyle:'triangle', showLine:false});
+  if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, yAxisID:'y', _grp:'int',
+    borderColor:'#f59e0b', backgroundColor:'#f59e0b', pointRadius:0, tension:.3, borderWidth:2});
+  if (metPts.length) ds.push({label:'Previsto MET/YR (max 1h)', data:metPts, yAxisID:'y', _grp:'int',
+    borderColor:'#06b6d4', backgroundColor:'#06b6d4', pointRadius:0, tension:.3, borderWidth:2, borderDash:[5,4]});
+  if (nowPts.length) ds.push({label:'Nowcast SRI (picco)', data:nowPts, yAxisID:'y', _grp:'int',
+    borderColor:'#eab308', backgroundColor:'#eab308', pointRadius:8, pointStyle:'triangle', showLine:false});
 
-  // ── Cumulate (asse Y destro, mm) — il dato che conta per "quanto è piovuto" ──
-  if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1',
-    borderColor:'#10b981', backgroundColor:'#10b981', pointRadius:0, tension:.2, borderWidth:3});
-  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, yAxisID:'y1',
-    borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2, stepped:true});
-  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1',
-    borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:0, borderWidth:1, borderDash:[2,3], stepped:true});
+  // ── Cumulate (asse Y destro, mm) — colori nettamente diversi dall'intensità ──
+  if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1', _grp:'cum',
+    borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:0, tension:.2, borderWidth:3.5});
+  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, yAxisID:'y1', _grp:'cum',
+    borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:3, tension:0, borderWidth:2.5, stepped:true});
+  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1', _grp:'cum',
+    borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:1.5, borderDash:[2,3], stepped:true});
   if (ground && ground.daily && ground.total>0 && arpaPts.length){
-    // SIR giornaliero: nessun andamento orario. Traccio il totale del giorno
-    // come linea orizzontale di riferimento sull'asse cumulata (mm).
     const xs=arpaPts.map(p=>p.x); const x0=Math.min(...xs), x1=Math.max(...xs);
     ds.push({label:`${ground.name} — totale giorno ${ground.total.toFixed(0)} mm (SIR)`,
-      data:[{x:x0,y:ground.total},{x:x1,y:ground.total}], yAxisID:'y1',
-      borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:0, borderWidth:2, borderDash:[6,4]});
+      data:[{x:x0,y:ground.total},{x:x1,y:ground.total}], yAxisID:'y1', _grp:'cum',
+      borderColor:'#ec4899', backgroundColor:'#ec4899', pointRadius:0, borderWidth:2.5, borderDash:[6,4]});
   } else if (ground && ground.cumTot && ground.cumTot.length){
     const gtot = ground.total||0;
-    ds.push({label:`Cumulata ${ground.name} (${gtot.toFixed(0)} mm tot)`, data:ground.cumTot, yAxisID:'y1',
-      borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:0, tension:.2, borderWidth:3});
+    ds.push({label:`Cumulata ${ground.name} a terra (${gtot.toFixed(0)} mm tot)`, data:ground.cumTot, yAxisID:'y1', _grp:'cum',
+      borderColor:'#ec4899', backgroundColor:'#ec4899', pointRadius:0, tension:.2, borderWidth:3.5});
   }
+
+  _lastDs = ds; _lastEv = ev;   // per download e legenda
 
   const ctx = document.getElementById('evChart');
   if (_chart) _chart.destroy();
@@ -568,20 +632,22 @@ async function openChart(ev){
       interaction:{ mode:'index', intersect:false },
       scales:{
         x:{ type:'linear',
-            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#94a3b8', maxTicksLimit:9, font:{size:11} },
+            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#cbd5e1', maxTicksLimit:10, font:{size:13} },
             grid:{ color:'rgba(148,163,184,.08)' } },
-        y:{ position:'left', beginAtZero:true, title:{display:true,text:'Intensità (mm/h)',color:'#34d399',font:{size:11}},
-            ticks:{color:'#94a3b8',font:{size:11}}, grid:{ color:'rgba(148,163,184,.08)' } },
-        y1:{ position:'right', beginAtZero:true, title:{display:true,text:'Cumulata (mm)',color:'#e879f9',font:{size:11}},
-            ticks:{color:'#94a3b8',font:{size:11}}, grid:{ drawOnChartArea:false } },
+        y:{ position:'left', beginAtZero:true, title:{display:true,text:'Intensità (mm/h)',color:'#22c55e',font:{size:13,weight:'600'}},
+            ticks:{color:'#cbd5e1',font:{size:13}}, grid:{ color:'rgba(148,163,184,.08)' } },
+        y1:{ position:'right', beginAtZero:true, title:{display:true,text:'Cumulata (mm)',color:'#2dd4bf',font:{size:13,weight:'600'}},
+            ticks:{color:'#cbd5e1',font:{size:13}}, grid:{ drawOnChartArea:false } },
       },
       plugins:{
         legend:{ display:false },
-        tooltip:{ backgroundColor:'rgba(15,23,42,.95)', borderColor:'#334155', borderWidth:1, padding:10,
+        tooltip:{ backgroundColor:'rgba(15,23,42,.96)', borderColor:'#334155', borderWidth:1, padding:11,
+          titleFont:{size:13}, bodyFont:{size:13},
           callbacks:{ title:items=>new Date(items[0].parsed.x).toLocaleString('it-IT',{timeZone:'Europe/Rome'}) } },
       },
     },
   });
+  buildInteractiveLegend(ds);
 
   // Nota diagnostica
   const peak = +ev.observed_mm_max||0;
@@ -626,6 +692,19 @@ async function openChart(ev){
 }
 function closeChart(){ document.getElementById('chartModal').style.display='none'; if(_chart){_chart.destroy();_chart=null;} }
 document.getElementById('chartModal').addEventListener('click',e=>{ if(e.target.id==='chartModal') closeChart(); });
+document.getElementById('dlEvent').addEventListener('click', downloadEventCSV);
+document.getElementById('dlAll').addEventListener('click', ()=>{
+  // Esporta gli eventi grezzi (rispettando i filtri correnti) come CSV
+  if(!ALL.events||!ALL.events.length) return;
+  const cols=Object.keys(ALL.events[0]);
+  let csv=cols.join(',')+'\n';
+  for(const e of ALL.events){
+    csv+=cols.map(c=>{ const v=(e[c]??''); return /[,"\n]/.test(v)?`"${String(v).replace(/"/g,'""')}"`:v; }).join(',')+'\n';
+  }
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`eventi_radar_dpc_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+});
 
 // ── FORECAST 3 SITI (stessi ingredienti dashboard: 5 modelli OM + YR, worst-case) ──
 const OM_URL='https://api.open-meteo.com/v1/forecast', YR_URL='https://api.met.no/weatherapi/locationforecast/2.0/compact';
