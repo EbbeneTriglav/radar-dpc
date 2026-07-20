@@ -279,6 +279,123 @@ def process_area(area: dict, files: list[str], max_new: int = 48) -> int:
     return len(rows)
 
 
+# ─── Rendering frame PNG per la mappa (bypass 403 lato browser) ──────────────
+# ARPA blocca le richieste automatiche dirette (403), quindi il browser NON può
+# scaricare i .tif.gz. Soluzione server-side: questo collector (che gira su
+# GitHub Actions e i cui fetch ARPA a volte passano) rende gli ultimi frame come
+# PNG RGBA leggeri + un index.json con i bounds LETTI dal file reale (rasterio),
+# committati nel repo. arpa.html li legge da raw@main via L.imageOverlay.
+# Nessun numero inventato: la georeferenziazione viene dai bounds effettivi del
+# GeoTIFF, la scala colori dBZ è quella condivisa (allineata a colormap.js).
+FRAMES_DIR = DATA / 'radar_arpa'
+FRAMES_KEEP = 12                         # ultimi 12 frame = 1h a passo 5'
+
+# Scala dBZ IDENTICA a js/colormap.js (stessi stop e colori)
+_DBZ_SCALE = [
+    (-30, (0, 0, 0, 0)), (0, (100, 149, 237, 60)), (10, (0, 230, 230, 140)),
+    (20, (0, 200, 0, 180)), (30, (255, 255, 0, 200)), (35, (255, 180, 0, 215)),
+    (40, (255, 80, 0, 230)), (45, (255, 0, 0, 240)), (55, (150, 0, 150, 250)),
+    (65, (255, 0, 255, 255)),
+]
+
+
+def _dbz_to_rgba(arr, nodata):
+    """Mappa un array dBZ → (H,W,4) uint8 con la scala condivisa. Interpolazione
+    lineare tra gli stop, come ColorMap.getColor. nodata e valori <-100 → trasparente."""
+    h, w = arr.shape
+    rgba = np.zeros((h, w, 4), dtype=np.uint8)
+    valid = np.isfinite(arr) & (arr > -100) & (arr != nodata)
+    vals = arr.copy()
+    xs = np.array([s[0] for s in _DBZ_SCALE], dtype=np.float32)
+    for ch in range(4):
+        ys = np.array([s[1][ch] for s in _DBZ_SCALE], dtype=np.float32)
+        interp = np.interp(np.clip(vals, xs[0], xs[-1]), xs, ys)
+        chan = rgba[:, :, ch]
+        chan[valid] = interp[valid].astype(np.uint8)
+    rgba[~valid] = 0  # trasparente dove non c'è dato
+    return rgba
+
+
+def save_radar_frames_png(files: list[str]) -> int:
+    """Rende gli ultimi FRAMES_KEEP frame ARPA come PNG + index.json.
+    Ritorna il numero di frame scritti. Silenzioso su Pillow assente (best-effort)."""
+    try:
+        from PIL import Image
+    except ImportError:
+        log.warning('Pillow non installato: skip rendering frame PNG per la mappa')
+        return 0
+
+    FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+    # Prendi gli ultimi FRAMES_KEEP timestamp validi (più recenti)
+    parsed = []
+    for f in files:
+        ts = parse_timestamp(f)
+        if ts:
+            parsed.append((f, ts))
+    parsed.sort(key=lambda x: x[1])
+    recent = parsed[-FRAMES_KEEP:]
+    if not recent:
+        return 0
+
+    index = []
+    written = 0
+    for fname, ts in recent:
+        ts_iso = ts.isoformat().replace('+00:00', 'Z')
+        png_name = f"{ts.strftime('%y%m%d%H%M')}.png"
+        png_path = FRAMES_DIR / png_name
+        if png_path.exists():
+            # già reso: rileggi bounds dall'index se presente, altrimenti rigenera
+            pass
+        tiff = fetch_tiff(fname)
+        if tiff is None:
+            continue
+        try:
+            with MemoryFile(tiff) as mf:
+                with mf.open() as src:
+                    arr = src.read(1).astype(np.float32)
+                    nodata = src.nodata if src.nodata is not None else -9999
+                    b = src.bounds  # nativo del file
+                    crs = src.crs
+                    # Bounds in WGS84 (lat/lon) per Leaflet. I file ARPA sono
+                    # geografici (4326) marcati 32767: se il CRS è già 4326 o i
+                    # bounds sono in gradi, usali diretti; altrimenti riproietta.
+                    if crs and crs.to_epsg() and crs.to_epsg() != 4326:
+                        from rasterio.warp import transform_bounds
+                        left, bottom, right, top = transform_bounds(crs, 'EPSG:4326',
+                                                                    b.left, b.bottom, b.right, b.top)
+                    else:
+                        left, bottom, right, top = b.left, b.bottom, b.right, b.top
+            rgba = _dbz_to_rgba(arr, nodata)
+            Image.fromarray(rgba, 'RGBA').save(png_path, optimize=True)
+            index.append({
+                'file': png_name, 'ts_utc': ts_iso,
+                # Leaflet imageOverlay vuole [[south, west],[north, east]]
+                'bounds': [[round(bottom, 6), round(left, 6)],
+                           [round(top, 6), round(right, 6)]],
+            })
+            written += 1
+        except Exception as e:
+            log.warning(f'  rendering PNG {fname} fallito: {e}')
+
+    # Prune: elimina PNG non più nell'index (più vecchi di FRAMES_KEEP)
+    keep_names = {e['file'] for e in index}
+    for p in FRAMES_DIR.glob('*.png'):
+        if p.name not in keep_names:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+    if index:
+        index.sort(key=lambda e: e['ts_utc'])
+        (FRAMES_DIR / 'index.json').write_text(json.dumps({
+            'updated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
+            'frames': index,
+        }, indent=1))
+        log.info(f'✓ radar frames PNG: {written} scritti, index.json aggiornato ({len(index)} frame)')
+    return written
+
+
 def main() -> int:
     if not AREAS_FILE.exists():
         log.error(f'{AREAS_FILE} mancante'); return 1
@@ -296,6 +413,13 @@ def main() -> int:
     for area in areas:
         total += process_area(area, files)
     log.info(f'✓ ARPA: {total} righe scritte ({len(areas)} aree)')
+
+    # Frame PNG per la mappa (bypass 403 lato browser). Best-effort: un errore
+    # qui non deve compromettere la raccolta stats (già committata sopra).
+    try:
+        save_radar_frames_png(files)
+    except Exception as e:
+        log.warning(f'save_radar_frames_png fallito: {e}')
     return 0
 
 

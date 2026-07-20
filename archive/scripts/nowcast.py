@@ -727,6 +727,81 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
+def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
+    """Rileva picchi SRI sull'AREA nei frame intermedi persi (sri_frames[1:]).
+    Per ogni area, se un frame passato supera la soglia 'cella su area' MA lo
+    stato non risulta mai passato attivo su quel picco, logga un evento
+    storm_on_area TARDIVO (onesto sul ritardo). Idempotente via chiave di stato
+    per timestamp del frame → non ri-notifica lo stesso picco a run successivi.
+    Non invia moto/permanenza (dati non affidabili a posteriori): solo il fatto
+    che una cella È PASSATA e quanta pioggia risulta caduta (CUM3 se presente).
+    """
+    now_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+    for area in areas:
+        name = area['name']
+        try:
+            _srt1_ths = (area.get('monitoring', {}).get('products', {})
+                             .get('SRT1', {}).get('thresholds', []))
+            thr = next((float(t['value_mm']) for t in _srt1_ths if t.get('level') == 'warning'), 10.0)
+        except Exception:
+            thr = 10.0
+        geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)
+        cum3_in = stats_in_geom_tm(cum3_tiff, geom_area) if cum3_tiff else None
+
+        # Frame intermedi (escluso il più recente, già valutato da process_area)
+        for ts_ms, tiff in sri_frames[1:]:
+            key = f"{name}:nowcast:catchup:{ts_ms}"
+            if state.get(key, {}).get('done'):
+                continue  # già valutato in un run precedente
+            st = stats_in_geom_tm(tiff, geom_area)
+            if not st:
+                continue
+            if st['max'] >= thr:
+                ts_iso = datetime.fromtimestamp(ts_ms/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
+                late_min = int((now_ms - ts_ms) / 60000)
+                cum_fallen = cum3_in['max'] if cum3_in else None
+                label = area['label']
+                subject = f"⏰ [TARDIVO +{late_min}min] {label} — cella rilevata a posteriori"
+                text = (f"⏰ RILEVAMENTO TARDIVO (catch-up nowcast)\n\n"
+                        f"Una cella temporalesca è transitata su {label} alle "
+                        f"{_ts_local(ts_iso)} (ora italiana) — SRI max {st['max']:.1f} mm/h "
+                        f"(soglia {thr:.0f}) — rilevata con {late_min} min di ritardo "
+                        f"(scheduler GitHub saltato).\n"
+                        + (f"Pioggia stimata caduta (CUM3 max area): {cum_fallen:.1f} mm\n" if cum_fallen is not None else ''))
+                md = (f"⏰ *RILEVAMENTO TARDIVO — {label}*\n"
+                      f"Cella transitata {_ts_local(ts_iso)}, SRI max *{st['max']:.1f} mm/h*\n"
+                      + (f"Pioggia stimata: *{cum_fallen:.1f} mm* (CUM3)\n" if cum_fallen is not None else '')
+                      + f"_rilevata +{late_min}min tardi (gap scheduler)_")
+                mon_cfg = area.get('monitoring', {})
+                channels = set(mon_cfg.get('channels', ['email', 'telegram']))
+                rcpt = mon_cfg.get('recipients', {}) or {}
+                em = send_email(subject, text, to=rcpt.get('email')) if 'email' in channels else 'skipped'
+                tg = send_telegram(md, chat_ids=rcpt.get('telegram_chat_ids')) if 'telegram' in channels else 'skipped'
+                writer.writerow({
+                    'event_timestamp_utc': now_iso, 'area_name': name,
+                    'level': 'storm_on_area', 'threshold_mm': thr,
+                    'observed_mm_mean': f"{st.get('mean',0):.2f}", 'observed_mm_max': f"{st['max']:.2f}",
+                    'product': 'SRI', 'observation_timestamp_utc': ts_iso,
+                    'forecast_max_6h_mm': '',
+                    'notified_email': em, 'notified_telegram': tg,
+                    'note': f"catch-up: cella rilevata a posteriori +{late_min}min"
+                            + (f", ~{cum_fallen:.1f}mm CUM3" if cum_fallen is not None else ''),
+                })
+                log.info(f"  ⏰ catch-up {name}: cella a {ts_iso} SRI={st['max']:.1f} (+{late_min}min)")
+            # Marca il frame come valutato (anche se sotto soglia) per non riprovarlo
+            state[key] = {'done': True}
+
+    # Pulizia chiavi catch-up vecchie (>6h) per non gonfiare lo stato
+    cutoff = now_ms - 6 * 3600_000
+    for k in [k for k in state if ':nowcast:catchup:' in k]:
+        try:
+            ts = int(k.rsplit(':', 1)[1])
+            if ts < cutoff:
+                del state[k]
+        except (ValueError, IndexError):
+            pass
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -745,10 +820,15 @@ def main():
         log.info('Nessuna area attiva.'); return 0
 
     # ── Scarica i prodotti UNA volta (condivisi tra tutte le aree) ──
-    log.info('Download prodotti radar (SRI×2, SRT1, CUM3)…')
+    # SRI: NON solo gli ultimi 2 (moto), ma fino a NOWCAST_SRI_FRAMES frame per
+    # coprire le celle convettive brevi cadute tra un run e l'altro quando lo
+    # scheduler GitHub salta. La rilevazione "cella su area/soglia SRI" viene
+    # valutata su OGNI frame nuovo dall'ultimo processato; la stima del moto
+    # continua a usare i 2 frame più recenti (invariata).
+    log.info('Download prodotti radar (SRI catch-up, SRT1, CUM3)…')
 
-    # SRI — 2 frame per stima moto
-    sri_times = get_last_products('SRI', n=2)
+    NOWCAST_SRI_FRAMES = int(os.environ.get('NOWCAST_SRI_FRAMES', '6'))  # 6×5' = 30'
+    sri_times = get_last_products('SRI', n=NOWCAST_SRI_FRAMES)
     sri_frames = []
     for t in sri_times:
         tiff = download_tiff('SRI', t)
@@ -819,6 +899,17 @@ def main():
             except Exception as e:
                 log.error(f'  errore: {e}', exc_info=True)
                 all_obs[area['name']] = {'error': str(e), 'timestamp_utc': now_iso}
+
+    # ── CATCH-UP celle brevi: rivaluta il PICCO SRI sui frame SRI intermedi
+    #    persi (sri_frames[1:]), che il processing normale (solo frame[0]) non
+    #    vede. Cattura la cella convettiva estiva che nasce e si estingue tra
+    #    due run quando lo scheduler salta. Registra un evento storm_on_area
+    #    TARDIVO se un frame passato ha superato soglia mentre lo stato NON era
+    #    attivo. Non tocca moto/permanenza/chiusura (gestiti sul frame corrente).
+    if len(sri_frames) > 1:
+        with open(events_file, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=EVENT_HEADERS)
+            _nowcast_catchup(enabled, sri_frames, cum3_tiff, state, now_iso, writer)
 
     # ── Salva state e osservazioni ──
     save_state(state_file, state)
