@@ -20,6 +20,17 @@
 const ArchiveTab = (() => {
 
   // ─── Configurazione ───────────────────────────────────────────────────────
+// Dati sempre freschi da raw@main (deploy Pages non più triggerato dai push dati).
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try {
+      const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' });
+      if (r.ok) return r;
+    } catch {}
+  }
+  return fetch(path + '?_=' + Date.now(), { cache: 'no-cache' });
+}
   const AREAS_URL    = 'archive/areas.json';
   const DATA_BASE    = 'archive/data';
   const IDW_POWER    = 2;     // esponente IDW: 2 dà transizioni morbide
@@ -48,7 +59,7 @@ const ArchiveTab = (() => {
 
     // Carica config aree
     try {
-      const r = await fetch(AREAS_URL);
+      const r = await fetchData(AREAS_URL);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       _areasConfig = await r.json();
     } catch (e) {
@@ -183,7 +194,7 @@ const ArchiveTab = (() => {
   }
 
   async function _loadCsv(url) {
-    const r = await fetch(url, { cache: 'no-cache' });
+    const r = await fetchData(url);
     if (!r.ok) {
       if (r.status === 404) return [];
       throw new Error(`HTTP ${r.status}`);
