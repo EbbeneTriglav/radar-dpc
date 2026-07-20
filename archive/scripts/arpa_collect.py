@@ -117,8 +117,8 @@ def list_available_filenames() -> list[str]:
     if not files:
         # Fallback: genera ultimi 24 candidati (2h × 12 file/h)
         now = utc_floor_5min(datetime.now(timezone.utc))
-        log.info('  listing fallito, uso fallback candidati ultime 2h')
-        for i in range(24):
+        log.info('  listing fallito, uso fallback candidati ultime 5h')
+        for i in range(60):
             t = now - timedelta(minutes=5 * i)
             files.append(f'CMP{t.strftime("%y%m%d%H%M")}.MAX.tif.gz')
         files.reverse()  # cronologico
@@ -202,7 +202,7 @@ def load_existing_timestamps(csv_file: Path) -> set[str]:
     return seen
 
 
-def process_area(area: dict, files: list[str], max_new: int = 12) -> int:
+def process_area(area: dict, files: list[str], max_new: int = 48) -> int:
     """Processa fino a `max_new` nuovi timestamp per l'area.
     Ritorna il numero di nuovi record scritti (uno per timestamp×location)."""
     name = area['name']
@@ -224,7 +224,13 @@ def process_area(area: dict, files: list[str], max_new: int = 12) -> int:
         ts_iso = ts.isoformat().replace('+00:00', 'Z')
         if ts_iso not in seen:
             new_files.append((f, ts, ts_iso))
-    new_files = new_files[-max_new:]
+    # Ordina per timestamp CRESCENTE e prendi i più VECCHI tra i non
+    # processati: così i buchi lasciati dai gap dello scheduler GitHub vengono
+    # recuperati (la sorgente tiene ~24h) invece di restare permanenti, come
+    # accaduto il 20/07/2026 (02:25–04:45 UTC persi durante l'evento Ruspino).
+    # Con max_new=48 (4h di frame) un run recupera il gap tipico osservato.
+    new_files.sort(key=lambda x: x[1])
+    new_files = new_files[:max_new]
     if not new_files:
         log.info(f'[{name}] niente di nuovo')
         return 0

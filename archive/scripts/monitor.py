@@ -125,6 +125,54 @@ def download_geotiff(url):
     return r.content
 
 
+# ─── Catch-up frame: recupero buchi dello scheduler GitHub ───────────────────
+# I cron GitHub Actions vengono ritardati/saltati sotto carico (osservato:
+# monitor */15 eseguito ogni 3-4h la notte del 20/07/2026 → cella 40-50mm su
+# Ruspino non valutata). Rimedio: ad ogni run valutiamo TUTTI i frame dal
+# precedente frame valutato (state '<area>:<prod>:last_eval_ms') fino
+# all'ultimo disponibile, con passo pari alla griglia del prodotto e cap
+# CATCHUP_MAX_H. L'API DPC downloadProduct accetta productDate storici
+# (stesso pattern già usato da collect.py per il backfill).
+#
+# Passi campionamento (dichiarati, non ipotesi):
+#   SRT1: griglia 5' osservata nei dati; passo catch-up 10'. SRT1 è cumulata
+#         MOBILE oraria: un superamento di soglia persiste per costruzione su
+#         più frame consecutivi, quindi il passo 10' può perdere solo
+#         sfioramenti marginali di durata <10'.
+#   CUM3: timestamp osservati a :00/:30 → passo 30'.
+CATCHUP_MAX_H = float(os.environ.get('CATCHUP_MAX_H', '4'))
+CATCHUP_STEP_MIN = {'SRT1': 10, 'CUM3': 30}
+LATE_MARK_MIN = 30   # frame più vecchio di così → notifica marcata "tardiva"
+
+
+def build_catchup_frames(area_name, product, latest_ms, state):
+    """Lista [(ts_ms, ts_iso, late_min)] in ordine cronologico, ultimo incluso.
+    late_min = minuti tra frame e adesso (per marcare notifiche tardive)."""
+    step_ms = CATCHUP_STEP_MIN.get(product, 30) * 60_000
+    key = f'{area_name}:{product}:last_eval_ms'
+    last_eval = state.get(key)
+    now_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+    cap_ms = latest_ms - int(CATCHUP_MAX_H * 3600_000)
+
+    frames_ms = [latest_ms]
+    if isinstance(last_eval, (int, float)) and last_eval < latest_ms:
+        t = latest_ms - step_ms
+        while t > max(last_eval, cap_ms):
+            frames_ms.append(int(t))
+            t -= step_ms
+    frames_ms.sort()
+
+    out = []
+    for ms in frames_ms:
+        iso = datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+        late_min = int((now_ms - ms) / 60_000)
+        out.append((ms, iso, late_min))
+    if len(out) > 1:
+        log.info(f'  [{area_name}/{product}] catch-up: {len(out)} frame da valutare '
+                 f'(gap scheduler, ultimo valutato: {last_eval})')
+    return out
+
+
 # ─── Stats area ──────────────────────────────────────────────────────────────
 
 def stats_for_polygon(tiff_bytes, polygon_latlon):
@@ -860,61 +908,83 @@ def process_area(area, archive_dir, events_writer):
         if not last:
             log.warning(f'  no last product for {product}')
             continue
-        ts_ms = last['time']
-        ts_iso = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+        latest_ms = last['time']
 
-        url = get_pre_signed_url(product, ts_ms)
-        if not url:
-            continue
-        tiff = download_geotiff(url)
-        if not tiff:
-            continue
+        # ── Catch-up: valuta in ordine cronologico tutti i frame dal
+        #    precedente valutato all'ultimo (recupera i buchi dello scheduler).
+        frames = build_catchup_frames(area['name'], product, latest_ms, state)
+        last_ok_ms = None
+        for ts_ms, ts_iso, late_min in frames:
+            url = get_pre_signed_url(product, ts_ms)
+            if not url:
+                if ts_ms != latest_ms:
+                    log.info(f'  {product} {ts_iso}: frame non disponibile (skip)')
+                continue
+            tiff = download_geotiff(url)
+            if not tiff:
+                continue
 
-        stats = stats_for_polygon(tiff, area['polygon'])
-        if not stats:
-            log.warning(f'  stats N/D per {product}')
-            continue
-        log.info(f'  {product} {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm')
+            stats = stats_for_polygon(tiff, area['polygon'])
+            if not stats:
+                log.warning(f'  stats N/D per {product} {ts_iso}')
+                continue
+            is_late = late_min > LATE_MARK_MIN
+            log.info(f'  {product} {ts_iso}: mean={stats["mean"]:.2f} max={stats["max"]:.2f} mm'
+                     + (f' [tardivo +{late_min}min]' if is_late else ''))
+            last_ok_ms = ts_ms
 
-        # Salva ultima osservazione (anche se nessuna soglia attiva → frontend lo legge)
-        update_last_observation(last_obs_file, area['name'], product, ts_iso, stats)
+            # Salva ultima osservazione SOLO per il frame più recente
+            if ts_ms == latest_ms:
+                update_last_observation(last_obs_file, area['name'], product, ts_iso, stats)
 
-        metric_value = stats[metric]
-        triggers = evaluate_thresholds(area, product, thresholds, metric_value, state, now_iso, anti_spam, rearm_pct)
-        if not triggers:
-            log.info(f'  {product}: nessuna soglia attivata')
-            continue
+            metric_value = stats[metric]
+            triggers = evaluate_thresholds(area, product, thresholds, metric_value, state, ts_iso, anti_spam, rearm_pct)
+            if not triggers:
+                continue
 
-        # Forecast on-demand (una volta sola)
-        if not forecast_done and mon.get('forecast', {}).get('enabled'):
-            forecast = fetch_forecast(area['centroid']['lat'], area['centroid']['lon'],
-                                      hours=mon['forecast'].get('lookahead_hours', 6))
-            forecast_metno = fetch_forecast_metno(area['centroid']['lat'], area['centroid']['lon'],
-                                      hours=mon['forecast'].get('lookahead_hours', 6))
-            forecast_done = True
-            if forecast:
-                m = forecast_metno or {}
-                log.info(f'  forecast OM: 1h={forecast["max_1h_next"]:.1f} 3h={forecast["max_3h_next"]:.1f} | MET: 1h={m.get("max_1h_next","?")} 3h={m.get("max_3h_next","?")} mm')
+            # Forecast on-demand (una volta sola)
+            if not forecast_done and mon.get('forecast', {}).get('enabled'):
+                forecast = fetch_forecast(area['centroid']['lat'], area['centroid']['lon'],
+                                          hours=mon['forecast'].get('lookahead_hours', 6))
+                forecast_metno = fetch_forecast_metno(area['centroid']['lat'], area['centroid']['lon'],
+                                          hours=mon['forecast'].get('lookahead_hours', 6))
+                forecast_done = True
+                if forecast:
+                    m = forecast_metno or {}
+                    log.info(f'  forecast OM: 1h={forecast["max_1h_next"]:.1f} 3h={forecast["max_3h_next"]:.1f} | MET: 1h={m.get("max_1h_next","?")} 3h={m.get("max_3h_next","?")} mm')
 
-        for th in triggers:
-            subject, text, html, md = compose_messages(area, product, th, stats, ts_iso, forecast)
-            email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
-            tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
-            events_writer.writerow({
-                'event_timestamp_utc':        now_iso,
-                'area_name':                  area['name'],
-                'level':                      th['level'],
-                'threshold_mm':               th['value_mm'],
-                'observed_mm_mean':           f"{stats['mean']:.3f}",
-                'observed_mm_max':            f"{stats['max']:.3f}",
-                'product':                    product,
-                'observation_timestamp_utc':  ts_iso,
-                'forecast_max_6h_mm':         f"{forecast['max_1h_next']:.2f}" if forecast else '',
-                'notified_email':             email_status,
-                'notified_telegram':          tg_status,
-                'note':                       '',
-            })
-            log.info(f'  ✓ trigger {product}/{th["level"]}: email={email_status} telegram={tg_status}')
+            for th in triggers:
+                subject, text, html, md = compose_messages(area, product, th, stats, ts_iso, forecast)
+                if is_late:
+                    # Onestà sui tempi: la soglia è stata superata NEL PASSATO,
+                    # rilevata ora per gap dello scheduler GitHub.
+                    subject = f'⏰ [TARDIVO +{late_min}min] ' + subject
+                    text = (f'⏰ RILEVAMENTO TARDIVO: osservazione delle {ts_iso}, '
+                            f'valutata con {late_min} min di ritardo (gap scheduler GitHub Actions).\n\n') + text
+                    md = f'⏰ *RILEVAMENTO TARDIVO* (+{late_min}min, oss. {ts_iso})\n' + md
+                email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
+                tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+                events_writer.writerow({
+                    'event_timestamp_utc':        now_iso,
+                    'area_name':                  area['name'],
+                    'level':                      th['level'],
+                    'threshold_mm':               th['value_mm'],
+                    'observed_mm_mean':           f"{stats['mean']:.3f}",
+                    'observed_mm_max':            f"{stats['max']:.3f}",
+                    'product':                    product,
+                    'observation_timestamp_utc':  ts_iso,
+                    'forecast_max_6h_mm':         f"{forecast['max_1h_next']:.2f}" if forecast else '',
+                    'notified_email':             email_status,
+                    'notified_telegram':          tg_status,
+                    'note':                       f'rilevamento tardivo catch-up +{late_min}min' if is_late else '',
+                })
+                log.info(f'  ✓ trigger {product}/{th["level"]} @ {ts_iso}: email={email_status} telegram={tg_status}')
+
+        # Avanza il puntatore all'ultimo frame VALUTATO CON SUCCESSO: se un
+        # frame (anche l'ultimo) fallisce il download, il prossimo run lo
+        # ritenta invece di saltarlo per sempre.
+        if last_ok_ms is not None:
+            state[f'{area["name"]}:{product}:last_eval_ms'] = last_ok_ms
 
     # ─── Forecast triggers (predittivi OpenMeteo) ────────────────────────────
     # Anche se non c'è stato nessun trigger osservato, il forecast viene caricato
@@ -1020,6 +1090,23 @@ def main():
     if not enabled:
         log.info('Nessuna area con monitoring attivo, esco.')
         return 0
+
+    # ── Rilevamento gap scheduler: se dal run precedente sono passati più di
+    #    GAP_NOTIFY_MIN minuti (cron */15 → atteso ~15'), avvisa su Telegram.
+    #    Trasparenza: l'utente deve SAPERE quando il watchdog è stato cieco.
+    gap_notify_min = int(os.environ.get('GAP_NOTIFY_MIN', '75'))
+    try:
+        hb_file = data_dir / 'last_observations.json'
+        prev = json.loads(hb_file.read_text()).get('_monitor_last_run_utc') if hb_file.exists() else None
+        if prev:
+            prev_dt = datetime.fromisoformat(prev.replace('Z', '+00:00'))
+            gap_min = int((datetime.now(tz=timezone.utc) - prev_dt).total_seconds() / 60)
+            if gap_min > gap_notify_min:
+                log.warning(f'GAP SCHEDULER: {gap_min} min dal run precedente ({prev})')
+                send_telegram(f'⚠️ *Monitor radar-dpc*: gap scheduler di *{gap_min} min* '
+                              f'(run precedente {prev}). Eseguo catch-up sui frame persi.')
+    except Exception as e:
+        log.warning(f'gap check failed: {e}')
 
     events_file = data_dir / 'events.csv'
     write_header = not events_file.exists()
