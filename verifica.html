@@ -104,7 +104,7 @@
   <table class="vf">
     <thead><tr>
       <th>Quando</th><th>Area</th><th>Tipo</th>
-      <th>Previsto (6h prima)</th><th>Nowcast SRI</th><th>Osservato</th><th>Esito</th>
+      <th>Previsto (6h prima)</th><th>Nowcast SRI</th><th>Osservato radar</th><th>Pluviometro a terra</th><th>Esito</th>
     </tr></thead>
     <tbody id="ev-body"><tr><td colspan="7">Caricamento…</td></tr></tbody>
   </table>
@@ -119,14 +119,17 @@
     <h3 id="chartTitle">—</h3>
     <p class="vf-note" id="chartSub"></p>
     <div style="margin:8px 0">
-      <span class="legend-chip"><i style="background:#f59e0b"></i>Previsto OM (max 1h)</span>
-      <span class="legend-chip"><i style="background:#22d3ee"></i>Previsto MET (max 1h)</span>
-      <span class="legend-chip"><i style="background:#a78bfa"></i>Nowcast SRI (mm/h)</span>
-      <span class="legend-chip"><i style="background:#4ade80"></i>Osservato ARPA (mm/h)</span>
-      <span class="legend-chip"><i style="background:#f87171"></i>DPC CUM3 max (mm/3h)</span>
-      <span class="legend-chip"><i style="background:#e879f9"></i>Pluviometro a terra (mm/3h)</span>
+      <div style="font-size:11px;color:var(--text3,#94a3b8);margin-bottom:4px">Intensità (mm/h, asse sx):</div>
+      <span class="legend-chip"><i style="background:#34d399"></i>Intensità ARPA</span>
+      <span class="legend-chip"><i style="background:#fbbf24"></i>Previsto OM</span>
+      <span class="legend-chip"><i style="background:#38bdf8"></i>Previsto MET/YR</span>
+      <span class="legend-chip"><i style="background:#a78bfa"></i>Nowcast SRI</span>
+      <div style="font-size:11px;color:var(--text3,#94a3b8);margin:6px 0 4px">Cumulata (mm, asse dx):</div>
+      <span class="legend-chip"><i style="background:#10b981;height:4px"></i>Cumulata evento ARPA (picco d'area)</span>
+      <span class="legend-chip"><i style="background:#f87171"></i>DPC CUM3 max/mean</span>
+      <span class="legend-chip"><i style="background:#e879f9;height:4px"></i>Cumulata pluviometro a terra</span>
     </div>
-    <canvas id="evChart" height="120"></canvas>
+    <div style="position:relative;height:340px;margin-top:4px"><canvas id="evChart"></canvas></div>
     <p class="vf-note" id="chartNote"></p>
   </div>
 </div>
@@ -273,9 +276,10 @@ function renderEvents(){
   }).sort((a,b)=> new Date(b.event_timestamp_utc)-new Date(a.event_timestamp_utc));
 
   const body = document.getElementById('ev-body');
-  if (!evs.length){ body.innerHTML='<tr><td colspan="7">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
+  if (!evs.length){ body.innerHTML='<tr><td colspan="8">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
 
-  body.innerHTML = evs.slice(0,200).map((e,i)=>{
+  const shown = evs.slice(0,200);
+  body.innerHTML = shown.map((e,i)=>{
     const tsMs = new Date(e.event_timestamp_utc).getTime();
     const cls = classifyEvent(e);
     const when = new Date(e.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -290,7 +294,6 @@ function renderEvents(){
       prevTxt = (f.om!=null?`OM ${f.om.toFixed(1)}`:'OM —')+(f.met!=null?` · MET ${f.met.toFixed(1)}`:'');
       nowTxt = (+e.observed_mm_max||0).toFixed(1)+' mm/h';
       obsTxt = (+e.observed_mm_max||0).toFixed(1)+' max SRI';
-      // esito: sottostima se picco osservato >> previsto
       const peak = +e.observed_mm_max||0;
       if (f.om!=null && peak >= (f.om*3) && peak>=10){
         esito = `<span class="miss">sottostima ×${(peak/Math.max(f.om,0.1)).toFixed(0)}</span>`;
@@ -307,17 +310,45 @@ function renderEvents(){
     } else {
       prevTxt = '—'; nowTxt=(+e.observed_mm_max||0).toFixed(1)+' mm/h'; obsTxt=(+e.observed_mm_mean||0).toFixed(1)+' mean';
     }
+    const hasGround = !!GROUND_SENSORS[e.area_name];
+    const groundCell = hasGround ? `<span id="grd-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">n/d</span>';
 
     return `<tr class="ev" data-i="${i}">
       <td>${when}</td><td>${e.area_name||''}</td><td>${pill}</td>
-      <td>${prevTxt}</td><td>${nowTxt}</td><td>${obsTxt}</td><td>${esito}</td>
+      <td>${prevTxt}</td><td>${nowTxt}</td><td>${obsTxt}</td><td>${groundCell}</td><td>${esito}</td>
     </tr>`;
   }).join('');
 
   // click → grafico
   [...body.querySelectorAll('tr.ev')].forEach(tr=>{
-    tr.addEventListener('click',()=> openChart(evs[+tr.dataset.i]));
+    tr.addEventListener('click',()=> openChart(shown[+tr.dataset.i]));
   });
+
+  // Popolamento LAZY del pluviometro a terra (solo primi 20 eventi, in
+  // background, per non bloccare né saturare l'API). Cumulata totale evento.
+  populateGroundColumn(shown.slice(0,20));
+}
+
+async function populateGroundColumn(events){
+  for (let i=0;i<events.length;i++){
+    const e=events[i];
+    const cell=document.getElementById(`grd-${i}`);
+    if(!cell || !GROUND_SENSORS[e.area_name]) continue;
+    const evMs=new Date(e.event_timestamp_utc).getTime();
+    try{
+      const g=await fetchGroundRain(e.area_name, evMs-9*3600_000, evMs+6*3600_000);
+      if(g && g.total>0){
+        const tot=g.total.toFixed(0);
+        const tag = g.type==='sir_daily' ? '(SIR, giorno)' : g.type==='reanalysis' ? '(reanalisi)' : g.name.split(' ')[0];
+        cell.innerHTML=`<b style="color:#e879f9">${tot} mm</b>`
+          + `<span style="color:var(--text3);font-size:11px"> ${tag}</span>`;
+      } else if (g && g.err){
+        cell.innerHTML=`<span style="color:var(--text3);font-size:11px">n/d</span>`;
+      } else {
+        cell.innerHTML=`<span style="color:var(--text3)">0 mm</span>`;
+      }
+    }catch{ cell.innerHTML=`<span style="color:var(--text3)">—</span>`; }
+  }
 }
 
 // ── GRAFICO PER-EVENTO: previsto / nowcast / osservato attorno all'evento ──
@@ -325,48 +356,84 @@ let _chart=null;
 // ── Pluviometri ARPA a terra (verità al suolo, via API Socrata pubblica) ──
 // Il radar sottostima strutturalmente i picchi convettivi: il pluviometro a
 // terra è il riferimento più affidabile. Cornalita (Ruspino) e Oga S.Colombano
-// (Cepina) — stessi sensori usati dalle dashboard idrologiche.
+// (Cepina) via ARPA Socrata (CORS pubblico). Monte di Fò (Panna) è SIR Toscana,
+// che NON ha API CORS pubblica: usiamo la reanalysis ECMWF IFS di Open-Meteo
+// alle coordinate della stazione come proxy dell'osservato (etichettato come
+// tale, non è il pluviometro reale — no invented numbers).
 const SOCRATA='https://www.dati.lombardia.it/resource/647i-nhxk.json';
-const GROUND_SENSORS={ ruspino:{id:2278,name:'Cornalita'}, cepina:{id:8010,name:'Oga S.Colombano'} };
+const GROUND_SENSORS={
+  ruspino:{type:'arpa', id:2278, name:'Cornalita'},
+  cepina:{type:'arpa', id:8010, name:'Oga S.Colombano'},
+  // Monte di Fò (Panna) è SIR Toscana, senza API CORS live. Il dato REALE è
+  // il totale giornaliero storico, raccolto server-side (GitHub Action) nel
+  // repo dati_idro. Lo leggiamo da lì: è il pluviometro vero, non un modello.
+  // Granularità giornaliera → mostriamo il totale del/i giorno/i dell'evento.
+  panna:{type:'sir_daily',
+    url:'https://raw.githubusercontent.com/EbbeneTriglav/dati_idro/main/dati/MonteDiFo_precip_1992-2026.csv',
+    name:'Monte di Fò'},
+};
 
 async function fetchGroundRain(area, winStart, winEnd){
   const s=GROUND_SENSORS[area]; if(!s) return null;
   try{
-    // Socrata filtra per idsensore; prendo le ultime righe e filtro la finestra.
-    const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$limit=2000&$order=data DESC`);
-    if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
-    const rows=await r.json();
-    // Campi: data (ISO), valore (mm nell'intervallo di misura, tipicamente 10-30min)
-    const pts=[];
-    for(const row of rows){
-      const t=new Date(row.data).getTime(); const v=+row.valore;
-      if(isFinite(t)&&isFinite(v)&&v>=0&&t>=winStart&&t<=winEnd) pts.push({x:t,y:v});
+    let pts=[];
+    if(s.type==='arpa'){
+      const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$limit=2000&$order=data DESC`);
+      if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
+      const rows=await r.json();
+      for(const row of rows){
+        const t=new Date(row.data).getTime(); const v=+row.valore;
+        if(isFinite(t)&&isFinite(v)&&v>=0&&t>=winStart&&t<=winEnd) pts.push({x:t,y:v});
+      }
+    } else if(s.type==='sir_daily'){
+      // CSV giornaliero SIR (Data;Precip_mm) da dati_idro. Granularità daily:
+      // non c'è andamento orario, solo il totale del giorno. Restituiamo il
+      // totale dei giorni civili coperti dalla finestra evento.
+      const r=await fetch(s.url+'?_='+Date.now());
+      if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, daily:true, pts:[]};
+      const txt=await r.text();
+      const days=new Set();
+      for(let t=winStart; t<=winEnd+86400000; t+=86400000) days.add(new Date(t).toISOString().slice(0,10));
+      let tot=0; const perDay=[];
+      for(const line of txt.trim().split(/\r?\n/).slice(1)){
+        const [d,v]=line.split(';');
+        if(days.has(d)){ const mm=+v; if(isFinite(mm)){ tot+=mm; perDay.push({date:d, mm}); } }
+      }
+      return {name:s.name, type:'sir_daily', daily:true, perDay, total:+tot.toFixed(1), pts:[], cum3:[], cumTot:[]};
+    } else if(s.type==='reanalysis'){
+      // Open-Meteo ECMWF IFS analisi, orario, alle coordinate stazione SIR
+      const d0=new Date(winStart), d1=new Date(winEnd);
+      const fmt=d=>d.toISOString().slice(0,10);
+      const url=`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}`
+        +`&hourly=precipitation&models=ecmwf_ifs025&timezone=UTC`
+        +`&start_date=${fmt(d0)}&end_date=${fmt(d1)}`;
+      const r=await fetch(url);
+      if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
+      const h=(await r.json()).hourly||{};
+      const times=h.time||[], vals=h.precipitation||[];
+      for(let i=0;i<times.length;i++){
+        const t=new Date(times[i]+'Z').getTime(); const v=+vals[i];
+        if(isFinite(t)&&isFinite(v)&&v>=0&&t>=winStart&&t<=winEnd) pts.push({x:t,y:v});
+      }
     }
     pts.sort((a,b)=>a.x-b.x);
-    // Cumulata mobile 3h (per confronto diretto col CUM3 radar mm/3h)
-    const cum3=[];
+    // Cumulata mobile 3h (confronto col CUM3 radar) e cumulata PROGRESSIVA evento
+    const cum3=[], cumTot=[]; let running=0;
     for(let i=0;i<pts.length;i++){
       let sum=0; const t0=pts[i].x-3*3600_000;
       for(let j=0;j<=i;j++) if(pts[j].x>t0) sum+=pts[j].y;
       cum3.push({x:pts[i].x, y:+sum.toFixed(1)});
+      running+=pts[i].y; cumTot.push({x:pts[i].x, y:+running.toFixed(1)});
     }
-    return {name:s.name, pts, cum3, total:pts.reduce((a,b)=>a+b.y,0)};
+    return {name:s.name, type:s.type, pts, cum3, cumTot, total:running};
   }catch(e){ return {name:s.name, err:e.message, pts:[]}; }
 }
 
 async function openChart(ev){
   const area = ev.area_name;
   const evMs = new Date(ev.event_timestamp_utc).getTime();
-  const winStart = evMs - 6*3600_000;   // 6h prima
-  const winEnd   = evMs + 3*3600_000;   // 3h dopo
 
-  document.getElementById('chartTitle').textContent =
-    `${area} — ${new Date(ev.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome'})}`;
-  document.getElementById('chartSub').textContent =
-    `Livello: ${ev.level} · prodotto ${ev.product||'—'} · finestra −6h/+3h attorno all'evento`;
-  document.getElementById('chartModal').style.display='flex';
-
-  // Carica ARPA + CUM3 dell'area (cache locale)
+  // Carica ARPA + CUM3 dell'area (cache locale) — serve PRIMA per la finestra adattiva
   if (!ALL.arpa[area]){
     try { ALL.arpa[area] = parseCSV(await (await fetchData(`archive/data/${area}_arpa.csv`)).text()); }
     catch { ALL.arpa[area] = []; }
@@ -376,11 +443,53 @@ async function openChart(ev){
     catch { ALL.cum3[area] = []; }
   }
 
+  // Finestra ADATTIVA: default −6h/+3h, ma per eventi lunghi (autunnali/
+  // primaverili) si estende automaticamente fino a coprire tutta la pioggia
+  // ARPA continua attorno all'evento. Cerchiamo l'ultima ora con mm/h>0.5
+  // entro 24h dall'evento per non tagliare eventi persistenti.
+  let winStart = evMs - 6*3600_000;
+  let winEnd   = evMs + 3*3600_000;
+  try {
+    const arpaAll = (ALL.arpa[area]||[]);
+    if (arpaAll.length){
+      const near = arpaAll.filter(r=>r.location_type==='area')
+        .map(r=>({t:new Date(r.timestamp_utc).getTime(), v:+r.max_mmh||0}))
+        .filter(p=>isFinite(p.t) && p.t>=evMs-24*3600_000 && p.t<=evMs+24*3600_000 && p.v>0.5);
+      if (near.length){
+        const tmin=Math.min(...near.map(p=>p.t)), tmax=Math.max(...near.map(p=>p.t));
+        winStart=Math.min(winStart, tmin-2*3600_000);
+        winEnd  =Math.max(winEnd,   tmax+2*3600_000);
+      }
+    }
+  } catch {}
+  const durH = Math.round((winEnd-winStart)/3600_000);
+
+  document.getElementById('chartTitle').textContent =
+    `${area} — ${new Date(ev.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome'})}`;
+  document.getElementById('chartSub').textContent =
+    `Livello: ${ev.level} · prodotto ${ev.product||'—'} · finestra ~${durH}h (adattiva alla durata evento)`;
+  document.getElementById('chartModal').style.display='flex';
+
+  // Carica pluviometro a terra (già caricati ARPA+CUM3 sopra)
+
   // Serie osservata ARPA (mm/h) nella finestra
   const arpaPts = ALL.arpa[area]
     .filter(r=>r.location_type==='area')
     .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max_mmh||0}))
     .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+  arpaPts.sort((a,b)=>a.x-b.x);
+
+  // Cumulata PROGRESSIVA totale evento (radar ARPA): integrale dell'intensità
+  // mm/h nel tempo → mm totali caduti dall'inizio finestra. Copre eventi di
+  // qualsiasi durata (anche autunnali lunghi), non solo 3h. Ogni frame ARPA è
+  // a passo ~5 min: mm = mm/h × (Δt ore). Asse Y secondario (scala diversa).
+  const arpaCumTot=[]; let acc=0;
+  for(let i=0;i<arpaPts.length;i++){
+    const dtH = i>0 ? (arpaPts[i].x-arpaPts[i-1].x)/3600_000 : 5/60;
+    acc += arpaPts[i].y * Math.min(dtH, 0.5);  // clamp Δt per buchi dati
+    arpaCumTot.push({x:arpaPts[i].x, y:+acc.toFixed(1)});
+  }
+  const eventTotal = acc;  // mm totali evento (radar)
 
   // Serie osservata DPC CUM3 (mm/3h) nella finestra.
   // MAX = picco nel punto peggiore dell'area (rappresenta la pioggia caduta
@@ -418,13 +527,36 @@ async function openChart(ev){
   }
 
   const ds = [];
-  if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, borderColor:'#f59e0b', backgroundColor:'#f59e0b', pointRadius:2, tension:.2, borderWidth:2});
-  if (metPts.length) ds.push({label:'Previsto MET (max 1h)', data:metPts, borderColor:'#22d3ee', backgroundColor:'#22d3ee', pointRadius:2, tension:.2, borderWidth:2, borderDash:[4,3]});
-  if (arpaPts.length) ds.push({label:'Osservato ARPA (mm/h)', data:arpaPts, borderColor:'#4ade80', backgroundColor:'#4ade80', pointRadius:1, tension:.15, borderWidth:2, fill:false});
-  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2.5, stepped:true});
-  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:0, tension:0, borderWidth:1, borderDash:[2,3], stepped:true});
-  if (ground && ground.cum3 && ground.cum3.length) ds.push({label:`Pluviometro ${ground.name} (mm/3h)`, data:ground.cum3, borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:2, tension:.1, borderWidth:2.5, fill:false});
-  if (nowPts.length) ds.push({label:'Nowcast SRI (mm/h)', data:nowPts, borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:6, pointStyle:'triangle', showLine:false});
+  // ── Intensità (asse Y sinistro, mm/h) ──
+  if (arpaPts.length) ds.push({label:'Intensità ARPA (mm/h)', data:arpaPts, yAxisID:'y',
+    borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.14)', pointRadius:0, tension:.3,
+    borderWidth:1.5, fill:true});
+  if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, yAxisID:'y',
+    borderColor:'#fbbf24', backgroundColor:'#fbbf24', pointRadius:0, tension:.3, borderWidth:1.5});
+  if (metPts.length) ds.push({label:'Previsto MET/YR (max 1h)', data:metPts, yAxisID:'y',
+    borderColor:'#38bdf8', backgroundColor:'#38bdf8', pointRadius:0, tension:.3, borderWidth:1.5, borderDash:[5,4]});
+  if (nowPts.length) ds.push({label:'Nowcast SRI (picco)', data:nowPts, yAxisID:'y',
+    borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:7, pointStyle:'triangle', showLine:false});
+
+  // ── Cumulate (asse Y destro, mm) — il dato che conta per "quanto è piovuto" ──
+  if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1',
+    borderColor:'#10b981', backgroundColor:'#10b981', pointRadius:0, tension:.2, borderWidth:3});
+  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, yAxisID:'y1',
+    borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2, stepped:true});
+  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1',
+    borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:0, borderWidth:1, borderDash:[2,3], stepped:true});
+  if (ground && ground.daily && ground.total>0 && arpaPts.length){
+    // SIR giornaliero: nessun andamento orario. Traccio il totale del giorno
+    // come linea orizzontale di riferimento sull'asse cumulata (mm).
+    const xs=arpaPts.map(p=>p.x); const x0=Math.min(...xs), x1=Math.max(...xs);
+    ds.push({label:`${ground.name} — totale giorno ${ground.total.toFixed(0)} mm (SIR)`,
+      data:[{x:x0,y:ground.total},{x:x1,y:ground.total}], yAxisID:'y1',
+      borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:0, borderWidth:2, borderDash:[6,4]});
+  } else if (ground && ground.cumTot && ground.cumTot.length){
+    const gtot = ground.total||0;
+    ds.push({label:`Cumulata ${ground.name} (${gtot.toFixed(0)} mm tot)`, data:ground.cumTot, yAxisID:'y1',
+      borderColor:'#e879f9', backgroundColor:'#e879f9', pointRadius:0, tension:.2, borderWidth:3});
+  }
 
   const ctx = document.getElementById('evChart');
   if (_chart) _chart.destroy();
@@ -432,17 +564,21 @@ async function openChart(ev){
     type:'line',
     data:{ datasets: ds },
     options:{
-      parsing:false, animation:false,
+      parsing:false, animation:false, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
       scales:{
         x:{ type:'linear',
-            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#94a3b8', maxTicksLimit:8 },
-            grid:{ color:'rgba(120,120,120,.12)' } },
-        y:{ beginAtZero:true, title:{display:true,text:'mm/h · mm/3h',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid:{ color:'rgba(120,120,120,.12)' } },
+            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#94a3b8', maxTicksLimit:9, font:{size:11} },
+            grid:{ color:'rgba(148,163,184,.08)' } },
+        y:{ position:'left', beginAtZero:true, title:{display:true,text:'Intensità (mm/h)',color:'#34d399',font:{size:11}},
+            ticks:{color:'#94a3b8',font:{size:11}}, grid:{ color:'rgba(148,163,184,.08)' } },
+        y1:{ position:'right', beginAtZero:true, title:{display:true,text:'Cumulata (mm)',color:'#e879f9',font:{size:11}},
+            ticks:{color:'#94a3b8',font:{size:11}}, grid:{ drawOnChartArea:false } },
       },
       plugins:{
         legend:{ display:false },
-        annotation:false,
-        tooltip:{ callbacks:{ title:items=>new Date(items[0].parsed.x).toLocaleString('it-IT',{timeZone:'Europe/Rome'}) } },
+        tooltip:{ backgroundColor:'rgba(15,23,42,.95)', borderColor:'#334155', borderWidth:1, padding:10,
+          callbacks:{ title:items=>new Date(items[0].parsed.x).toLocaleString('it-IT',{timeZone:'Europe/Rome'}) } },
       },
     },
   });
@@ -465,18 +601,25 @@ async function openChart(ev){
            `Le serie ARPA/DPC mostrano cosa è poi realmente caduto nella finestra.`;
   }
   // Confronto radar vs pluviometro a terra (verità al suolo)
-  if (ground && ground.total>0){
+  if (ground && ground.daily && ground.total>0){
+    // SIR giornaliero: solo totale del/i giorno/i, non max su 3h
+    const gtot = ground.total;
+    const rtot = arpaCumTot.length ? arpaCumTot[arpaCumTot.length-1].y : 0;
+    note += ` Pluviometro ${ground.name} (SIR): ${gtot.toFixed(0)} mm totali nel/i giorno/i dell'evento (dato giornaliero).`;
+    if (rtot>0) note += ` Radar ARPA cumulata evento (picco d'area): ${rtot.toFixed(0)} mm.`;
+  } else if (ground && ground.total>0){
     const gmax = ground.cum3.length ? Math.max(...ground.cum3.map(p=>p.y)) : 0;
+    const gtot = ground.total;
     const rmax = cum3MaxPts.length ? Math.max(...cum3MaxPts.map(p=>p.y)) : 0;
-    note += ` Pluviometro ${ground.name}: ${gmax.toFixed(0)} mm max/3h a terra`;
+    note += ` Pluviometro ${ground.name.split(' ')[0]}: ${gtot.toFixed(0)} mm totali evento (${gmax.toFixed(0)} max/3h)`;
     if (rmax>0){
       const sotto = gmax>0 ? (1 - rmax/gmax)*100 : 0;
-      note += ` vs radar DPC ${rmax.toFixed(0)} mm`;
+      note += ` vs radar DPC ${rmax.toFixed(0)} mm/3h`;
       if (sotto>=20) note += ` — il radar sottostima del ${sotto.toFixed(0)}% (tipico dei picchi convettivi; il dato a terra è il riferimento).`;
       else note += '.';
     } else note += '.';
   } else if (ground && ground.err){
-    note += ` (Pluviometro ${ground.name} non raggiungibile: ${ground.err}.)`;
+    note += ` (Dato a terra ${ground.name} non raggiungibile: ${ground.err}.)`;
   }
   if (!arpaPts.length && !cum3MaxPts.length && !(ground&&ground.total>0)) note += ' (Nessun dato osservato in questa finestra.)';
   document.getElementById('chartNote').textContent = note;
