@@ -5,7 +5,9 @@ name: Radar Nowcast
 
 on:
   schedule:
-    - cron: '7 * * * *'        # ogni ora, minuto sfalsato (i run a :00 sono i più saltati)
+    # Ogni 20 min (era ogni ora): le celle convettive estive durano spesso
+    # <30' e sparivano tra due run. Il catch-up 6 frame SRI copre i gap residui.
+    - cron: '9,29,49 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
