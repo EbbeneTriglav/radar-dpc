@@ -12,6 +12,9 @@
 const ALLOWED_HOSTS = [
   'dpc-radar.s3.eu-south-1.amazonaws.com',
   'radar-api.protezionecivile.it',
+  // Composito radar ARPA Lombardia (Desio+Flero, CMPyymmddhhMM.MAX.tif.gz):
+  // usato da arpa.html per visualizzare il segnale radar live sulla mappa.
+  'radarlive.arpalombardia.it',
 ];
 
 // User-Agent realistico: emula Chrome desktop per non essere bloccati dai WAF
