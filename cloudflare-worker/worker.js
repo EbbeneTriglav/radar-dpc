@@ -97,8 +97,11 @@ export default {
       });
       Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
 
-      // Cache leggera lato browser per i .tif (file immutabili, identificati da timestamp)
-      if (targetUrl.pathname.endsWith('.tif')) {
+      // Cache leggera lato browser per i prodotti radar immutabili
+      // (identificati da timestamp nel nome). Copre sia i .tif DPC/pre-signed
+      // sia i .tif.gz del composito ARPA Lombardia.
+      const p = targetUrl.pathname.toLowerCase();
+      if (p.endsWith('.tif') || p.endsWith('.tif.gz')) {
         headers.set('Cache-Control', 'public, max-age=300');
       }
 
