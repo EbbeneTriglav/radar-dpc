@@ -2,7 +2,10 @@ name: Forecast 24h Alert
 
 on:
   schedule:
-    - cron: '37 */6 * * *'   # ogni 6 ore, minuto sfalsato (00:37, 06:37, 12:37, 18:37)
+    # Ogni 2 ore (minuto sfalsato): la logica in forecast_matrix.py evita spam
+    # (1 mail/giorno per soglia + escalation) ma invia SUBITO su cambio repentino
+    # delle previsioni (worst-case +20mm e +50% vs run precedente).
+    - cron: '37 */2 * * *'
   workflow_dispatch:
     inputs:
       mode:
