@@ -100,6 +100,17 @@
 </div>
 
 <script>
+// Dati sempre freschi da raw@main (deploy Pages non più triggerato dai push dati).
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try {
+      const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' });
+      if (r.ok) return r;
+    } catch {}
+  }
+  return fetch(path + '?_=' + Date.now(), { cache: 'no-cache' });
+}
 const EVENTS_CSV   = 'archive/data/events.csv';
 const VERIFY_CSV   = 'archive/data/forecast_verification.csv';
 
@@ -153,8 +164,8 @@ let allVerify = [];
 
 async function load() {
   const [eRes, vRes] = await Promise.allSettled([
-    fetch(EVENTS_CSV + '?_=' + Date.now()),
-    fetch(VERIFY_CSV + '?_=' + Date.now()),
+    fetchData(EVENTS_CSV),
+    fetchData(VERIFY_CSV),
   ]);
   if (eRes.status === 'fulfilled' && eRes.value.ok) {
     allEvents = parseCSV(await eRes.value.text());

@@ -150,6 +150,19 @@
 
 <script>
 // ─── Monitor v2 ──────────────────────────────────────────────────────────────
+// Dati letti da raw.githubusercontent.com@main (sempre HEAD): il deploy Pages
+// non viene più rifatto ad ogni push dati, quindi i path relativi sarebbero
+// stantii. fetchData() prova raw, poi fallback al path relativo (dev locale).
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try {
+      const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' });
+      if (r.ok) return r;
+    } catch {}
+  }
+  return fetch(path, { cache: 'no-cache' });
+}
 const AREAS_URL    = 'archive/areas.json';
 const EVENTS_URL   = 'archive/data/events.csv';
 const LAST_OBS_URL = 'archive/data/last_observations.json';
@@ -250,7 +263,7 @@ async function init(){
 
 async function loadAreas(){
   try {
-    const r = await fetch(AREAS_URL, { cache: 'no-cache' });
+    const r = await fetchData(AREAS_URL);
     const d = await r.json();
     _areas = (d.areas||[]).filter(a => a.monitoring?.enabled);
   } catch { _areas = []; }
@@ -258,7 +271,7 @@ async function loadAreas(){
 
 async function loadEvents(){
   try {
-    const r = await fetch(EVENTS_URL, { cache: 'no-cache' });
+    const r = await fetchData(EVENTS_URL);
     if (!r.ok) { _events = []; return; }
     const lines = (await r.text()).trim().split(/\r?\n/);
     if (lines.length < 2) { _events = []; return; }
@@ -269,7 +282,7 @@ async function loadEvents(){
 
 async function loadLastObs(){
   try {
-    const r = await fetch(LAST_OBS_URL, { cache: 'no-cache' });
+    const r = await fetchData(LAST_OBS_URL);
     if (!r.ok) { _lastObs = {}; return; }
     _lastObs = await r.json();
   } catch { _lastObs = {}; }
@@ -285,7 +298,7 @@ async function loadArchiveForAll(){
 
 async function loadCsv(url){
   try {
-    const r = await fetch(url, { cache: 'no-cache' });
+    const r = await fetchData(url);
     if (!r.ok) return [];
     const lines = (await r.text()).trim().split(/\r?\n/);
     if (lines.length < 2) return [];
@@ -609,7 +622,7 @@ window.toggleEdit = toggleEdit;
 window.updateThreshold = updateThreshold;
 
 async function openExportModal(){
-  const r = await fetch(AREAS_URL, { cache: 'no-cache' });
+  const r = await fetchData(AREAS_URL);
   const cfg = await r.json();
   for (const a of cfg.areas) {
     const ov = loadOverrides(a.name);

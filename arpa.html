@@ -10,6 +10,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/style.css?v=20260529arpa">
   <style>
+    .radar-btn{background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);border:1px solid var(--border,#334155);
+      border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px}
+    .radar-btn:hover{border-color:#3eaaff}
+    #radar-legend .legend-bar-wrap{height:220px}
+  </style>
+  <style>
     .arpa-layout { display: grid; grid-template-rows: auto 1fr; gap: 12px; height: 100%; padding: 16px 20px; overflow: auto; }
     .arpa-header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .arpa-header h1 { font-family: var(--mono); font-size: 22px; font-weight: 400; }
@@ -94,10 +100,28 @@
 
     </div>
 
-    <!-- Mappa con focus aree -->
+    <!-- Mappa con focus aree + segnale radar live -->
     <div class="arpa-card">
-      <h2><i class="fa fa-map"></i> Mappa aree monitorate</h2>
-      <div id="arpa-map"></div>
+      <h2><i class="fa fa-map"></i> Mappa aree monitorate — segnale radar live</h2>
+      <div id="radar-controls" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;font-size:12px">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" id="radar-toggle" checked> Radar
+        </label>
+        <button id="radar-prev" class="radar-btn" title="Frame precedente (−5 min)">◀</button>
+        <button id="radar-live" class="radar-btn" title="Torna al frame più recente" style="font-weight:700">LIVE</button>
+        <button id="radar-next" class="radar-btn" title="Frame successivo (+5 min)">▶</button>
+        <span id="radar-ts" style="font-family:monospace;color:var(--text2, #64748b)">—</span>
+        <span id="radar-status" style="color:var(--text3, #94a3b8)"></span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div id="arpa-map" style="flex:1"></div>
+        <div id="radar-legend" style="width:64px;flex-shrink:0"></div>
+      </div>
+      <p style="font-size:10px;color:var(--text3, #94a3b8);margin:6px 0 0">
+        Composito MAX dBZ ARPA Lombardia (Desio+Flero), passo 5&nbsp;min, via proxy Cloudflare.
+        Georeferenziazione: bounding box riproiettato dal CRS nativo del GeoTIFF
+        (stesso approccio del radar DPC, distorsione bbox &lt;0,5% dichiarata).
+      </p>
     </div>
 
   </div>
@@ -105,7 +129,26 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Librerie per il rendering del segnale radar (stesse versioni di index.html) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="js/config.js?v=20260518j"></script>
+<script src="js/colormap.js?v=20260518j"></script>
 <script>
+// Dati sempre freschi da raw@main (deploy Pages non più triggerato dai push dati).
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try {
+      const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' });
+      if (r.ok) return r;
+    } catch {}
+  }
+  return fetch(path + '?_=' + Date.now(), { cache: 'no-cache' });
+}
 const AREAS_URL = 'archive/areas.json';
 const ARPA_AREAS = ['ruspino', 'cepina'];
 const ARPA_COLORS = { ruspino: '#4ade80', cepina: '#60a5fa' };
@@ -142,7 +185,7 @@ function fmtDate(iso) {
 
 // ── Data loader ──────────────────────────────────────────────────────────
 async function loadAreasGeo() {
-  const r = await fetch(AREAS_URL, { cache: 'no-cache' });
+  const r = await fetchData(AREAS_URL);
   const cfg = await r.json();
   const out = {};
   for (const a of cfg.areas) {
@@ -153,7 +196,7 @@ async function loadAreasGeo() {
 
 async function loadArpaCSV(area) {
   // ARPA CSV (solo righe area-wide)
-  const r = await fetch(`archive/data/${area}_arpa.csv?_=${Date.now()}`);
+  const r = await fetchData(`archive/data/${area}_arpa.csv`);
   if (!r.ok) return [];
   const rows = parseCSV(await r.text())
     .filter(x => x.location_type === 'area')
@@ -171,7 +214,7 @@ async function loadArpaCSV(area) {
 
 async function loadDpcCSV(area) {
   // Per confronto: <area>_cum3.csv DPC (mm/3h)
-  const r = await fetch(`archive/data/${area}_cum3.csv?_=${Date.now()}`);
+  const r = await fetchData(`archive/data/${area}_cum3.csv`);
   if (!r.ok) return [];
   const rows = parseCSV(await r.text())
     .filter(x => x.location_type === 'area')
@@ -343,6 +386,152 @@ function renderMap(areas) {
   } else {
     map.setView([45.85, 9.8], 8);
   }
+
+  initRadarOverlay(map);
+}
+
+// ── Overlay segnale radar ARPA (composito MAX dBZ, 5 min) ────────────────
+// Fetch dei .tif.gz via worker Cloudflare (radarlive.arpalombardia.it è in
+// allowlist). Il CRS viene LETTO dal GeoTIFF, mai assunto: EPSG:4326 diretto,
+// EPSG:32632 riproiettato via proj4; qualsiasi altro CRS → errore esplicito
+// e nessun rendering (mai georeferenziazione sbagliata in silenzio).
+// Bounding-box overwrite = stesso approccio documentato di georaster-utils
+// per la TM custom DPC (distorsione <0,5% a queste latitudini, dichiarata).
+function initRadarOverlay(map) {
+  const RADAR_BASE = 'https://radarlive.arpalombardia.it/CMP';
+  const STEP_MS = 5 * 60_000;
+  const MAX_BACKSEARCH = 12;          // fino a 60' indietro per trovare il live
+  proj4.defs('EPSG:32632', '+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs');
+
+  let layer = null;          // GeoRasterLayer corrente
+  let currentTs = null;      // Date del frame mostrato
+  let latestTs = null;       // Date dell'ultimo frame trovato in LIVE
+  let liveMode = true;
+  let loading = false;
+
+  const elTs = document.getElementById('radar-ts');
+  const elStatus = document.getElementById('radar-status');
+  const elToggle = document.getElementById('radar-toggle');
+
+  ColorMap.renderLegend('dbz', 'dBZ', 'radar-legend');
+
+  function floor5(d) {
+    const t = new Date(d);
+    t.setUTCSeconds(0, 0);
+    t.setUTCMinutes(t.getUTCMinutes() - (t.getUTCMinutes() % 5));
+    return t;
+  }
+  function fname(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `CMP${String(d.getUTCFullYear()).slice(2)}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}.MAX.tif.gz`;
+  }
+  function fmtTs(d) {
+    // Orario locale Europe/Rome per coerenza col resto della pagina
+    return d.toLocaleString('it-IT', { timeZone: 'Europe/Rome',
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' (locale)';
+  }
+  function setStatus(msg) { elStatus.textContent = msg || ''; }
+
+  async function fetchFrame(d) {
+    const url = CONFIG.CORS_PROXY + encodeURIComponent(`${RADAR_BASE}/${fname(d)}`);
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (!r.ok) return null;
+    let buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length < 256) return null;
+    // Il file è un .gz (magic 1f 8b); se il proxy/CDN lo ha già decompresso
+    // arriva un TIFF nudo (magic II*/MM*): gestiamo entrambi i casi.
+    if (buf[0] === 0x1f && buf[1] === 0x8b) buf = pako.ungzip(buf);
+    return parseGeoraster(buf.buffer);
+  }
+
+  function georeference(g) {
+    // g.projection: EPSG letto dai geokey del TIFF
+    if (g.projection === 4326) return true;
+    if (g.projection === 32632) {
+      const toWgs = c => proj4('EPSG:32632', 'WGS84', c);
+      const corners = [
+        toWgs([g.xmin, g.ymin]), toWgs([g.xmin, g.ymax]),
+        toWgs([g.xmax, g.ymin]), toWgs([g.xmax, g.ymax]),
+      ];
+      const lons = corners.map(c => c[0]), lats = corners.map(c => c[1]);
+      g.xmin = Math.min(...lons); g.xmax = Math.max(...lons);
+      g.ymin = Math.min(...lats); g.ymax = Math.max(...lats);
+      g.pixelWidth  = (g.xmax - g.xmin) / g.width;
+      g.pixelHeight = (g.ymax - g.ymin) / g.height;
+      g.projection = 4326;
+      return true;
+    }
+    setStatus(`⚠️ CRS EPSG:${g.projection} non gestito — rendering annullato per evitare georeferenziazione errata`);
+    return false;
+  }
+
+  function colorFn(v) {
+    if (v === null || v === undefined || isNaN(v) || v <= -100) return null;  // nodata
+    const [r, gg, b, a] = ColorMap.getColor(v, 'dbz');
+    if (a === 0) return null;
+    return `rgba(${r},${gg},${b},${a / 255})`;
+  }
+
+  async function showFrame(d) {
+    if (loading) return false;
+    loading = true;
+    setStatus('caricamento…');
+    try {
+      const g = await fetchFrame(d);
+      if (!g) { setStatus(`frame ${fmtTs(d)} non disponibile`); return false; }
+      if (!georeference(g)) return 'crs-error';   // inutile cercare altri frame
+      const newLayer = new GeoRasterLayer({
+        georaster: g, opacity: 0.75, resolution: 256,
+        pixelValuesToColorFn: colorFn,
+      });
+      if (layer) map.removeLayer(layer);
+      layer = newLayer;
+      if (elToggle.checked) layer.addTo(map);
+      currentTs = d;
+      elTs.textContent = fmtTs(d) + (liveMode ? '' : '  [storico]');
+      setStatus('');
+      return true;
+    } catch (e) {
+      setStatus('errore: ' + e.message);
+      return false;
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function goLive() {
+    liveMode = true;
+    let d = floor5(new Date());
+    for (let i = 0; i < MAX_BACKSEARCH; i++) {
+      const r = await showFrame(d);
+      if (r === true) { latestTs = d; return; }
+      if (r === 'crs-error') return;   // messaggio EPSG già mostrato, stop
+      d = new Date(d.getTime() - STEP_MS);
+    }
+    setStatus('nessun frame radar disponibile negli ultimi 60 min');
+  }
+
+  document.getElementById('radar-prev').addEventListener('click', () => {
+    if (!currentTs) return;
+    liveMode = false;
+    showFrame(new Date(currentTs.getTime() - STEP_MS));
+  });
+  document.getElementById('radar-next').addEventListener('click', () => {
+    if (!currentTs) return;
+    const next = new Date(currentTs.getTime() + STEP_MS);
+    if (latestTs && next.getTime() > latestTs.getTime()) { goLive(); return; }
+    liveMode = false;
+    showFrame(next);
+  });
+  document.getElementById('radar-live').addEventListener('click', goLive);
+  elToggle.addEventListener('change', () => {
+    if (!layer) return;
+    if (elToggle.checked) layer.addTo(map); else map.removeLayer(layer);
+  });
+
+  // Auto-refresh in LIVE ogni 5 min
+  setInterval(() => { if (liveMode && elToggle.checked) goLive(); }, STEP_MS);
+  goLive();
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────
