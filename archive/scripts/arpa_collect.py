@@ -356,6 +356,28 @@ def save_radar_frames_png(files: list[str]) -> int:
                     nodata = src.nodata if src.nodata is not None else -9999
                     b = src.bounds  # nativo del file
                     crs = src.crs
+                    # Diagnostica CRS (una volta per run): scrive il CRS REALE
+                    # letto dal file + bounds nativi + riproiettati, così è
+                    # ispezionabile dal repo senza indovinare la proiezione.
+                    if not getattr(save_radar_frames_png, '_crs_logged', False):
+                        try:
+                            dbg = FRAMES_DIR / '_crs_debug.txt'
+                            wkt = crs.to_wkt() if crs else 'None'
+                            proj4s = crs.to_proj4() if crs else 'None'
+                            dbg.write_text(
+                                f"file: {fname}\n"
+                                f"crs.to_epsg(): {crs.to_epsg() if crs else None}\n"
+                                f"crs.is_geographic: {crs.is_geographic if crs else None}\n"
+                                f"crs.to_proj4(): {proj4s}\n"
+                                f"bounds_native: {b.left}, {b.bottom}, {b.right}, {b.top}\n"
+                                f"size: {src.width}x{src.height}\n"
+                                f"crs.to_wkt():\n{wkt}\n"
+                            )
+                            log.info(f'  CRS ARPA reale: epsg={crs.to_epsg() if crs else None} '
+                                     f'proj4={proj4s[:80] if crs else None}')
+                        except Exception as _e:
+                            log.warning(f'  crs debug write failed: {_e}')
+                        save_radar_frames_png._crs_logged = True
                     # I file ARPA NON sono in gradi: hanno una proiezione custom
                     # (codice EPSG 32767 "user-defined", coordinate in metri).
                     # rasterio conosce comunque il CRS reale (stesso usato dal
