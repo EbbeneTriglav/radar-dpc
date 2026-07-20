@@ -76,6 +76,17 @@
   <div class="vf-cards" id="acc-cards"><div class="vf-card"><div class="k">Caricamento…</div></div></div>
   <p class="vf-note" id="acc-legend"></p>
 
+  <h2 style="font-size:15px;margin:24px 0 8px">Forecast sorgenti — 24/48/72h (Ruspino · Panna · Levissima)</h2>
+  <p class="vf-note">Stessi ingredienti delle dashboard: 5 modelli Open-Meteo (ICON·IFS·GFS·ARPEGE·AROME),
+  <b>worst-case</b> = modello più piovoso, <b>MET Norway (YR)</b> come validazione indipendente (mai mediato).
+  Se una soglia viene superata, il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice SP3
+  dettagliata va solo via mail ai destinatari). Ricalcolo live qui sotto per controllo; il <b>trigger reale</b> gira
+  server-side ogni 6h e su cambi repentini.</p>
+  <div id="fc-sites" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+    <div class="vf-card"><div class="k">Caricamento forecast…</div></div>
+  </div>
+  <p class="vf-note" id="fc-note"></p>
+
   <h2 style="font-size:15px;margin:24px 0 8px">Eventi — previsto vs osservato</h2>
   <div class="vf-filters">
     <select id="ev-area"><option value="">Tutte le aree</option></select>
@@ -413,7 +424,111 @@ async function openChart(ev){
 function closeChart(){ document.getElementById('chartModal').style.display='none'; if(_chart){_chart.destroy();_chart=null;} }
 document.getElementById('chartModal').addEventListener('click',e=>{ if(e.target.id==='chartModal') closeChart(); });
 
-// ── Boot ──
+// ── FORECAST 3 SITI (stessi ingredienti dashboard: 5 modelli OM + YR, worst-case) ──
+const OM_URL='https://api.open-meteo.com/v1/forecast', YR_URL='https://api.met.no/weatherapi/locationforecast/2.0/compact';
+const FC_MODELS=[['icon_seamless','ICON'],['ecmwf_ifs025','IFS'],['gfs_seamless','GFS'],['meteofrance_arpege_europe','ARPEGE'],['meteofrance_arome_france_hd','AROME']];
+// Punti+soglie IDENTICI agli script server-side (forecast_matrix.py)
+const FC_SITES=[
+  { name:'ruspino', label:'Ruspino', crit:'matrix',
+    thr:{'24h':[60,80],'48h':[80,120],'72h':[100,140]},  // MATRIX2 Ruspino (Att,Crit)
+    pts:[[45.8672,9.6505,.11],[45.8623,9.6373,.10],[45.8574,9.6439,.10],[45.8524,9.6176,.10],[45.8464,9.6353,.12],[45.8475,9.6571,.09],[45.8377,9.6242,.09],[45.8426,9.6505,.08],[45.8278,9.6307,.07],[45.8327,9.6373,.07],[45.8475,9.6637,.07]] },
+  { name:'panna', label:'Sorgenti Panna', crit:'day', thrDay:[5,10,15],  // mm/giorno worst-case
+    pts:[[44.092,11.283,.14],[44.084,11.272,.12],[44.075,11.278,.11],[44.077,11.299,.13],[44.076,11.320,.11],[44.065,11.312,.09],[44.061,11.299,.08],[44.049,11.304,.05],[44.080,11.281,.06],[44.0818,11.309,.06],[44.0872,11.291,.05]] },
+  { name:'cepina', label:'Cepina (Levissima)', crit:'day', thrDay:[5,10,15], // provvisorie (=Panna)
+    pts:[[46.4393,10.3344,1/7],[46.4318,10.3379,1/7],[46.4330,10.3455,1/7],[46.4215,10.3436,1/7],[46.4378,10.3480,1/7],[46.4360,10.3400,1/7],[46.4300,10.3440,1/7]] },
+];
+const DAY_COL=v=>v>=15?'#7c3aed':v>=10?'#ef4444':v>=5?'#f59e0b':v>0?'#3b82f6':'#64748b';
+
+async function fetchOMhourly(lat,lon){
+  const keys=FC_MODELS.map(m=>m[0]).join(',');
+  const r=await fetch(`${OM_URL}?latitude=${lat}&longitude=${lon}&hourly=precipitation&forecast_hours=72&models=${keys}&timezone=UTC`);
+  if(!r.ok) return null; const h=(await r.json()).hourly||{}; const out={};
+  for(const [k] of FC_MODELS){ const v=h['precipitation_'+k]||h.precipitation; if(v) out[k]=v.slice(0,72).map(x=>x==null?0:x); }
+  return {series:out, times:(h.time||[]).slice(0,72)};
+}
+async function fetchYRhourly(lat,lon){
+  try{ const r=await fetch(`${YR_URL}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`); if(!r.ok) return null;
+    const ts=(await r.json()).properties?.timeseries||[]; const out=[];
+    for(const e of ts){ const d=e.data?.next_1_hours; if(!d) break; out.push(d.details?.precipitation_amount||0); if(out.length>=72) break; }
+    return out.length?out:null;
+  }catch{ return null; }
+}
+function rollMax(s,H){ if(!s.length) return 0; if(s.length<=H) return +s.reduce((a,b)=>a+b,0).toFixed(1);
+  let sum=s.slice(0,H).reduce((a,b)=>a+b,0),best=sum; for(let i=H;i<s.length;i++){sum+=s[i]-s[i-H]; if(sum>best)best=sum;} return +best.toFixed(1); }
+
+async function computeSiteForecast(site){
+  const per={}; let yrAgg=null,yrW=0,mw={},times0=null,nOK=0;
+  FC_MODELS.forEach(([k])=>{per[k]=new Array(72).fill(0); mw[k]=0;});
+  for(const [lat,lon,w] of site.pts){
+    const om=await fetchOMhourly(lat,lon);
+    if(om&&Object.keys(om.series).length){ nOK++; times0=times0||om.times;
+      for(const k in om.series){ om.series[k].forEach((v,i)=>per[k][i]+=v*w); mw[k]+=w; } }
+    const yr=await fetchYRhourly(lat,lon);
+    if(yr){ if(!yrAgg)yrAgg=new Array(72).fill(0); yr.forEach((v,i)=>{if(i<72)yrAgg[i]+=v*w;}); yrW+=w; }
+  }
+  const series={}; for(const k in per){ if(mw[k]>0) series[k]=per[k].map(v=>v/mw[k]); }
+  const yr=yrAgg&&yrW>0?yrAgg.map(v=>v/yrW):null;
+  const nMod=Object.keys(series).length;
+  const ensMean=new Array(72).fill(0).map((_,i)=>{let s=0;for(const k in series)s+=series[k][i];return s/nMod;});
+  return {series,yr,ensMean,nMod,nOK,times0};
+}
+
+function renderForecastSites(){
+  const el=document.getElementById('fc-sites');
+  Promise.all(FC_SITES.map(async site=>{
+    let fc; try{ fc=await computeSiteForecast(site); }catch(e){ return {site,err:e.message}; }
+    return {site,fc};
+  })).then(results=>{
+    el.innerHTML=results.map(({site,fc,err})=>{
+      if(err||!fc) return `<div class="vf-card"><div class="k">${site.label}</div><div class="s miss">forecast non disponibile: ${err||''}</div></div>`;
+      const H={'24h':24,'48h':48,'72h':72};
+      let rows='', maxLvl=-1, anyOver=false;
+      for(const hz of ['24h','48h','72h']){
+        const perM={}; for(const k in fc.series) perM[k]=rollMax(fc.series[k],H[hz]);
+        const worstK=Object.keys(perM).reduce((a,b)=>perM[a]>=perM[b]?a:b,Object.keys(perM)[0]);
+        const worst=perM[worstK]||0, mean=rollMax(fc.ensMean,H[hz]), yr=fc.yr?rollMax(fc.yr,H[hz]):null;
+        let lvl=-1, thrTxt='', col='#64748b';
+        if(site.crit==='matrix'){ const t=site.thr[hz]; lvl=worst>=t[1]?1:worst>=t[0]?0:-1;
+          thrTxt=`Att ${t[0]} · Crit ${t[1]}`; col=lvl===1?'#dc2626':lvl===0?'#0ea5e9':'#64748b'; }
+        else { const t=site.thrDay; lvl=worst>=t[2]?2:worst>=t[1]?1:worst>=t[0]?0:-1;
+          thrTxt=`${t[0]}/${t[1]}/${t[2]} mm`; col=DAY_COL(worst); }
+        if(lvl>maxLvl)maxLvl=lvl; if(lvl>=(site.crit==='matrix'?1:1))anyOver=true;
+        const nAgree=Object.values(perM).filter(v=>v>=(site.crit==='matrix'?site.thr[hz][0]:site.thrDay[0])).length;
+        rows+=`<tr><td style="padding:4px 8px;font-weight:600">${hz}</td>
+          <td style="padding:4px 8px;text-align:right;font-weight:700;color:${col}">${worst.toFixed(0)} mm</td>
+          <td style="padding:4px 8px;text-align:right;color:#94a3b8">${mean.toFixed(0)}</td>
+          <td style="padding:4px 8px;text-align:right;color:#22d3ee">${yr!=null?yr.toFixed(0):'—'}</td>
+          <td style="padding:4px 8px;color:#94a3b8;font-size:11px">${thrTxt} · ${nAgree}/${fc.nMod}</td></tr>`;
+      }
+      const critLvl=site.crit==='matrix'?1:1;
+      const alertOn = maxLvl>=critLvl;
+      const badge = alertOn
+        ? `<span class="pill obs" style="background:#7f1d1d;color:#fecaca">⛔ soglia superata → mail+telegram</span>`
+        : maxLvl>=0 ? `<span class="pill" style="background:#78350f;color:#fde68a">⚠️ attenzione (sotto soglia allerta)</span>`
+        : `<span class="pill good" style="background:#14532d;color:#bbf7d0">✓ sotto soglia</span>`;
+      return `<div class="vf-card" style="padding:0;overflow:hidden">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border,#334155)">
+          <div style="font-weight:700;font-size:15px">${site.label}</div>
+          <div style="margin-top:4px">${badge}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <tr style="color:#94a3b8;font-size:10px;text-transform:uppercase">
+            <th style="text-align:left;padding:4px 8px">Orizz.</th><th style="text-align:right;padding:4px 8px">Worst</th>
+            <th style="text-align:right;padding:4px 8px">Ens.</th><th style="text-align:right;padding:4px 8px">YR</th>
+            <th style="text-align:left;padding:4px 8px">Soglie · concordi</th></tr>
+          ${rows}
+        </table>
+        <div style="padding:6px 14px;font-size:10px;color:#94a3b8">${fc.nMod}/5 modelli · ${fc.nOK}/${site.pts.length} punti · YR ${fc.yr?'ok':'N/D'}${site.name==='cepina'?' · soglie provvisorie (=Panna)':''}</div>
+      </div>`;
+    }).join('');
+  });
+  document.getElementById('fc-note').innerHTML=
+    'Worst-case = modello più piovoso (mai mediato con YR). Colonna <b>Ens.</b> = media dei 5 modelli, <b>YR</b> = MET Norway indipendente. '+
+    'Il <b>trigger reale</b> di invio mail+Telegram gira server-side (workflow forecast-alert, ogni 6h) con la stessa logica: '+
+    'una mail parte al superamento soglia (matrice SP3 dettagliata solo via mail). Questo ricalcolo live serve al controllo visivo.';
+}
+
+
 ['acc-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderAccuracy));
 ['ev-area','ev-type','ev-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderEvents));
 
@@ -421,6 +536,7 @@ document.getElementById('chartModal').addEventListener('click',e=>{ if(e.target.
   await loadAll();
   renderAccuracy();
   renderEvents();
+  renderForecastSites();
 })();
 </script>
 </body>
