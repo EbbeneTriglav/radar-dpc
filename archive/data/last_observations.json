@@ -1,6 +1,6 @@
 {
   "_cum3_available": true,
-  "_forecast24h_last_run_utc": "2026-07-20T04:12:05Z",
+  "_forecast24h_last_run_utc": "2026-07-20T09:40:33Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-07-20T07:25:44Z",
   "_nowcast_cum3_available": true,
@@ -51,12 +51,12 @@
       "updated_at_utc": "2026-07-20T07:25:43Z"
     },
     "forecast_24h": {
-      "mean_ensemble": 2.13,
-      "metno_weighted": 0.48,
+      "mean_ensemble": 3.32,
+      "metno_weighted": 1.68,
       "n_models": 5,
       "n_points": 6,
-      "updated_at_utc": "2026-07-20T04:12:05Z",
-      "worst_case": 7.83
+      "updated_at_utc": "2026-07-20T09:40:33Z",
+      "worst_case": 10.4
     },
     "motion": null,
     "nowcast": {
@@ -123,12 +123,12 @@
       "updated_at_utc": "2026-07-20T07:25:41Z"
     },
     "forecast_24h": {
-      "mean_ensemble": 1.41,
-      "metno_weighted": 0.39,
+      "mean_ensemble": 2.05,
+      "metno_weighted": 0.77,
       "n_models": 5,
       "n_points": 11,
-      "updated_at_utc": "2026-07-20T04:12:05Z",
-      "worst_case": 5.39
+      "updated_at_utc": "2026-07-20T09:40:33Z",
+      "worst_case": 5.55
     },
     "motion": null,
     "nowcast": {
@@ -196,11 +196,11 @@
     },
     "forecast_24h": {
       "mean_ensemble": 3.12,
-      "metno_weighted": 3.37,
+      "metno_weighted": 6.5,
       "n_models": 5,
       "n_points": 6,
-      "updated_at_utc": "2026-07-20T04:12:05Z",
-      "worst_case": 8.37
+      "updated_at_utc": "2026-07-20T09:40:33Z",
+      "worst_case": 7.15
     },
     "motion": {
       "bearing_deg": 159.9723234761482,
