@@ -513,29 +513,39 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
     # ── APERTURA: cella sopra soglia e non già attiva ──
     if sri_max >= sri_threshold and not st.get('active'):
         # Stima permanenza: estensione cella lungo la direzione di moto / velocità
-        motion, dwell_min, rain_est = None, None, None
+        motion, dwell_min, rain_proj = None, None, None
         if len(sri_frames) >= 2:
             dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
             motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], geom_area, dt_min)
         if motion and motion.get('speed_kmh') and motion['speed_kmh'] > 1:
-            # Estensione approssimata: diametro equivalente dell'area dei pixel > soglia
-            # proxy semplice: sqrt(area poligono) + 4 km (dimensione tipica cella)
             import math
             area_km2 = geom_area.area / 1e6
             ext_km = math.sqrt(area_km2) + 4.0
             dwell_min = int(round(ext_km / motion['speed_kmh'] * 60))
             dwell_min = max(5, min(dwell_min, 180))  # clamp 5..180 min
-            rain_est = sri_stat['mean'] * dwell_min / 60  # mm = mm/h × h
+            # PROIEZIONE (non misura): pioggia attesa se l'intensità di PICCO
+            # (max, non mean) persistesse per la permanenza stimata. Il mean
+            # sottostima perché media su tutti i pixel dell'area, annacquando
+            # il picco della cella. Etichettata come proiezione, non misura.
+            rain_proj = sri_max * dwell_min / 60  # mm = mm/h(picco) × h
         elif motion and motion.get('compass') == 'stazionaria':
-            dwell_min = None  # stazionaria: permanenza indefinita
-            rain_est = None
+            dwell_min = None
+            rain_proj = None
+
+        # PIOGGIA REALMENTE CADUTA: dal CUM3 misurato (cumulata 3h del radar),
+        # non da una stima. Il MAX rappresenta il punto peggiore dell'area
+        # (dove la cella ha scaricato), più fedele del mean. Questo è il dato
+        # da comunicare come "caduto", separato dalla proiezione teorica.
+        cum_fallen = cum3_in['max'] if cum3_in else None
 
         label = area['label']
         dwell_str = (f"  • Permanenza stimata: ~{dwell_min} min\n" if dwell_min
                      else "  • Cella STAZIONARIA: permanenza prolungata possibile\n" if motion and motion.get('compass') == 'stazionaria'
                      else '')
-        rain_str = f"  • Pioggia attesa al suolo: ~{rain_est:.0f} mm\n" if rain_est else ''
-        fallen_str = f"  • Già caduti (cum. 3h): {cum3_in['max']:.1f} mm\n" if cum3_in else ''
+        # Pioggia CADUTA (misurata dal CUM3) — il dato che conta
+        fallen_str = f"  • Pioggia caduta finora (cum. 3h, radar): {cum_fallen:.1f} mm\n" if cum_fallen is not None else ''
+        # Proiezione se la cella persiste (chiaramente etichettata come stima)
+        proj_str = f"  • Proiezione se persiste ~{dwell_min}min al picco: ~{rain_proj:.0f} mm\n" if rain_proj else ''
         mot_str = (f"  • Moto: {motion['compass']} a {motion['speed_kmh']} km/h\n"
                    if motion and motion.get('bearing_deg') is not None else '')
 
@@ -543,8 +553,10 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             f"⛈️ CELLA SULL'AREA — {label}\n\n"
             f"Cella temporalesca SOPRA il bacino (radar DPC):\n"
             f"  • SRI max in area: {sri_max:.1f} mm/h (soglia {sri_threshold})\n"
-            f"{mot_str}{dwell_str}{rain_str}{fallen_str}"
-            f"\nRilevazione: {_ts_local(ts_iso)} (ora italiana)\n"
+            f"{mot_str}{dwell_str}{fallen_str}{proj_str}"
+            f"\nNota: il radar sottostima i picchi convettivi — il pluviometro a "
+            f"terra è il riferimento.\n"
+            f"Rilevazione: {_ts_local(ts_iso)} (ora italiana)\n"
             f"Riceverai un messaggio quando la cella avrà lasciato l'area.\n"
         )
         md = (
@@ -552,11 +564,11 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             f"SRI max: *{sri_max:.1f} mm/h* (soglia {sri_threshold})\n"
             + (f"Moto: {motion['compass']} {motion['speed_kmh']}km/h\n" if motion and motion.get('bearing_deg') is not None else '')
             + (f"Permanenza stimata: ~*{dwell_min} min*\n" if dwell_min else ('*Cella stazionaria*\n' if motion and motion.get('compass')=='stazionaria' else ''))
-            + (f"Pioggia attesa: ~*{rain_est:.0f} mm*\n" if rain_est else '')
-            + (f"Già caduti: {cum3_in['max']:.1f} mm (3h)\n" if cum3_in else '')
+            + (f"Pioggia caduta: *{cum_fallen:.1f} mm* (cum.3h radar)\n" if cum_fallen is not None else '')
+            + (f"Proiezione se persiste: ~{rain_proj:.0f} mm\n" if rain_proj else '')
             + f"_{_ts_local(ts_iso)}_"
         )
-        subject = f"⛈️ {label} — CELLA SULL'AREA {sri_max:.0f}mm/h" + (f" ~{dwell_min}min" if dwell_min else '')
+        subject = f"⛈️ {label} — CELLA SULL'AREA {sri_max:.0f}mm/h" + (f" (~{cum_fallen:.0f}mm caduti)" if cum_fallen is not None else '')
         em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
         tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
         writer.writerow({
@@ -566,10 +578,11 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             'product': 'SRI', 'observation_timestamp_utc': ts_iso,
             'forecast_max_6h_mm': '',
             'notified_email': em, 'notified_telegram': tg,
-            'note': f"cella su area" + (f" dwell~{dwell_min}min rain~{rain_est:.0f}mm" if dwell_min and rain_est else ''),
+            'note': "cella su area" + (f" caduti~{cum_fallen:.0f}mm(cum3)" if cum_fallen is not None else '')
+                    + (f" dwell~{dwell_min}min" if dwell_min else ''),
         })
         state[key] = {'active': True, 'since': now_iso}
-        log.info(f"  ✓ cell_ON_AREA: SRI={sri_max:.1f} dwell={dwell_min} rain={rain_est} email={em} tg={tg}")
+        log.info(f"  ✓ cell_ON_AREA: SRI_max={sri_max:.1f} caduti={cum_fallen} dwell={dwell_min} proj={rain_proj} email={em} tg={tg}")
         return True
 
     return st.get('active', False)
