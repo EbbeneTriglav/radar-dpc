@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-forecast_matrix.py — Matrice rischio SP3 previsionale (24/48/72h) via email.
+forecast_matrix.py — Matrice rischio scarico preventivo previsionale (24/48/72h) via email.
 
 Replica ESATTAMENTE gli ingredienti delle dashboard:
   · Ruspino v2.0: 11 punti pesati (POINTS_RUSPINO, copiati verbatim dalla
@@ -8,7 +8,7 @@ Replica ESATTAMENTE gli ingredienti delle dashboard:
     (mai mediato nell'ensemble), cumulate MOBILI 24/48/72h, worst-case =
     modello più piovoso, matrice 3×2 a soglia unica di scarico:
       Attenzione [60, 80, 100] · Critico [80, 120, 140] (24/48/72h)
-      SP3 a scarico al livello CRITICO in QUALSIASI orizzonte.
+      Scarico preventivo al livello CRITICO in QUALSIASI orizzonte.
       Prossimità: warning se worst ≥ 85% della soglia successiva (proxFactor).
   · Panna v6.6: 11 punti CONTROL_POINTS (già identici alla dashboard),
     criterio B su CUMULATA GIORNALIERA worst-case (giorni civili Europe/Rome):
@@ -70,20 +70,20 @@ POINTS_RUSPINO = [
     {'id': 'P11', 'name': 'Cornalita',     'lat': 45.8475, 'lon': 9.6637, 'elev':  650, 'weight': 0.07},
 ]
 
-# ── Punti di controllo Cepina/Levissima — 7 sorgenti del bacino, estratte
+# ── Punti di controllo Cepina — 7 sorgenti del bacino, estratte
 #    dalla dashboard analitica Sorgenti_Oga.html. Pesi UNIFORMI (1/7): non
 #    esiste ancora una pesatura idrogeologica validata per questo bacino (a
 #    differenza di Ruspino/Panna). Dichiarato, non inventato: quando avrai i
 #    pesi reali basta aggiornare 'weight'. Criterio soglie = giornaliero Panna
 #    (5/10/15 mm/g worst-case), provvisorio finché non tari soglie proprie.
 _CEPINA_PTS_RAW = [
-    ('Pozzaccio (Levissima)', 46.4393, 10.3344, 1780),
-    ('Maggionaro',           46.4318, 10.3379, 1750),
-    ('Baite Vecchi',         46.4330, 10.3455, 1550),
-    ('Suena (frana ARPA)',   46.4215, 10.3436, 1540),
-    ('Redont',               46.4378, 10.3480, 1400),
-    ('Santa Maria',          46.4360, 10.3400, 1400),
-    ('Sassi',                46.4300, 10.3440, 1350),
+    ('Sorgente 1', 46.4393, 10.3344, 1780),
+    ('Sorgente 2', 46.4318, 10.3379, 1750),
+    ('Sorgente 3', 46.4330, 10.3455, 1550),
+    ('Sorgente 4', 46.4215, 10.3436, 1540),
+    ('Sorgente 5', 46.4378, 10.3480, 1400),
+    ('Sorgente 6', 46.4360, 10.3400, 1400),
+    ('Sorgente 7', 46.4300, 10.3440, 1350),
 ]
 POINTS_CEPINA = [
     {'id': f'C{i+1}', 'name': n, 'lat': la, 'lon': lo, 'elev': el, 'weight': 1.0/len(_CEPINA_PTS_RAW)}
@@ -257,7 +257,7 @@ def compute_ruspino_matrix():
 
 def compute_days_worstcase(points):
     """Cumulate giornaliere worst-case (criterio B dashboard Panna). Riusabile
-    per qualsiasi bacino con criterio giornaliero (Panna, Cepina/Levissima)."""
+    per qualsiasi bacino con criterio giornaliero (Panna, Cepina)."""
     series, metno, n_pts, metno_cov, times = weighted_series_by_model(points)
     if not series or not times:
         return None
@@ -305,11 +305,11 @@ def _cell(v, active, color):
 def compose_email_ruspino(res, now_iso):
     lvl_name = MATRIX2['levels'][res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
     icon = '⛔' if res['sp3'] else ('⚠️' if res['max_level'] >= 0 else '✓')
-    subject = (f"{icon} Matrice SP3 previsionale Ruspino — {lvl_name}"
-               + (' · SP3 A SCARICO' if res['sp3'] else ''))
+    subject = (f"{icon} Matrice scarico preventivo Ruspino — {lvl_name}"
+               + (' · SCARICO CONSIGLIATO' if res['sp3'] else ''))
 
     head = ''.join(f'<th style="padding:8px 12px;border:1px solid #e2e8f0;color:{c};font-size:12px">{lv}'
-                   + (' · SP3 scarico' if i == 1 else '') + '</th>'
+                   + (' · scarico' if i == 1 else '') + '</th>'
                    for i, (lv, c) in enumerate(zip(MATRIX2['levels'], MATRIX2['colors'])))
     body_rows, text_rows = [], []
     for r in res['rows']:
@@ -339,12 +339,12 @@ def compose_email_ruspino(res, now_iso):
     if res['sp3']:
         banner = ('<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:8px;'
                   'padding:12px 16px;margin:0 0 14px;font-size:15px;font-weight:700;color:#7f1d1d">'
-                  '⛔ SP3 A SCARICO consigliato — livello Critico (worst-case) raggiunto</div>')
+                  '⛔ SCARICO PREVENTIVO consigliato — livello Critico (worst-case) raggiunto</div>')
 
     metno_note = (f"MET Norway: copertura oraria {res['metno_cov_h']}/{FORECAST_HOURS}h "
                   "(validazione indipendente, mai mediato nell'ensemble)")
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
-<h2 style="margin:0 0 4px">🚱 Matrice rischio SP3 previsionale — Bacino Ruspino</h2>
+<h2 style="margin:0 0 4px">🚱 Matrice rischio scarico preventivo — Bacino Ruspino</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulate mobili 24/48/72h · worst-case = modello più piovoso ·
 soglie identiche alla dashboard v2.0 (matrice 3×2, soglia unica di scarico) · run {now_iso}</p>
 {banner}
@@ -360,8 +360,8 @@ Cella evidenziata = livello del worst-case. Contenuto riservato ai destinatari e
 (non pubblicato su dashboard/Telegram/eventi).</p>
 </body></html>"""
 
-    text = (f"MATRICE SP3 PREVISIONALE — RUSPINO ({now_iso})\n"
-            + ('*** SP3 A SCARICO consigliato (Critico raggiunto) ***\n' if res['sp3'] else '')
+    text = (f"MATRICE SCARICO PREVENTIVO — RUSPINO ({now_iso})\n"
+            + ('*** SCARICO PREVENTIVO consigliato (Critico raggiunto) ***\n' if res['sp3'] else '')
             + '\n'.join(text_rows)
             + f"\n\nEnsemble {res['n_models']}/5 modelli, {res['n_points_ok']}/11 punti · {metno_note}\n"
             "Soglie = dashboard Ruspino v2.0, matrice 3×2 (Att 60/80/100 · Crit 80/120/140).\n"
@@ -453,9 +453,9 @@ def main():
         ('panna',   'Sorgenti Panna',
          lambda: compute_days_worstcase(CONTROL_POINTS),
          lambda res, ts: compose_email_days(res, ts, 'Sorgenti Panna')),
-        ('cepina',  'Cepina (Levissima)',
+        ('cepina',  'Cepina',
          lambda: compute_days_worstcase(POINTS_CEPINA),
-         lambda res, ts: compose_email_days(res, ts, 'Cepina (Levissima)')),
+         lambda res, ts: compose_email_days(res, ts, 'Cepina')),
     ]
 
     for area, label, compute, compose in jobs:

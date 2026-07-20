@@ -541,7 +541,7 @@ def main():
     state['_last_run_utc'] = now_iso
 
     # Labels per i messaggi
-    AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina (Levissima)'}
+    AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
 
     write_header = not events_file.exists()
     with open(events_file, 'a', newline='', encoding='utf-8') as f:
