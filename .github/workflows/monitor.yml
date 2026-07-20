@@ -14,7 +14,10 @@ name: Rain Monitor
 
 on:
   schedule:
-    - cron: '*/15 * * * *'    # ogni 15 minuti
+    # Minuti sfalsati (4,19,34,49): i run schedulati al minuto :00/:15/:30/:45
+    # sono i più congestionati e GitHub li salta con maggiore probabilità.
+    # Il catch-up in monitor.py recupera comunque i frame dei run saltati.
+    - cron: '4,19,34,49 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:

@@ -2,7 +2,7 @@ name: Forecast 24h Alert
 
 on:
   schedule:
-    - cron: '30 */6 * * *'   # ogni 6 ore (00:30, 06:30, 12:30, 18:30)
+    - cron: '37 */6 * * *'   # ogni 6 ore, minuto sfalsato (00:37, 06:37, 12:37, 18:37)
   workflow_dispatch:
     inputs:
       mode:
@@ -44,6 +44,26 @@ jobs:
             python archive/scripts/forecast_ensemble_alert.py --dry-run
           else
             python archive/scripts/forecast_ensemble_alert.py
+          fi
+
+      - name: Matrice SP3 previsionale (24/48/72h, solo email)
+        # La matrice va SOLO via email ai destinatari dell'area: niente
+        # Telegram, niente events.csv, niente pagine pubbliche.
+        # continue-on-error: un problema qui non deve bloccare il commit
+        # dello stato dell'alert 24h sopra.
+        continue-on-error: true
+        env:
+          SMTP_HOST:        ${{ secrets.SMTP_HOST }}
+          SMTP_PORT:        ${{ secrets.SMTP_PORT }}
+          SMTP_USER:        ${{ secrets.SMTP_USER }}
+          SMTP_PASS:        ${{ secrets.SMTP_PASS }}
+          SMTP_TO:          ${{ secrets.SMTP_TO }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ "$MODE" = "dry-run" ]; then
+            python archive/scripts/forecast_matrix.py --dry-run
+          elif [ "$MODE" = "normal" ] || [ -z "$MODE" ]; then
+            python archive/scripts/forecast_matrix.py
           fi
 
       - name: Commit state

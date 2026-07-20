@@ -3,6 +3,17 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    # Deploy SOLO quando cambiano i file del sito. I push dei workflow dati
+    # (monitor/nowcast/arpa/forecast, decine al giorno) NON devono triggerare
+    # deploy: GitHub Pages ha limiti di build/ora e la coda rendeva il sito
+    # stantio. I dati vengono letti dai frontend via raw.githubusercontent.com
+    # (sempre HEAD), quindi non serve ridistribuire il sito per aggiornarli.
+    paths:
+      - '**.html'
+      - 'css/**'
+      - 'js/**'
+      - 'archive/areas.json'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:

@@ -6,7 +6,7 @@ name: Forecast History
 
 on:
   schedule:
-    - cron: '10 * * * *'    # ogni ora al minuto :10
+    - cron: '41 * * * *'    # ogni ora, minuto sfalsato rispetto agli altri workflow
   workflow_dispatch:
 
 permissions:

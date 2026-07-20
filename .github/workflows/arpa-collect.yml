@@ -7,7 +7,9 @@ name: ARPA Lombardia Collect
 
 on:
   schedule:
-    - cron: '*/5 * * * *'    # ogni 5 minuti
+    # Cadenza realistica: */5 non veniva MAI rispettato (run reali ogni 2-3h).
+    # Ogni 10' sfalsato + backfill oldest-first (48 frame/run) copre i gap.
+    - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
 
 permissions:

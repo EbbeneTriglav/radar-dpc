@@ -5,7 +5,7 @@ name: Radar Nowcast
 
 on:
   schedule:
-    - cron: '0 * * * *'        # ogni ora
+    - cron: '7 * * * *'        # ogni ora, minuto sfalsato (i run a :00 sono i più saltati)
   workflow_dispatch:
     inputs:
       dry_run:
