@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Verifica sistema — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css?v=20260518j">
+  <style>
+    .vf-wrap{max-width:1200px;margin:0 auto;padding:18px}
+    .vf-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0 0 18px}
+    .vf-card{background:var(--bg2,#1e293b);border:1px solid var(--border,#334155);border-radius:12px;padding:14px 16px}
+    .vf-card .k{font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.05em}
+    .vf-card .v{font-size:26px;font-weight:700;margin:4px 0}
+    .vf-card .s{font-size:11px;color:var(--text3,#94a3b8)}
+    .vf-note{font-size:12px;color:var(--text3,#94a3b8);line-height:1.5;margin:6px 0 18px}
+    .vf-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+    .vf-filters select{background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);border:1px solid var(--border,#334155);border-radius:8px;padding:6px 10px;font-size:13px}
+    table.vf{width:100%;border-collapse:collapse;font-size:13px}
+    table.vf th{padding:8px 10px;text-align:left;font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border,#334155)}
+    table.vf td{padding:8px 10px;border-bottom:1px solid rgba(120,120,120,.12)}
+    table.vf tr.ev{cursor:pointer}
+    table.vf tr.ev:hover{background:rgba(120,160,255,.08)}
+    .pill{display:inline-block;font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px}
+    .pill.storm{background:#7c2d12;color:#fed7aa}
+    .pill.fore{background:#164e63;color:#a5f3fc}
+    .pill.now{background:#3730a3;color:#c7d2fe}
+    .pill.obs{background:#14532d;color:#bbf7d0}
+    .miss{color:#f87171;font-weight:600}
+    .good{color:#4ade80;font-weight:600}
+    #chartModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
+    #chartBox{background:var(--bg,#0f172a);border:1px solid var(--border,#334155);border-radius:14px;padding:18px;width:min(880px,94vw);max-height:90vh;overflow:auto}
+    #chartBox h3{margin:0 0 4px}
+    .close-x{float:right;cursor:pointer;color:var(--text3,#94a3b8);font-size:20px;border:none;background:none}
+    .legend-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-right:12px}
+    .legend-chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  </style>
+</head>
+<body>
+
+<nav id="topbar">
+  <div class="logo"><i class="fa fa-broadcast-tower"></i> RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC</div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link">📊 Storico</a>
+    <a href="archivio.html" class="nav-link">🗄 Archivio</a>
+    <a href="monitor.html" class="nav-link">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link">📡 ARPA</a>
+    <a href="verifica.html" class="nav-link active">✅ Verifica</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
+</nav>
+
+<div id="app" style="height:calc(100vh - 48px);overflow:auto">
+<div class="vf-wrap">
+
+  <h1 style="margin:0 0 4px">✅ Verifica del sistema</h1>
+  <p class="vf-note">Quanto bene il sistema anticipa gli eventi. Confronto tra <b>previsto</b>
+  (forecast ensemble/MET), <b>nowcasting radar</b> (SRI DPC) e <b>osservato</b> post-evento
+  (cumulate DPC + composito ARPA). Focus sui temporali convettivi estivi, dove i modelli
+  tipicamente sottostimano. Clicca una riga per il grafico per-evento.</p>
+
+  <h2 style="font-size:15px;margin:18px 0 8px">Accuratezza forecast</h2>
+  <div class="vf-filters">
+    <select id="acc-window">
+      <option value="7">Ultimi 7 giorni</option>
+      <option value="14">Ultimi 14 giorni</option>
+      <option value="30">Ultimi 30 giorni</option>
+      <option value="9999">Tutto</option>
+    </select>
+  </div>
+  <div class="vf-cards" id="acc-cards"><div class="vf-card"><div class="k">Caricamento…</div></div></div>
+  <p class="vf-note" id="acc-legend"></p>
+
+  <h2 style="font-size:15px;margin:24px 0 8px">Eventi — previsto vs osservato</h2>
+  <div class="vf-filters">
+    <select id="ev-area"><option value="">Tutte le aree</option></select>
+    <select id="ev-type">
+      <option value="storm">Solo temporali (cella su area)</option>
+      <option value="forecast">Solo allerte forecast</option>
+      <option value="">Tutti gli eventi</option>
+    </select>
+    <select id="ev-window">
+      <option value="30">Ultimi 30 giorni</option>
+      <option value="14">Ultimi 14 giorni</option>
+      <option value="9999">Tutto</option>
+    </select>
+  </div>
+  <table class="vf">
+    <thead><tr>
+      <th>Quando</th><th>Area</th><th>Tipo</th>
+      <th>Previsto (6h prima)</th><th>Nowcast SRI</th><th>Osservato</th><th>Esito</th>
+    </tr></thead>
+    <tbody id="ev-body"><tr><td colspan="7">Caricamento…</td></tr></tbody>
+  </table>
+
+</div>
+</div>
+
+<!-- Modal grafico per-evento -->
+<div id="chartModal">
+  <div id="chartBox">
+    <button class="close-x" onclick="closeChart()">✕</button>
+    <h3 id="chartTitle">—</h3>
+    <p class="vf-note" id="chartSub"></p>
+    <div style="margin:8px 0">
+      <span class="legend-chip"><i style="background:#f59e0b"></i>Previsto OM (max 1h)</span>
+      <span class="legend-chip"><i style="background:#22d3ee"></i>Previsto MET (max 1h)</span>
+      <span class="legend-chip"><i style="background:#a78bfa"></i>Nowcast SRI (mm/h)</span>
+      <span class="legend-chip"><i style="background:#4ade80"></i>Osservato ARPA (mm/h)</span>
+      <span class="legend-chip"><i style="background:#f87171"></i>Osservato DPC CUM3 (mm/3h)</span>
+    </div>
+    <canvas id="evChart" height="120"></canvas>
+    <p class="vf-note" id="chartNote"></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Dati sempre freschi da raw@main (il deploy Pages non è più triggerato dai push dati).
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try { const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' }); if (r.ok) return r; } catch {}
+  }
+  return fetch(path + '?_=' + Date.now(), { cache: 'no-cache' });
+}
+
+// ── Tema (riusa logica delle altre pagine) ──
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+applyTheme(localStorage.getItem('radar-theme')||'dark');
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  localStorage.setItem('radar-theme',t); applyTheme(t); });
+
+// ── Parsing CSV minimale (gestisce virgolette) ──
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const split = l => { const out=[]; let cur='',q=false;
+    for (const ch of l){ if(ch==='"'){q=!q;} else if(ch===','&&!q){out.push(cur);cur='';} else cur+=ch; }
+    out.push(cur); return out; };
+  const h = split(lines[0]);
+  return lines.slice(1).map(l=>{ const c=split(l); const o={}; h.forEach((k,i)=>o[k]=c[i]??''); return o; });
+}
+
+let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {} };
+
+async function loadAll(){
+  const [ev, vf] = await Promise.allSettled([
+    fetchData('archive/data/events.csv').then(r=>r.text()),
+    fetchData('archive/data/forecast_verification.csv').then(r=>r.text()),
+  ]);
+  if (ev.status==='fulfilled') ALL.events = parseCSV(ev.value);
+  if (vf.status==='fulfilled') ALL.verify = parseCSV(vf.value);
+  // forecast_history.jsonl
+  try {
+    const t = await (await fetchData('archive/data/forecast_history.jsonl')).text();
+    ALL.history = t.trim().split(/\r?\n/).filter(Boolean).map(l=>JSON.parse(l));
+  } catch { ALL.history = []; }
+}
+
+// ── ACCURATEZZA: aggrega forecast_verification per source×horizon ──
+function renderAccuracy(){
+  const days = +document.getElementById('acc-window').value;
+  const cutoff = Date.now() - days*86400_000;
+  const rows = ALL.verify.filter(r=>{
+    const t = new Date(r.forecast_made_at_utc).getTime();
+    return isFinite(t) && t >= cutoff;
+  });
+  const groups = {};
+  for (const r of rows){
+    const key = `${r.source}·${r.horizon}`;
+    (groups[key] ??= []).push(r);
+  }
+  const order = ['openmeteo·1h','openmeteo·3h','metno·1h','metno·3h'];
+  const cardsEl = document.getElementById('acc-cards');
+  const keys = Object.keys(groups).sort((a,b)=>{
+    const ia=order.indexOf(a), ib=order.indexOf(b);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
+  if (!keys.length){ cardsEl.innerHTML='<div class="vf-card"><div class="k">Nessun dato nella finestra</div></div>'; return; }
+  cardsEl.innerHTML = keys.map(k=>{
+    const g = groups[k];
+    const n = g.length;
+    const mae = g.reduce((s,r)=>s+Math.abs(+r.abs_error_mm||0),0)/n;
+    const bias = g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;
+    const hit = g.reduce((s,r)=>s+(+r.hit_warning||0),0);
+    const miss = g.reduce((s,r)=>s+(+r.missed_warning||0),0);
+    const fa = g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
+    const [src,hz] = k.split('·');
+    const label = (src==='openmeteo'?'OpenMeteo':'MET Norway')+' · '+hz;
+    return `<div class="vf-card">
+      <div class="k">${label}</div>
+      <div class="v">MAE ${mae.toFixed(2)} <span style="font-size:14px">mm</span></div>
+      <div class="s">Bias ${bias>=0?'+':''}${bias.toFixed(2)} · ${n} confronti</div>
+      <div class="s">Hit ${hit} · <span class="${miss>0?'miss':''}">Miss ${miss}</span> · FA ${fa}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('acc-legend').innerHTML =
+    'MAE = errore assoluto medio · Bias = errore medio con segno (negativo = sottostima). '+
+    '<b>Hit/Miss/FA</b> riferiti al superamento soglia warning: Miss = evento accaduto ma non previsto '+
+    '(critico per i convettivi), FA = falso allarme. I dati vengono da forecast_verification.csv, '+
+    'popolato dal workflow forecast-verify confrontando ogni previsione con l\'osservato reale.';
+}
+
+// ── EVENTI: costruisci righe con previsto/nowcast/osservato ──
+function eventPrevForecast(area, tsMs){
+  // Miglior forecast OM/MET nelle 6h PRIMA dell'evento (max 1h previsto)
+  let bestOM=null, bestMET=null;
+  for (const h of ALL.history){
+    if (h.area_name!==area) continue;
+    const t = new Date(h.updated_at_utc).getTime();
+    const dh = (tsMs - t)/3600_000;
+    if (dh>=0 && dh<=6){
+      const om = h.openmeteo?.max_1h; const mt = h.metno?.max_1h;
+      if (om!=null && (bestOM==null || om>bestOM)) bestOM=om;
+      if (mt!=null && (bestMET==null || mt>bestMET)) bestMET=mt;
+    }
+  }
+  return { om: bestOM, met: bestMET };
+}
+
+function classifyEvent(e){
+  const lv = e.level||'';
+  if (lv.startsWith('storm')) return 'storm';
+  if (lv.startsWith('forecast')) return 'forecast';
+  if (lv.startsWith('nowcast')) return 'nowcast';
+  return 'other';
+}
+
+function renderEvents(){
+  const area = document.getElementById('ev-area').value;
+  const type = document.getElementById('ev-type').value;
+  const days = +document.getElementById('ev-window').value;
+  const cutoff = Date.now() - days*86400_000;
+
+  // popola filtro aree una volta
+  const areaSel = document.getElementById('ev-area');
+  if (areaSel.options.length<=1){
+    [...new Set(ALL.events.map(e=>e.area_name).filter(Boolean))].sort()
+      .forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; areaSel.appendChild(o); });
+    areaSel.value = area;
+  }
+
+  let evs = ALL.events.filter(e=>{
+    const t = new Date(e.event_timestamp_utc).getTime();
+    if (!isFinite(t) || t<cutoff) return false;
+    if (area && e.area_name!==area) return false;
+    const cls = classifyEvent(e);
+    if (type==='storm' && cls!=='storm') return false;
+    if (type==='forecast' && cls!=='forecast') return false;
+    // per i temporali mostro solo l'apertura (storm_on_area), non la chiusura
+    if (type==='storm' && e.level!=='storm_on_area') return false;
+    return true;
+  }).sort((a,b)=> new Date(b.event_timestamp_utc)-new Date(a.event_timestamp_utc));
+
+  const body = document.getElementById('ev-body');
+  if (!evs.length){ body.innerHTML='<tr><td colspan="7">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
+
+  body.innerHTML = evs.slice(0,200).map((e,i)=>{
+    const tsMs = new Date(e.event_timestamp_utc).getTime();
+    const cls = classifyEvent(e);
+    const when = new Date(e.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const pill = cls==='storm'?'<span class="pill storm">temporale</span>'
+      : cls==='forecast'?'<span class="pill fore">forecast</span>'
+      : cls==='nowcast'?'<span class="pill now">nowcast</span>':'<span class="pill">—</span>';
+
+    // Previsto: per storm, dal forecast_history; per forecast, dal campo dell'evento
+    let prevTxt='—', nowTxt='—', obsTxt='—', esito='';
+    if (cls==='storm'){
+      const f = eventPrevForecast(e.area_name, tsMs);
+      prevTxt = (f.om!=null?`OM ${f.om.toFixed(1)}`:'OM —')+(f.met!=null?` · MET ${f.met.toFixed(1)}`:'');
+      nowTxt = (+e.observed_mm_max||0).toFixed(1)+' mm/h';
+      obsTxt = (+e.observed_mm_max||0).toFixed(1)+' max SRI';
+      // esito: sottostima se picco osservato >> previsto
+      const peak = +e.observed_mm_max||0;
+      if (f.om!=null && peak >= (f.om*3) && peak>=10){
+        esito = `<span class="miss">sottostima ×${(peak/Math.max(f.om,0.1)).toFixed(0)}</span>`;
+      } else if (f.om!=null && f.om>=peak*0.7){
+        esito = '<span class="good">colto</span>';
+      } else {
+        esito = '<span style="color:var(--text3)">parziale</span>';
+      }
+    } else if (cls==='forecast'){
+      prevTxt = (+e.forecast_max_6h_mm||0).toFixed(1)+' mm ('+(e.product||'')+')';
+      nowTxt = '—';
+      obsTxt = '(vedi grafico)';
+      esito = '<span class="pill fore">allerta inviata</span>';
+    } else {
+      prevTxt = '—'; nowTxt=(+e.observed_mm_max||0).toFixed(1)+' mm/h'; obsTxt=(+e.observed_mm_mean||0).toFixed(1)+' mean';
+    }
+
+    return `<tr class="ev" data-i="${i}">
+      <td>${when}</td><td>${e.area_name||''}</td><td>${pill}</td>
+      <td>${prevTxt}</td><td>${nowTxt}</td><td>${obsTxt}</td><td>${esito}</td>
+    </tr>`;
+  }).join('');
+
+  // click → grafico
+  [...body.querySelectorAll('tr.ev')].forEach(tr=>{
+    tr.addEventListener('click',()=> openChart(evs[+tr.dataset.i]));
+  });
+}
+
+// ── GRAFICO PER-EVENTO: previsto / nowcast / osservato attorno all'evento ──
+let _chart=null;
+async function openChart(ev){
+  const area = ev.area_name;
+  const evMs = new Date(ev.event_timestamp_utc).getTime();
+  const winStart = evMs - 6*3600_000;   // 6h prima
+  const winEnd   = evMs + 3*3600_000;   // 3h dopo
+
+  document.getElementById('chartTitle').textContent =
+    `${area} — ${new Date(ev.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome'})}`;
+  document.getElementById('chartSub').textContent =
+    `Livello: ${ev.level} · prodotto ${ev.product||'—'} · finestra −6h/+3h attorno all'evento`;
+  document.getElementById('chartModal').style.display='flex';
+
+  // Carica ARPA + CUM3 dell'area (cache locale)
+  if (!ALL.arpa[area]){
+    try { ALL.arpa[area] = parseCSV(await (await fetchData(`archive/data/${area}_arpa.csv`)).text()); }
+    catch { ALL.arpa[area] = []; }
+  }
+  if (!ALL.cum3[area]){
+    try { ALL.cum3[area] = parseCSV(await (await fetchData(`archive/data/${area}_cum3.csv`)).text()); }
+    catch { ALL.cum3[area] = []; }
+  }
+
+  // Serie osservata ARPA (mm/h) nella finestra
+  const arpaPts = ALL.arpa[area]
+    .filter(r=>r.location_type==='area')
+    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max_mmh||0}))
+    .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+
+  // Serie osservata DPC CUM3 (mm/3h) nella finestra
+  const cum3Pts = ALL.cum3[area]
+    .filter(r=>r.location_type==='area')
+    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.mean||0}))
+    .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+
+  // Serie previsto (forecast_history) nelle 6h prima: OM e MET max_1h
+  const omPts=[], metPts=[];
+  for (const h of ALL.history){
+    if (h.area_name!==area) continue;
+    const t=new Date(h.updated_at_utc).getTime();
+    if (t>=winStart && t<=winEnd){
+      if (h.openmeteo?.max_1h!=null) omPts.push({x:t,y:h.openmeteo.max_1h});
+      if (h.metno?.max_1h!=null) metPts.push({x:t,y:h.metno.max_1h});
+    }
+  }
+  omPts.sort((a,b)=>a.x-b.x); metPts.sort((a,b)=>a.x-b.x);
+
+  // Nowcast SRI: il picco osservato dell'evento come punto singolo all'istante evento
+  const nowPts = [];
+  if ((ev.level||'').includes('storm') || (ev.level||'').includes('nowcast')){
+    nowPts.push({x:evMs, y:+ev.observed_mm_max||0});
+  }
+
+  const ds = [];
+  if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, borderColor:'#f59e0b', backgroundColor:'#f59e0b', pointRadius:2, tension:.2, borderWidth:2});
+  if (metPts.length) ds.push({label:'Previsto MET (max 1h)', data:metPts, borderColor:'#22d3ee', backgroundColor:'#22d3ee', pointRadius:2, tension:.2, borderWidth:2, borderDash:[4,3]});
+  if (arpaPts.length) ds.push({label:'Osservato ARPA (mm/h)', data:arpaPts, borderColor:'#4ade80', backgroundColor:'#4ade80', pointRadius:1, tension:.15, borderWidth:2, fill:false});
+  if (cum3Pts.length) ds.push({label:'Osservato DPC CUM3 (mm/3h)', data:cum3Pts, borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:3, tension:0, borderWidth:2, borderDash:[2,2], stepped:true});
+  if (nowPts.length) ds.push({label:'Nowcast SRI (mm/h)', data:nowPts, borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:6, pointStyle:'triangle', showLine:false});
+
+  const ctx = document.getElementById('evChart');
+  if (_chart) _chart.destroy();
+  _chart = new Chart(ctx, {
+    type:'line',
+    data:{ datasets: ds },
+    options:{
+      parsing:false, animation:false,
+      scales:{
+        x:{ type:'linear',
+            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#94a3b8', maxTicksLimit:8 },
+            grid:{ color:'rgba(120,120,120,.12)' } },
+        y:{ beginAtZero:true, title:{display:true,text:'mm/h · mm/3h',color:'#94a3b8'}, ticks:{color:'#94a3b8'}, grid:{ color:'rgba(120,120,120,.12)' } },
+      },
+      plugins:{
+        legend:{ display:false },
+        annotation:false,
+        tooltip:{ callbacks:{ title:items=>new Date(items[0].parsed.x).toLocaleString('it-IT',{timeZone:'Europe/Rome'}) } },
+      },
+    },
+  });
+
+  // Nota diagnostica
+  const peak = +ev.observed_mm_max||0;
+  const f = eventPrevForecast(area, evMs);
+  let note = '';
+  if ((ev.level||'').includes('storm') && f.om!=null){
+    const ratio = peak/Math.max(f.om,0.1);
+    if (peak>=10 && ratio>=3){
+      note = `⚠️ Evento convettivo sottostimato: il modello prevedeva ~${f.om.toFixed(1)} mm/1h, `+
+             `il radar ha misurato un picco SRI di ${peak.toFixed(0)} mm/h (×${ratio.toFixed(0)}). `+
+             `Tipico dei temporali estivi: la previsione a 6h non li localizza, il nowcasting radar è la difesa reale.`;
+    } else {
+      note = `Picco SRI ${peak.toFixed(0)} mm/h vs previsto OM ${f.om.toFixed(1)} mm/1h.`;
+    }
+  } else if ((ev.level||'').includes('forecast')){
+    note = `Allerta previsionale: soglia ${ev.threshold_mm} mm, valore previsto ${(+ev.forecast_max_6h_mm||0).toFixed(1)} mm. `+
+           `Le serie ARPA/DPC mostrano cosa è poi realmente caduto nella finestra.`;
+  }
+  if (!arpaPts.length && !cum3Pts.length) note += ' (Nessun dato osservato archiviato in questa finestra.)';
+  document.getElementById('chartNote').textContent = note;
+}
+function closeChart(){ document.getElementById('chartModal').style.display='none'; if(_chart){_chart.destroy();_chart=null;} }
+document.getElementById('chartModal').addEventListener('click',e=>{ if(e.target.id==='chartModal') closeChart(); });
+
+// ── Boot ──
+['acc-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderAccuracy));
+['ev-area','ev-type','ev-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderEvents));
+
+(async()=>{
+  await loadAll();
+  renderAccuracy();
+  renderEvents();
+})();
+</script>
+</body>
+</html>
