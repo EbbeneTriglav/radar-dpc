@@ -76,10 +76,10 @@
   <div class="vf-cards" id="acc-cards"><div class="vf-card"><div class="k">Caricamento…</div></div></div>
   <p class="vf-note" id="acc-legend"></p>
 
-  <h2 style="font-size:15px;margin:24px 0 8px">Forecast sorgenti — 24/48/72h (Ruspino · Panna · Levissima)</h2>
+  <h2 style="font-size:15px;margin:24px 0 8px">Forecast sorgenti — 24/48/72h (Ruspino · Panna · Cepina)</h2>
   <p class="vf-note">Stessi ingredienti delle dashboard: 5 modelli Open-Meteo (ICON·IFS·GFS·ARPEGE·AROME),
   <b>worst-case</b> = modello più piovoso, <b>MET Norway (YR)</b> come validazione indipendente (mai mediato).
-  Se una soglia viene superata, il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice SP3
+  Se una soglia viene superata, il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice decisionale
   dettagliata va solo via mail ai destinatari). Ricalcolo live qui sotto per controllo; il <b>trigger reale</b> gira
   server-side ogni 6h e su cambi repentini.</p>
   <div id="fc-sites" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
@@ -434,7 +434,7 @@ const FC_SITES=[
     pts:[[45.8672,9.6505,.11],[45.8623,9.6373,.10],[45.8574,9.6439,.10],[45.8524,9.6176,.10],[45.8464,9.6353,.12],[45.8475,9.6571,.09],[45.8377,9.6242,.09],[45.8426,9.6505,.08],[45.8278,9.6307,.07],[45.8327,9.6373,.07],[45.8475,9.6637,.07]] },
   { name:'panna', label:'Sorgenti Panna', crit:'day', thrDay:[5,10,15],  // mm/giorno worst-case
     pts:[[44.092,11.283,.14],[44.084,11.272,.12],[44.075,11.278,.11],[44.077,11.299,.13],[44.076,11.320,.11],[44.065,11.312,.09],[44.061,11.299,.08],[44.049,11.304,.05],[44.080,11.281,.06],[44.0818,11.309,.06],[44.0872,11.291,.05]] },
-  { name:'cepina', label:'Cepina (Levissima)', crit:'day', thrDay:[5,10,15], // provvisorie (=Panna)
+  { name:'cepina', label:'Cepina', crit:'day', thrDay:[5,10,15], // provvisorie (=Panna)
     pts:[[46.4393,10.3344,1/7],[46.4318,10.3379,1/7],[46.4330,10.3455,1/7],[46.4215,10.3436,1/7],[46.4378,10.3480,1/7],[46.4360,10.3400,1/7],[46.4300,10.3440,1/7]] },
 ];
 const DAY_COL=v=>v>=15?'#7c3aed':v>=10?'#ef4444':v>=5?'#f59e0b':v>0?'#3b82f6':'#64748b';
@@ -525,7 +525,7 @@ function renderForecastSites(){
   document.getElementById('fc-note').innerHTML=
     'Worst-case = modello più piovoso (mai mediato con YR). Colonna <b>Ens.</b> = media dei 5 modelli, <b>YR</b> = MET Norway indipendente. '+
     'Il <b>trigger reale</b> di invio mail+Telegram gira server-side (workflow forecast-alert, ogni 6h) con la stessa logica: '+
-    'una mail parte al superamento soglia (matrice SP3 dettagliata solo via mail). Questo ricalcolo live serve al controllo visivo.';
+    'una mail parte al superamento soglia (matrice decisionale dettagliata solo via mail). Questo ricalcolo live serve al controllo visivo.';
 }
 
 
