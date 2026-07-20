@@ -427,13 +427,80 @@ def load_state(f):
         return {}
 
 
-def should_send(state, area, level_rank, today):
+def _worsts_by_horizon(res):
+    """Estrae i worst-case per orizzonte da un risultato (matrice Ruspino o
+    giornaliero Panna/Cepina). Ritorna dict {chiave_orizzonte: mm}."""
+    if 'rows' in res:      # Ruspino: cumulate mobili 24/48/72h
+        return {r['hz']['sub']: r['worst'] for r in res['rows']}
+    if 'days' in res:      # Panna/Cepina: worst-case giornaliero (giorni 1..3)
+        return {f'g{i+1}': d['worst'] for i, d in enumerate(res['days'])}
+    return {}
+
+
+# Soglie del "salto brusco" (Canale B): una variazione del worst-case rispetto
+# al run precedente merita una mail anche SOTTO la soglia critica, se il peggio-
+# ramento è consistente. Servono ENTRAMBE le condizioni per evitare rumore su
+# valori piccoli: +JUMP_ABS_MM assoluti E +JUMP_REL_PCT relativi, su almeno un
+# orizzonte. Valori scelti pragmaticamente (dichiarati, tarabili via env).
+JUMP_ABS_MM = float(os.environ.get('FC_JUMP_ABS_MM', '20'))   # +20 mm
+JUMP_REL_PCT = float(os.environ.get('FC_JUMP_REL_PCT', '50')) # +50%
+JUMP_MIN_MM = float(os.environ.get('FC_JUMP_MIN_MM', '25'))   # ignora salti sotto 25mm assoluti
+JUMP_RENOTIFY_H = float(os.environ.get('FC_JUMP_RENOTIFY_H', '6'))  # non ripetere jump < 6h
+
+
+def _hours_since(iso, now_dt):
+    try:
+        return (now_dt - datetime.fromisoformat(iso.replace('Z', '+00:00'))).total_seconds() / 3600
+    except Exception:
+        return 1e9
+
+
+def decide_send(state, area, rank, worsts, today, now_dt):
+    """Decide SE e PERCHÉ inviare. Ritorna (send: bool, reason: str, kind: str).
+    Due canali:
+      A) SOGLIA: rank>=1 (livello Att/Crit raggiunto). 1 mail/giorno + escalation.
+      B) SALTO: un orizzonte peggiora di >=JUMP_ABS_MM e >=JUMP_REL_PCT rispetto
+         al run precedente (anche sotto soglia critica), con guardia anti-ripetizione.
+    La guardia condivisa evita mail-doppione: stesso livello + nessun salto +
+    già avvisato oggi → silenzio.
+    """
     st = state.get(area, {})
-    if level_rank <= 0:
-        return False
+    prev_worsts = st.get('worsts', {})
+
+    # ── Canale B: salto brusco ──
+    jump_hz, jump_from, jump_to = None, None, None
+    for hz, cur in worsts.items():
+        prev = prev_worsts.get(hz)
+        if prev is None:
+            continue
+        delta = cur - prev
+        rel = (delta / prev * 100) if prev > 0.5 else (999 if delta >= JUMP_MIN_MM else 0)
+        if cur >= JUMP_MIN_MM and delta >= JUMP_ABS_MM and rel >= JUMP_REL_PCT:
+            if jump_to is None or cur > jump_to:
+                jump_hz, jump_from, jump_to = hz, prev, cur
+    if jump_hz is not None:
+        # Guardia: non ripetere lo stesso salto entro JUMP_RENOTIFY_H se il
+        # valore non è ulteriormente salito.
+        last_jump = st.get('last_jump', {})
+        if (last_jump.get('hz') == jump_hz
+                and _hours_since(last_jump.get('utc', '1970-01-01T00:00:00Z'), now_dt) < JUMP_RENOTIFY_H
+                and jump_to <= last_jump.get('to', 0) + 5):
+            pass  # già avvisato di questo salto di recente → non ripetere
+        else:
+            # Se il salto coincide anche col superamento soglia (rank>=1),
+            # l'informazione è doppia: lo dichiaro nel motivo.
+            soglia_txt = f" + soglia livello {rank}" if rank >= 1 else ''
+            return True, f"salto {jump_hz}: {jump_from:.0f}→{jump_to:.0f} mm (+{jump_to-jump_from:.0f}){soglia_txt}", 'jump'
+
+    # ── Canale A: soglia ──
+    if rank <= 0:
+        return False, 'sotto soglia', 'none'
     if st.get('date') != today:
-        return True
-    return level_rank > st.get('rank', 0)     # escalation nello stesso giorno
+        return True, f"soglia raggiunta (livello {rank})", 'threshold'
+    if rank > st.get('rank', 0):
+        return True, f"escalation a livello {rank}", 'threshold'
+
+    return False, 'già avvisato oggi, nessuna escalation/salto', 'none'
 
 
 def main():
@@ -458,6 +525,7 @@ def main():
          lambda res, ts: compose_email_days(res, ts, 'Cepina')),
     ]
 
+    now_dt = datetime.now(tz=timezone.utc)
     for area, label, compute, compose in jobs:
         log.info(f'[{label}] calcolo matrice previsionale 24/48/72h...')
         try:
@@ -472,22 +540,56 @@ def main():
         rank = res['max_level'] + 1        # -1→0, 0→1, ...
         lvl = ('sotto soglia' if res['max_level'] < 0 else
                (MATRIX2['levels'] if area == 'ruspino' else PANNA_LEVELS)[res['max_level']])
-        log.info(f'[{label}] livello massimo: {lvl} (rank {rank})')
+        worsts = _worsts_by_horizon(res)
+        log.info(f'[{label}] livello {lvl} (rank {rank}) · worst: '
+                 + ' '.join(f'{k}={v:.0f}' for k, v in worsts.items()))
 
-        if not (args.force or should_send(state, area, rank, today)):
-            log.info(f'[{label}] nessun invio (sotto soglia o già inviata oggi senza escalation)')
+        send, reason, kind = decide_send(state, area, rank, worsts, today, now_dt)
+        if args.force:
+            send, reason, kind = True, 'forzato', kind if kind != 'none' else 'threshold'
+        if not send:
+            log.info(f'[{label}] nessun invio ({reason})')
+            # Aggiorno comunque i worst salvati per il confronto del prossimo run
+            prev = state.get(area, {})
+            prev['worsts'] = worsts
+            state[area] = prev
             continue
 
         subject, text, html = compose(res, now_iso)
+        # Se è un trigger da SALTO (Canale B), lo dichiaro in testa alla mail:
+        # l'utente deve capire che è un cambio repentino, non il run periodico.
+        if kind == 'jump':
+            jump_banner = f"⚡ CAMBIO REPENTINO PREVISIONI — {reason}\n\n"
+            subject = f"⚡ [CAMBIO] {subject}"
+            text = jump_banner + text
+            if html:
+                html = (f'<div style="background:#78350f;color:#fde68a;padding:10px 14px;'
+                        f'border-radius:8px;margin:0 0 12px;font-weight:600">⚡ Cambio repentino '
+                        f'previsioni — {reason}</div>') + html
+        log.info(f'[{label}] INVIO ({kind}): {reason}')
         if args.dry_run:
-            log.info(f'[{label}] DRY-RUN — subject: {subject}\n{text}')
+            log.info(f'[{label}] DRY-RUN — subject: {subject}\n{text[:200]}')
             continue
 
         rcpt_email, _ = _area_recipients(area)
         status = send_email(subject, text, html, to=rcpt_email)
         log.info(f'[{label}] email matrice: {status}')
         if status == 'true':
-            state[area] = {'date': today, 'rank': rank, 'last_sent_utc': now_iso}
+            entry = {'date': today, 'rank': max(rank, 0), 'last_sent_utc': now_iso,
+                     'worsts': worsts}
+            # Preserva il rank del giorno: un invio da salto sotto soglia non
+            # deve azzerare l'escalation già raggiunta oggi.
+            prev = state.get(area, {})
+            if prev.get('date') == today:
+                entry['rank'] = max(rank, prev.get('rank', 0))
+            if kind == 'jump':
+                # Ricava l'orizzonte/valore del salto per la guardia anti-ripetizione
+                hz = reason.split()[1].rstrip(':') if len(reason.split()) > 1 else '?'
+                entry['last_jump'] = {'hz': hz, 'to': max(worsts.values()) if worsts else 0,
+                                      'utc': now_iso}
+            elif prev.get('date') == today and prev.get('last_jump'):
+                entry['last_jump'] = prev['last_jump']   # conserva stato salto del giorno
+            state[area] = entry
 
     state['_last_run_utc'] = now_iso
     state_file.parent.mkdir(parents=True, exist_ok=True)
