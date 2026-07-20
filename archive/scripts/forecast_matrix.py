@@ -70,7 +70,25 @@ POINTS_RUSPINO = [
     {'id': 'P11', 'name': 'Cornalita',     'lat': 45.8475, 'lon': 9.6637, 'elev':  650, 'weight': 0.07},
 ]
 
-# ── Matrice 3×2 Ruspino — soglie IDENTICHE alla dashboard (MATRIX2) ──
+# ── Punti di controllo Cepina/Levissima — 7 sorgenti del bacino, estratte
+#    dalla dashboard analitica Sorgenti_Oga.html. Pesi UNIFORMI (1/7): non
+#    esiste ancora una pesatura idrogeologica validata per questo bacino (a
+#    differenza di Ruspino/Panna). Dichiarato, non inventato: quando avrai i
+#    pesi reali basta aggiornare 'weight'. Criterio soglie = giornaliero Panna
+#    (5/10/15 mm/g worst-case), provvisorio finché non tari soglie proprie.
+_CEPINA_PTS_RAW = [
+    ('Pozzaccio (Levissima)', 46.4393, 10.3344, 1780),
+    ('Maggionaro',           46.4318, 10.3379, 1750),
+    ('Baite Vecchi',         46.4330, 10.3455, 1550),
+    ('Suena (frana ARPA)',   46.4215, 10.3436, 1540),
+    ('Redont',               46.4378, 10.3480, 1400),
+    ('Santa Maria',          46.4360, 10.3400, 1400),
+    ('Sassi',                46.4300, 10.3440, 1350),
+]
+POINTS_CEPINA = [
+    {'id': f'C{i+1}', 'name': n, 'lat': la, 'lon': lo, 'elev': el, 'weight': 1.0/len(_CEPINA_PTS_RAW)}
+    for i, (n, la, lo, el) in enumerate(_CEPINA_PTS_RAW)
+]
 MATRIX2 = {
     'horizons': [
         {'key': '1g', 'h': 24, 'label': '1 giorno', 'sub': '24h'},
@@ -237,8 +255,10 @@ def compute_ruspino_matrix():
 
 # ─── Panna: cumulate giornaliere worst-case (criterio B dashboard) ──────────
 
-def compute_panna_days():
-    series, metno, n_pts, metno_cov, times = weighted_series_by_model(CONTROL_POINTS)
+def compute_days_worstcase(points):
+    """Cumulate giornaliere worst-case (criterio B dashboard Panna). Riusabile
+    per qualsiasi bacino con criterio giornaliero (Panna, Cepina/Levissima)."""
+    series, metno, n_pts, metno_cov, times = weighted_series_by_model(points)
     if not series or not times:
         return None
     n_models = len(series)
@@ -349,10 +369,10 @@ Cella evidenziata = livello del worst-case. Contenuto riservato ai destinatari e
     return subject, text, html
 
 
-def compose_email_panna(res, now_iso):
+def compose_email_days(res, now_iso, label='Sorgenti Panna'):
     lvl_name = PANNA_LEVELS[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
     icons = {0: '⚠️', 1: '⛔', 2: '⚡'}
-    subject = f"{icons.get(res['max_level'], '✓')} Forecast soglie Panna — {lvl_name} (worst-case giornaliero)"
+    subject = f"{icons.get(res['max_level'], '✓')} Forecast soglie {label} — {lvl_name} (worst-case giornaliero)"
 
     rows_html, rows_text = [], []
     for i, d in enumerate(res['days']):
@@ -376,7 +396,7 @@ def compose_email_panna(res, now_iso):
     metno_note = (f"MET Norway: copertura oraria {res['metno_cov_h']}/{FORECAST_HOURS}h "
                   "(validazione indipendente, mai mediato)")
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
-<h2 style="margin:0 0 4px">🌧️ Forecast soglie — Sorgenti Panna</h2>
+<h2 style="margin:0 0 4px">🌧️ Forecast soglie — {label}</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulata giornaliera worst-case (criterio B, dashboard v6.6):
 Attenzione ≥{PANNA_DAY_THR['att']} · Critico ≥{PANNA_DAY_THR['crit']} · Estremo ≥{PANNA_DAY_THR['ext']} mm/giorno · run {now_iso}</p>
 <table style="border-collapse:collapse">
@@ -430,7 +450,12 @@ def main():
 
     jobs = [
         ('ruspino', 'Ruspino', compute_ruspino_matrix, compose_email_ruspino),
-        ('panna',   'Sorgenti Panna', compute_panna_days, compose_email_panna),
+        ('panna',   'Sorgenti Panna',
+         lambda: compute_days_worstcase(CONTROL_POINTS),
+         lambda res, ts: compose_email_days(res, ts, 'Sorgenti Panna')),
+        ('cepina',  'Cepina (Levissima)',
+         lambda: compute_days_worstcase(POINTS_CEPINA),
+         lambda res, ts: compose_email_days(res, ts, 'Cepina (Levissima)')),
     ]
 
     for area, label, compute, compose in jobs:

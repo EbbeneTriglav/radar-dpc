@@ -356,15 +356,29 @@ def save_radar_frames_png(files: list[str]) -> int:
                     nodata = src.nodata if src.nodata is not None else -9999
                     b = src.bounds  # nativo del file
                     crs = src.crs
-                    # Bounds in WGS84 (lat/lon) per Leaflet. I file ARPA sono
-                    # geografici (4326) marcati 32767: se il CRS è già 4326 o i
-                    # bounds sono in gradi, usali diretti; altrimenti riproietta.
-                    if crs and crs.to_epsg() and crs.to_epsg() != 4326:
+                    # I file ARPA NON sono in gradi: hanno una proiezione custom
+                    # (codice EPSG 32767 "user-defined", coordinate in metri).
+                    # rasterio conosce comunque il CRS reale (stesso usato dal
+                    # collector per le stats). Riproiettiamo i bounds a 4326
+                    # ogni volta che il CRS NON è già geografico, senza affidarci
+                    # a to_epsg() (che è None per il 32767).
+                    is_geographic = bool(crs and crs.is_geographic)
+                    if crs and not is_geographic:
                         from rasterio.warp import transform_bounds
                         left, bottom, right, top = transform_bounds(crs, 'EPSG:4326',
                                                                     b.left, b.bottom, b.right, b.top)
                     else:
                         left, bottom, right, top = b.left, b.bottom, b.right, b.top
+                    # Guardia: se dopo la riproiezione i bounds NON sono
+                    # plausibili lat/lon per la Lombardia, non scrivere l'index
+                    # con dati errati (meglio nessun frame che un frame mal
+                    # georeferenziato). Nessun numero inventato.
+                    if not (-180 <= left <= 180 and -180 <= right <= 180
+                            and -90 <= bottom <= 90 and -90 <= top <= 90):
+                        log.warning(f'  bounds non geografici dopo riproiezione '
+                                    f'({left:.0f},{bottom:.0f},{right:.0f},{top:.0f}) '
+                                    f'crs={crs} — frame {fname} scartato')
+                        continue
             rgba = _dbz_to_rgba(arr, nodata)
             Image.fromarray(rgba, 'RGBA').save(png_path, optimize=True)
             index.append({
