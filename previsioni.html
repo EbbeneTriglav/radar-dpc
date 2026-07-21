@@ -49,7 +49,7 @@
     <a href="archivio.html" class="nav-link">🗄 Archivio</a>
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
-    <a href="arpa.html" class="nav-link">📡 ARPA Lombardia</a>
+    <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
     <a href="previsioni.html" class="nav-link active">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
   </div>
@@ -332,30 +332,39 @@ function buildLegend(elId, items, chart){
 }
 
 function renderCumChart(perHour, days, area){
-  // Cumulata progressiva oraria: previsto (mean/worst) su tutto -7/+7,
-  // misurato radar solo nel passato (cumulata progressiva CUM3 giornaliera).
-  const nowMs = Date.now();
+  // Cumulata SDOPPIATA: due curve separate che ripartono da zero.
+  //  • PASSATO (giorni <0, fino a ieri): cumulata del MISURATO radar (CUM3).
+  //  • FUTURO (da OGGI in poi): cumulata del PREVISTO ensemble (mean + worst).
+  // Oggi è incluso nel blocco FUTURO. Le due cumulate non si sommano tra loro:
+  // il passato racconta "quanto è caduto", il futuro "quanto è previsto".
+  const today = new Date(); today.setUTCHours(0,0,0,0);
+  const todayMs = today.getTime();
+
+  // ── FUTURO: previsto ensemble cumulato dalle 00:00 di oggi in avanti ──
   let cM=0, cX=0;
   const fMean=[], fMax=[];
   for(const ph of perHour){
+    if(ph.t < todayMs) continue;         // solo da oggi in poi
     cM+=ph.mean; cX+=ph.max;
     fMean.push({x:ph.t, y:+cM.toFixed(1)});
     fMax.push({x:ph.t, y:+cX.toFixed(1)});
   }
-  // Misurato: cumulata progressiva dei totali giornalieri CUM3 (solo passato+oggi)
+
+  // ── PASSATO: misurato radar (CUM3) cumulato, solo giorni PRIMA di oggi ──
   let cCum3=0; const meas=[];
   for(const d of days){
-    if(d.off>0) break;
+    if(d.off>=0) break;                  // si ferma a ieri (oggi va nel futuro)
     cCum3+=d.cum3;
     meas.push({x:d.ms+DAY_MS-1, y:+cCum3.toFixed(1)});
   }
+
   const ds=[
-    {label:'Previsto cumulato (media ensemble)', data:fMean, yAxisID:'y', _di:0,
-      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.10)', pointRadius:0, borderWidth:2.5, tension:.2, fill:true},
-    {label:'Previsto cumulato (worst-case)', data:fMax, yAxisID:'y', _di:1,
-      borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:0, borderWidth:2, tension:.2, borderDash:[5,4]},
-    {label:'Misurato radar (CUM3, cumulato)', data:meas, yAxisID:'y', _di:2,
+    {label:'Misurato radar — passato (CUM3, cumulato)', data:meas, yAxisID:'y', _di:0,
       borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:3, borderWidth:3, tension:.15, stepped:true},
+    {label:'Previsto — futuro (media ensemble)', data:fMean, yAxisID:'y', _di:1,
+      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.10)', pointRadius:0, borderWidth:2.5, tension:.2, fill:true},
+    {label:'Previsto — futuro (worst-case)', data:fMax, yAxisID:'y', _di:2,
+      borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:0, borderWidth:2, tension:.2, borderDash:[5,4]},
   ];
   if(charts.cum) charts.cum.destroy();
   const ctx = document.getElementById('pv-chart-cum');
@@ -364,7 +373,7 @@ function renderCumChart(perHour, days, area){
     scales:{
       x:{type:'linear',ticks:{callback:v=>new Date(v).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}),
         color:'#cbd5e1',maxTicksLimit:14,font:{size:12}},grid:{color:'rgba(148,163,184,.08)'}},
-      y:{beginAtZero:true,title:{display:true,text:'mm cumulati',color:'#94a3b8',font:{size:12}},
+      y:{beginAtZero:true,title:{display:true,text:'mm cumulati (passato e futuro separati)',color:'#94a3b8',font:{size:12}},
         ticks:{color:'#cbd5e1',font:{size:12}},grid:{color:'rgba(148,163,184,.08)'}},
     },
     plugins:{legend:{display:false},
@@ -373,9 +382,9 @@ function renderCumChart(perHour, days, area){
       annotation:false},
   }});
   buildLegend('pv-legend-cum',[
-    {di:0,label:'Media ensemble',color:'#f59e0b'},
-    {di:1,label:'Worst-case',color:'#ef4444',dash:true},
-    {di:2,label:'Misurato radar CUM3',color:'#2dd4bf'},
+    {di:0,label:'Misurato radar (passato)',color:'#2dd4bf'},
+    {di:1,label:'Previsto media (futuro)',color:'#f59e0b'},
+    {di:2,label:'Previsto worst-case (futuro)',color:'#ef4444',dash:true},
   ], charts.cum);
 }
 
