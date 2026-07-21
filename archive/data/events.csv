@@ -120,3 +120,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-20T20:09:48Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-07-20T20:00:00Z,,true,true,"cella uscita dopo ~100min, caduti 0.0mm"
 2026-07-21T07:45:00Z,ruspino,storm_on_area,10.0,,27.34,ARPA,2026-07-21T07:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-07-21T08:00:00Z,ruspino,storm_cleared,10.0,,27.34,ARPA,2026-07-21T08:00:00Z,,recon,recon,ricostruito
+2026-07-21T18:30:38Z,panna,nowcast_warning,8,0.69,12.74,SRT1,2026-07-21T18:20:00Z,,true,true,nowcast buffer=10km
