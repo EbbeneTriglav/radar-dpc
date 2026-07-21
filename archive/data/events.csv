@@ -26,6 +26,8 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-02T21:29:23Z,panna,forecast24h_emergency,20,25.13,97.73,ensemble_24h,,97.73,true,true,mean=25.1 worst=97.7 metno=8.47
 2026-06-03T02:52:38Z,panna,nowcast_emergency,20,6.83,21.72,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=5km
 2026-06-03T02:52:38Z,panna,nowcast_emergency,20,4.42,22.56,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=10km
+2026-06-03T03:00:00Z,panna,storm_on_area,10.0,,62.22,CUM3,2026-06-03T03:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-06-03T03:05:00Z,panna,storm_cleared,10.0,,62.22,CUM3,2026-06-03T03:05:00Z,,recon,recon,ricostruito
 2026-06-03T05:13:53Z,panna,warning,10,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
 2026-06-03T05:13:53Z,panna,alarm,15,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
 2026-06-03T05:13:53Z,panna,emergency,20,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
@@ -63,6 +65,12 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-26T16:07:47Z,cepina,storm_on_area,5.0,1.12,5.42,SRI,2026-06-26T15:55:00Z,,true,true,cella su area dwell~45min rain~1mm
 2026-06-26T18:23:49Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-06-26T18:15:00Z,,true,true,"cella uscita dopo ~136min, caduti 0.22499999403953552mm"
 2026-06-27T15:08:51Z,cepina,nowcast_emergency,20,1.55,26.88,SRT1,2026-06-27T15:00:00Z,,true,true,nowcast buffer=10km
+2026-06-29T00:30:00Z,ruspino,storm_on_area,10.0,,27.34,ARPA,2026-06-29T00:35:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-06-29T00:45:00Z,ruspino,storm_cleared,10.0,,27.34,ARPA,2026-06-29T00:45:00Z,,recon,recon,ricostruito
+2026-06-29T10:40:00Z,cepina,storm_on_area,10.0,,10.73,ARPA,2026-06-29T10:40:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-06-29T10:45:00Z,cepina,storm_cleared,10.0,,10.73,ARPA,2026-06-29T10:45:00Z,,recon,recon,ricostruito
+2026-06-29T14:30:00Z,ruspino,storm_on_area,10.0,,39.18,ARPA,2026-06-29T14:50:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-06-29T14:55:00Z,ruspino,storm_cleared,10.0,,39.18,ARPA,2026-06-29T14:55:00Z,,recon,recon,ricostruito
 2026-06-29T19:44:03Z,panna,nowcast_alarm,15,1.23,19.15,SRI,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km moto=SE/5.1kmh prob=30%
 2026-06-29T19:44:03Z,panna,nowcast_emergency,20,1.25,29.02,SRT1,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km
 2026-06-29T21:17:36Z,panna,nowcast_emergency,25,13.91,51.82,SRI,2026-06-29T21:05:00Z,,true,true,nowcast buffer=5km moto=W/3.8kmh prob=31%
@@ -81,11 +89,15 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-02T06:31:42Z,panna,storm_on_area,5.0,2.00,5.44,SRI,2026-07-02T06:25:00Z,,true,true,cella su area
 2026-07-02T09:53:10Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-07-02T09:45:00Z,,true,true,"cella uscita dopo ~201min, caduti 0.0mm"
 2026-07-10T16:15:07Z,panna,storm_on_area,5.0,14.37,55.40,SRI,2026-07-10T16:05:00Z,,true,true,cella su area dwell~138min rain~33mm
+2026-07-10T16:45:00Z,cepina,storm_on_area,10.0,,12.39,ARPA,2026-07-10T16:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-07-10T16:50:00Z,cepina,storm_cleared,10.0,,12.39,ARPA,2026-07-10T16:50:00Z,,recon,recon,ricostruito
 2026-07-10T18:17:15Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-07-10T18:05:00Z,,true,true,"cella uscita dopo ~122min, caduti 0.1850000023841858mm"
 2026-07-10T20:14:46Z,ruspino,storm_on_area,10.0,5.04,23.20,SRI,2026-07-10T20:05:00Z,,true,true,cella su area dwell~100min rain~8mm
 2026-07-10T22:51:58Z,ruspino,storm_cleared,10.0,0.12,0.32,SRI,2026-07-10T22:40:00Z,,true,true,"cella uscita dopo ~157min, caduti 6.170000076293945mm"
 2026-07-10T22:51:58Z,cepina,storm_on_area,5.0,1.44,7.73,SRI,2026-07-10T22:40:00Z,,true,true,cella su area
 2026-07-10T23:50:07Z,cepina,storm_cleared,5.0,0.15,1.11,SRI,2026-07-10T23:40:00Z,,true,true,"cella uscita dopo ~58min, caduti 3.929999828338623mm"
+2026-07-11T13:45:00Z,ruspino,storm_on_area,10.0,,10.73,ARPA,2026-07-11T13:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-07-11T13:50:00Z,ruspino,storm_cleared,10.0,,10.73,ARPA,2026-07-11T13:50:00Z,,recon,recon,ricostruito
 2026-07-11T18:46:06Z,ruspino,storm_on_area,10.0,30.90,85.63,SRI,2026-07-11T18:35:00Z,,true,true,cella su area
 2026-07-11T19:59:26Z,ruspino,storm_cleared,10.0,0.51,1.20,SRI,2026-07-11T19:50:00Z,,true,true,"cella uscita dopo ~73min, caduti 13.969999313354492mm"
 2026-07-14T21:48:22Z,ruspino,storm_on_area,10.0,5.44,12.68,SRI,2026-07-14T21:40:00Z,,true,true,cella su area
@@ -101,6 +113,10 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-17T07:12:29Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-07-17T07:00:00Z,,true,true,"cella uscita dopo ~136min, caduti 0.0mm"
 2026-07-18T19:59:23Z,ruspino,storm_on_area,10.0,5.31,25.41,SRI,2026-07-18T19:50:00Z,,true,true,cella su area
 2026-07-18T21:41:11Z,ruspino,storm_cleared,10.0,0.00,0.00,SRI,2026-07-18T21:30:00Z,,true,true,"cella uscita dopo ~101min, caduti 15.0649995803833mm"
+2026-07-20T00:40:00Z,ruspino,storm_on_area,10.0,,115.31,ARPA,2026-07-20T03:15:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-07-20T04:00:00Z,ruspino,storm_cleared,10.0,,115.31,ARPA,2026-07-20T04:00:00Z,,recon,recon,ricostruito
 2026-07-20T18:29:20Z,cepina,storm_on_area,5.0,1.82,7.24,SRI,2026-07-20T18:20:00Z,,true,true,cella su area
 2026-07-20T18:29:20Z,cepina,storm_on_area,5.0,2.40,10.56,SRI,2026-07-20T18:15:00Z,,true,true,catch-up: cella rilevata a posteriori +14min
 2026-07-20T20:09:48Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-07-20T20:00:00Z,,true,true,"cella uscita dopo ~100min, caduti 0.0mm"
+2026-07-21T07:45:00Z,ruspino,storm_on_area,10.0,,27.34,ARPA,2026-07-21T07:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-07-21T08:00:00Z,ruspino,storm_cleared,10.0,,27.34,ARPA,2026-07-21T08:00:00Z,,recon,recon,ricostruito
