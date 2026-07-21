@@ -1,0 +1,50 @@
+name: Reconstruct Events
+
+# Ricostruisce in events.csv gli eventi "cella su area" che il nowcast non ha
+# registrato (scheduler fermo). Legge i dati radar grezzi già archiviati e
+# scrive le coppie storm_on_area + storm_cleared mancanti, marcate 'ricostruito'.
+# Gira dopo arpa-collect così lavora su dati freschi.
+
+on:
+  schedule:
+    - cron: '47 */3 * * *'    # ogni 3h, sfasato dagli altri
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo simulazione (non scrive)'
+        default: 'false'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reconstruct-events
+  cancel-in-progress: false
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reconstruct missed events
+        run: |
+          FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then FLAG="--dry-run"; fi
+          python archive/scripts/reconstruct_events.py $FLAG
+      - name: Commit events.csv
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ -n "$(git status --porcelain archive/data/events.csv)" ]; then
+            git add archive/data/events.csv
+            git commit -m "reconstruct-events: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            for i in 1 2 3 4 5; do
+              git pull --rebase --autostash && git push && break || sleep 5
+            done
+          else
+            echo "Nessun evento da ricostruire."
+          fi
