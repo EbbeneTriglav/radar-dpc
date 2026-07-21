@@ -30,6 +30,7 @@ import gzip
 import io
 import json
 import logging
+import math
 import os
 import re
 import sys
@@ -432,6 +433,209 @@ def save_radar_frames_png(files: list[str]) -> int:
     return written
 
 
+# ─── ARCHIVIO EVENTI per replay ────────────────────────────────────────────
+# Quando è attivo un evento "cella su area" (storm_on_area senza storm_cleared
+# successivo in events.csv) per un'area coperta da ARPA, archiviamo i frame
+# radar RITAGLIATI attorno all'area (+20 km di buffer) in una cartella evento
+# permanente, con un suo index.json. Un events_index.json elenca tutti gli
+# eventi archiviati per il selettore nella pagina. Nessun prune: gli eventi
+# restano per il replay futuro (peso stimato ~2 MB/evento, ben sotto i limiti).
+EVENTS_DIR = FRAMES_DIR / 'events'
+EVENT_BUFFER_KM = 20.0
+EVENTS_CSV = DATA / 'events.csv'
+
+
+def active_storm_events():
+    """Legge events.csv e ritorna gli eventi 'cella su area' ATTUALMENTE attivi
+    per le aree ARPA. Un evento è attivo se l'ultima riga per (area) è
+    storm_on_area (non ancora storm_cleared). Ritorna {area: event_start_iso}."""
+    if not EVENTS_CSV.exists():
+        return {}
+    import csv as _csv
+    last_state = {}   # area -> ('on'|'cleared', start_iso)
+    try:
+        with EVENTS_CSV.open(newline='') as f:
+            for row in _csv.DictReader(f):
+                area = row.get('area_name')
+                lvl = row.get('level')
+                ts = row.get('event_timestamp_utc', '')
+                if area not in ARPA_AREAS:
+                    continue
+                if lvl == 'storm_on_area':
+                    last_state[area] = ('on', ts)
+                elif lvl == 'storm_cleared':
+                    last_state[area] = ('cleared', ts)
+    except Exception as e:
+        log.warning(f'  lettura events.csv fallita: {e}')
+        return {}
+    return {a: st[1] for a, st in last_state.items() if st[0] == 'on'}
+
+
+def _area_bbox_native(area, crs):
+    """Bounding box dell'area (dal polygon in areas.json) espansa di
+    EVENT_BUFFER_KM, nel CRS NATIVO del raster (metri). Ritorna
+    (left, bottom, right, top) o None."""
+    poly = area.get('polygon') or []
+    if not poly:
+        return None
+    lats = [p[0] for p in poly]
+    lons = [p[1] for p in poly]
+    south, north = min(lats), max(lats)
+    west, east = min(lons), max(lons)
+    # Buffer in gradi (approssimato) → poi trasformo nel CRS nativo
+    dlat = EVENT_BUFFER_KM / 111.0
+    dlon = EVENT_BUFFER_KM / (111.0 * math.cos(math.radians((south + north) / 2)))
+    south -= dlat; north += dlat; west -= dlon; east += dlon
+    try:
+        if crs and not crs.is_geographic:
+            from rasterio.warp import transform_bounds
+            # da 4326 (i poligoni sono lat/lon) al CRS nativo del raster
+            left, bottom, right, top = transform_bounds('EPSG:4326', crs,
+                                                        west, south, east, north)
+            return (left, bottom, right, top)
+        return (west, south, east, north)
+    except Exception:
+        return None
+
+
+def archive_event_frames(files, areas):
+    """Per ogni area ARPA con evento attivo, archivia i frame recenti ritagliati
+    (area + buffer) nella cartella evento. Idempotente: salta i frame già
+    presenti. Aggiorna events_index.json."""
+    active = active_storm_events()
+    if not active:
+        return 0
+    try:
+        from PIL import Image
+        from rasterio.windows import from_bounds as _win_from_bounds
+    except ImportError:
+        log.warning('  Pillow/rasterio assente: skip archivio eventi')
+        return 0
+
+    parsed = []
+    for f in files:
+        ts = parse_timestamp(f)
+        if ts:
+            parsed.append((f, ts))
+    parsed.sort(key=lambda x: x[1])
+    recent = parsed[-FRAMES_KEEP:]   # ultimi frame disponibili nel bucket
+    if not recent:
+        return 0
+
+    area_by_name = {a['name']: a for a in areas}
+    total_written = 0
+
+    for area_name, start_iso in active.items():
+        area = area_by_name.get(area_name)
+        if not area:
+            continue
+        event_id = f"{area_name}_{start_iso.replace(':', '').replace('-', '').replace('T', '_').rstrip('Z')}"
+        ev_dir = EVENTS_DIR / event_id
+        ev_dir.mkdir(parents=True, exist_ok=True)
+        # index esistente (per append idempotente)
+        idx_path = ev_dir / 'index.json'
+        existing = {}
+        if idx_path.exists():
+            try:
+                for e in json.loads(idx_path.read_text()).get('frames', []):
+                    existing[e['file']] = e
+            except Exception:
+                pass
+
+        for fname, ts in recent:
+            ts_iso = ts.isoformat().replace('+00:00', 'Z')
+            png_name = f"{ts.strftime('%y%m%d%H%M')}.png"
+            if png_name in existing:
+                continue   # già archiviato
+            tiff = fetch_tiff(fname)
+            if tiff is None:
+                continue
+            try:
+                with MemoryFile(tiff) as mf:
+                    with mf.open() as src:
+                        crs = src.crs
+                        bbox = _area_bbox_native(area, crs)
+                        if not bbox:
+                            continue
+                        left, bottom, right, top = bbox
+                        # Ritaglia: finestra dal bbox in coordinate native
+                        try:
+                            win = _win_from_bounds(left, bottom, right, top, src.transform)
+                            arr = src.read(1, window=win).astype(np.float32)
+                            wt = src.window_transform(win)
+                            # bounds reali della finestra letta
+                            from rasterio.transform import array_bounds
+                            wb = array_bounds(arr.shape[0], arr.shape[1], wt)
+                            wleft, wbottom, wright, wtop = wb
+                        except Exception:
+                            continue
+                        nodata = src.nodata if src.nodata is not None else -9999
+                        # Riproietta i bounds finestra a 4326 per Leaflet
+                        if crs and not crs.is_geographic:
+                            from rasterio.warp import transform_bounds
+                            gl, gb, gr, gt = transform_bounds(crs, 'EPSG:4326',
+                                                              wleft, wbottom, wright, wtop)
+                        else:
+                            gl, gb, gr, gt = wleft, wbottom, wright, wtop
+                        if not (-180 <= gl <= 180 and -180 <= gr <= 180
+                                and -90 <= gb <= 90 and -90 <= gt <= 90):
+                            continue
+                if arr.size == 0:
+                    continue
+                rgba = _dbz_to_rgba(arr, nodata)
+                Image.fromarray(rgba, 'RGBA').save(ev_dir / png_name, optimize=True)
+                existing[png_name] = {
+                    'file': png_name, 'ts_utc': ts_iso,
+                    'bounds': [[round(gb, 6), round(gl, 6)], [round(gt, 6), round(gr, 6)]],
+                }
+                total_written += 1
+            except Exception as e:
+                log.warning(f'  archivio frame {fname} ({area_name}) fallito: {e}')
+
+        if existing:
+            frames_sorted = sorted(existing.values(), key=lambda e: e['ts_utc'])
+            idx_path.write_text(json.dumps({
+                'event_id': event_id, 'area': area_name, 'start_utc': start_iso,
+                'updated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
+                'frames': frames_sorted,
+            }, indent=1))
+
+    _rebuild_events_index()
+    if total_written:
+        log.info(f'✓ archivio eventi ARPA: {total_written} frame archiviati per {list(active)}')
+    return total_written
+
+
+def _rebuild_events_index():
+    """Ricostruisce events_index.json elencando tutte le cartelle evento."""
+    if not EVENTS_DIR.exists():
+        return
+    events = []
+    for d in sorted(EVENTS_DIR.iterdir()):
+        idx = d / 'index.json'
+        if not d.is_dir() or not idx.exists():
+            continue
+        try:
+            j = json.loads(idx.read_text())
+            frames = j.get('frames', [])
+            if not frames:
+                continue
+            events.append({
+                'event_id': j.get('event_id', d.name),
+                'area': j.get('area', ''),
+                'start_utc': frames[0]['ts_utc'],
+                'end_utc': frames[-1]['ts_utc'],
+                'n_frames': len(frames),
+            })
+        except Exception:
+            continue
+    events.sort(key=lambda e: e['start_utc'], reverse=True)
+    (FRAMES_DIR / 'events_index.json').write_text(json.dumps({
+        'updated_at_utc': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
+        'events': events,
+    }, indent=1))
+
+
 def main() -> int:
     if not AREAS_FILE.exists():
         log.error(f'{AREAS_FILE} mancante'); return 1
@@ -456,6 +660,13 @@ def main() -> int:
         save_radar_frames_png(files)
     except Exception as e:
         log.warning(f'save_radar_frames_png fallito: {e}')
+
+    # Archivio eventi per replay: se c'è un evento "cella su area" attivo,
+    # salva i frame ritagliati (area + 20km) in modo permanente. Best-effort.
+    try:
+        archive_event_frames(files, areas)
+    except Exception as e:
+        log.warning(f'archive_event_frames fallito: {e}')
     return 0
 
 
