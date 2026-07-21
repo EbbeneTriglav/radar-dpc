@@ -422,6 +422,9 @@ def main():
                         help='Numero di giorni da recuperare a partire da ieri (default 1, max 30).')
     parser.add_argument('--force', action='store_true',
                         help='Rimpiazza le righe esistenti invece di skipparle.')
+    parser.add_argument('--include-today', action='store_true',
+                        help='Includi anche oggi (blocchi CUM3 finora disponibili) '
+                             'oltre ai giorni chiusi a partire da ieri.')
     parser.add_argument('--areas-file', default=None,
                         help='Path alternativo al file areas.json.')
     parser.add_argument('--data-dir', default=None,
@@ -441,9 +444,17 @@ def main():
     areas = config['areas']
     log.info(f'Configured areas: {[a["label"] for a in areas]}')
 
-    # Lavoreremo "ieri" a ritroso di N-1 giorni: oggi non è ancora completo
+    # Lavoriamo a partire da IERI a ritroso: il giorno di OGGI non è ancora
+    # completo, quindi i suoi blocchi CUM3 serali (21:00) e notturni (24:00 =
+    # domani 00:00) non esistono ancora sull'API DPC e non verrebbero raccolti.
+    # Partendo da ieri il giorno è chiuso: tutti gli 8 blocchi CUM3 sono
+    # disponibili. Questo risolve il buco per cui gli eventi serali/notturni
+    # avevano cumulata DPC mancante (blocchi 21:00/00:00 assenti nel CSV).
     today_utc = datetime.now(tz=timezone.utc).date()
-    days_to_process = [today_utc - timedelta(days=i) for i in range(days)]
+    yesterday_utc = today_utc - timedelta(days=1)
+    days_to_process = [yesterday_utc - timedelta(days=i) for i in range(days)]
+    if args.include_today:
+        days_to_process.append(today_utc)   # oggi (parziale) per la freschezza
     days_to_process.reverse()  # ordine cronologico
 
     log.info(f'Processing days: {[d.isoformat() for d in days_to_process]}')
