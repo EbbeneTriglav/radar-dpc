@@ -2,11 +2,12 @@ name: Health Check
 
 on:
   schedule:
-    - cron: '20 */6 * * *'    # 00:20, 06:20, 12:20, 18:20 UTC (sfasato)
+    - cron: '41 */2 * * *'    # ogni 2h sfasato — secondo livello del watchdog
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write             # per riavviare i workflow fermi (workflow_dispatch)
 
 concurrency:
   group: healthcheck
@@ -31,6 +32,7 @@ jobs:
           SMTP_TO:          ${{ secrets.SMTP_TO }}
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python archive/scripts/healthcheck.py
       - name: Commit state
         run: |
