@@ -53,6 +53,12 @@ SRI_THRESHOLDS = [                 # mm/h istantanea
     {'level': 'alarm',     'value': 15, 'icon': '⛈️'},
     {'level': 'emergency', 'value': 25, 'icon': '⚡'},
 ]
+# Soglie di cumulata EVENTO (mm) per gli aggiornamenti in diretta durante un
+# evento attivo: si notifica al superamento di ciascuna, una sola volta.
+# Configurabile via env CUM_EVENT_MILESTONES="20,40,60,80,100".
+CUM_EVENT_MILESTONES = sorted(
+    int(x) for x in os.environ.get('CUM_EVENT_MILESTONES', '20,40,60,80,100').split(',') if x.strip()
+)
 SRT1_THRESHOLDS = [                # mm/1h
     {'level': 'warning',   'value': 8,  'icon': '🌧️'},
     {'level': 'alarm',     'value': 15, 'icon': '⛈️'},
@@ -367,6 +373,33 @@ def update_nowcast_obs(file, all_obs):
 
 
 # ─── Composizione messaggi ───────────────────────────────────────────────────
+def _arpa_max_mmh(area_name, max_age_min=20):
+    """Ritorna l'ultimo max_mmh ARPA per l'area (solo ruspino/cepina), se fresco.
+    Serve al trigger in OR con il DPC: se ARPA vede pioggia sopra soglia ma il
+    DPC no (sottostima/buco dati), l'allerta parte comunque. Ritorna
+    (mmh, age_min) oppure (None, None) se non disponibile/vecchio."""
+    if area_name not in ('ruspino', 'cepina'):
+        return (None, None)
+    try:
+        f = Path(__file__).resolve().parents[1] / 'data' / f'{area_name}_arpa.csv'
+        if not f.exists():
+            return (None, None)
+        last = None
+        with f.open() as fh:
+            for row in csv.DictReader(fh):
+                if row.get('location_type') == 'area':
+                    last = row
+        if not last:
+            return (None, None)
+        ts = datetime.fromisoformat(last['timestamp_utc'].replace('Z', '+00:00'))
+        age_min = (datetime.now(timezone.utc) - ts).total_seconds() / 60
+        if age_min > max_age_min:
+            return (None, None)
+        return (float(last['max_mmh']), age_min)
+    except Exception:
+        return (None, None)
+
+
 def _arpa_confirm(area_name, max_age_min=20):
     """Conferma incrociata ARPA per i messaggi nowcast (solo ruspino/cepina)."""
     if area_name not in ('ruspino', 'cepina'):
@@ -463,8 +496,21 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
     sri_stat = stats_in_geom_tm(sri_now_tiff, geom_area)
     if not sri_stat:
         return st.get('active', False)
-    sri_max = sri_stat['max']
+    sri_max_dpc = sri_stat['max']
     ts_iso = datetime.fromtimestamp(sri_now_ts/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
+
+    # ── Canale ARPA in OR (solo ruspino/cepina) ──
+    # Se ARPA vede pioggia sopra soglia ma il DPC no (sottostima o buco dati),
+    # l'allerta parte comunque: sri_max effettivo = max(DPC, ARPA). Traccia la
+    # fonte per il messaggio, così si sa quale radar ha rilevato.
+    arpa_mmh, arpa_age = _arpa_max_mmh(name)
+    sri_max = sri_max_dpc
+    trigger_src = 'DPC'
+    if arpa_mmh is not None and arpa_mmh > sri_max_dpc:
+        sri_max = arpa_mmh
+        trigger_src = 'ARPA' if sri_max_dpc < sri_threshold else 'DPC+ARPA'
+    elif arpa_mmh is not None and arpa_mmh >= sri_threshold and sri_max_dpc >= sri_threshold:
+        trigger_src = 'DPC+ARPA'
 
     # Cumulate attuali dentro l'area (per stima pioggia caduta)
     srt1_in = stats_in_geom_tm(srt1_tiff[1], geom_area) if srt1_tiff else None
@@ -549,15 +595,20 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
         mot_str = (f"  • Moto: {motion['compass']} a {motion['speed_kmh']} km/h\n"
                    if motion and motion.get('bearing_deg') is not None else '')
 
+        src_label = {'DPC': 'radar DPC', 'ARPA': 'radar ARPA Lombardia',
+                     'DPC+ARPA': 'radar DPC + ARPA (concordi)'}.get(trigger_src, 'radar DPC')
+        arpa_line = ''
+        if arpa_mmh is not None:
+            arpa_line = f"  • ARPA Lombardia: {arpa_mmh:.1f} mm/h ({arpa_age:.0f} min fa)\n"
         text = (
             f"⛈️ CELLA SULL'AREA — {label}\n\n"
-            f"Cella temporalesca SOPRA il bacino (radar DPC):\n"
+            f"Cella temporalesca SOPRA il bacino ({src_label}):\n"
             f"  • SRI max in area: {sri_max:.1f} mm/h (soglia {sri_threshold})\n"
-            f"{mot_str}{dwell_str}{fallen_str}{proj_str}"
+            f"{arpa_line}{mot_str}{dwell_str}{fallen_str}{proj_str}"
             f"\nNota: il radar sottostima i picchi convettivi — il pluviometro a "
-            f"terra è il riferimento.\n"
+            f"terra è il riferimento. Riceverai aggiornamenti sulla cumulata "
+            f"durante l'evento e un messaggio finale quando la cella uscirà.\n"
             f"Rilevazione: {_ts_local(ts_iso)} (ora italiana)\n"
-            f"Riceverai un messaggio quando la cella avrà lasciato l'area.\n"
         )
         md = (
             f"⛈️ *CELLA SULL'AREA — {label}*\n"
@@ -581,8 +632,63 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             'note': "cella su area" + (f" caduti~{cum_fallen:.0f}mm(cum3)" if cum_fallen is not None else '')
                     + (f" dwell~{dwell_min}min" if dwell_min else ''),
         })
-        state[key] = {'active': True, 'since': now_iso}
-        log.info(f"  ✓ cell_ON_AREA: SRI_max={sri_max:.1f} caduti={cum_fallen} dwell={dwell_min} proj={rain_proj} email={em} tg={tg}")
+        state[key] = {'active': True, 'since': now_iso, 'cum_alerts': [], 'src': trigger_src}
+        log.info(f"  ✓ cell_ON_AREA [{trigger_src}]: SRI_max={sri_max:.1f} (DPC={sri_max_dpc:.1f} ARPA={arpa_mmh}) caduti={cum_fallen} email={em} tg={tg}")
+        return True
+
+    # ── EVENTO IN CORSO: allerta CUMULATA in diretta ──
+    # Mentre l'evento è attivo, calcola quanta acqua è caduta dall'inizio e
+    # notifica al superamento di soglie progressive (default 20/40/60/80/100mm),
+    # così si ha contezza in diretta del volume. Evita spam: ogni soglia è
+    # notificata una sola volta (tracciata in state['cum_alerts']).
+    if st.get('active'):
+        alerted = set(st.get('cum_alerts', []))
+        milestones = CUM_EVENT_MILESTONES
+        # Cumulata dall'inizio evento: dai blocchi CUM3 non abbiamo lo storico
+        # qui, ma il CUM3 max corrente è la miglior stima "caduto finora (3h)".
+        # Uso il max tra CUM3 DPC e integrale ARPA disponibile.
+        cum_now_dpc = cum3_in['max'] if cum3_in else 0.0
+        cum_now = cum_now_dpc
+        arpa_note = ''
+        if arpa_mmh is not None:
+            arpa_note = f" · ARPA ora {arpa_mmh:.0f} mm/h"
+        # Quali soglie sono state superate e non ancora notificate?
+        to_alert = [m for m in milestones if cum_now >= m and m not in alerted]
+        if to_alert:
+            crossed = max(to_alert)
+            since_local = _ts_local(st.get('since', now_iso))
+            text = (
+                f"🌧 EVENTO IN CORSO — {area['label']}\n\n"
+                f"Cumulata sull'area ha superato {crossed} mm.\n"
+                f"  • Pioggia caduta finora (CUM3 3h max): {cum_now:.1f} mm\n"
+                f"  • SRI attuale: {sri_max:.1f} mm/h{arpa_note}\n"
+                f"  • Evento iniziato: {since_local}\n\n"
+                f"Aggiornamento in diretta per contezza del volume caduto.\n"
+            )
+            md = (
+                f"🌧 *EVENTO IN CORSO — {area['label']}*\n"
+                f"Cumulata > *{crossed} mm* (caduti ~{cum_now:.0f} mm, CUM3 3h)\n"
+                f"SRI attuale {sri_max:.1f} mm/h{arpa_note}\n"
+                f"_dall'inizio: {since_local}_"
+            )
+            subject = f"🌧 {label} — cumulata evento {crossed}mm+ (in corso)"
+            em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
+            tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+            writer.writerow({
+                'event_timestamp_utc': now_iso, 'area_name': name,
+                'level': 'storm_cumulate', 'threshold_mm': crossed,
+                'observed_mm_mean': f"{(cum3_in.get('mean',0) if cum3_in else 0):.2f}",
+                'observed_mm_max': f"{cum_now:.2f}",
+                'product': 'CUM3', 'observation_timestamp_utc': ts_iso,
+                'forecast_max_6h_mm': '',
+                'notified_email': em, 'notified_telegram': tg,
+                'note': f"cumulata evento >{crossed}mm in corso",
+            })
+            for m in to_alert:
+                alerted.add(m)
+            st['cum_alerts'] = sorted(alerted)
+            state[key] = st
+            log.info(f"  ✓ cumulata_evento {crossed}mm+ ({cum_now:.1f}mm): email={em} tg={tg}")
         return True
 
     return st.get('active', False)
