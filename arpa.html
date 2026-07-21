@@ -16,7 +16,7 @@
     #radar-legend .legend-bar-wrap{height:220px}
   </style>
   <style>
-    .arpa-layout { display: grid; grid-template-rows: auto 1fr; gap: 12px; height: 100%; padding: 16px 20px; overflow: auto; }
+    .arpa-layout { display: grid; grid-template-rows: auto 1fr; gap: 12px; height: 100%; padding: 16px 28px; overflow: auto; max-width: 1800px; margin: 0 auto; }
     .arpa-header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .arpa-header h1 { font-family: var(--mono); font-size: 22px; font-weight: 400; }
     .arpa-header h1 .badge { font-size: 11px; padding: 2px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-left: 8px; color: var(--text2); }
@@ -34,7 +34,10 @@
     .arpa-stat.warning .value { color: var(--warn); }
     .arpa-stat.danger .value { color: var(--danger); }
     .arpa-chart-wrap { position: relative; height: 220px; }
-    #arpa-map { width: 100%; height: 380px; border-radius: var(--radius); border: 1px solid var(--border); }
+    #arpa-map { width: 100%; height: 560px; border-radius: var(--radius); border: 1px solid var(--border); }
+    #radar-mapwrap:fullscreen { background: var(--bg, #0f172a); padding: 12px; }
+    #radar-mapwrap:fullscreen #arpa-map { height: calc(100vh - 24px); }
+    #radar-slider::-webkit-slider-thumb { cursor: pointer; }
     .arpa-meta { font-size: 11px; color: var(--text3); margin-top: 6px; font-family: var(--mono); }
     .arpa-empty { padding: 40px; text-align: center; color: var(--text3); }
     .arpa-compare-row { display: flex; gap: 14px; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border2); }
@@ -103,18 +106,31 @@
 
     <!-- Mappa con focus aree + segnale radar live -->
     <div class="arpa-card">
-      <h2><i class="fa fa-map"></i> Mappa aree monitorate — segnale radar live</h2>
+      <h2><i class="fa fa-map"></i> Mappa aree monitorate — segnale radar</h2>
       <div id="radar-controls" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;font-size:12px">
         <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
           <input type="checkbox" id="radar-toggle" checked> Radar
         </label>
+        <button id="radar-play" class="radar-btn" title="Play / Pausa animazione" style="font-weight:700;min-width:64px">▶ Play</button>
         <button id="radar-prev" class="radar-btn" title="Frame precedente (−5 min)">◀</button>
-        <button id="radar-live" class="radar-btn" title="Torna al frame più recente" style="font-weight:700">LIVE</button>
         <button id="radar-next" class="radar-btn" title="Frame successivo (+5 min)">▶</button>
+        <button id="radar-live" class="radar-btn" title="Torna al frame più recente" style="font-weight:700">LIVE</button>
+        <input type="range" id="radar-slider" min="0" max="0" value="0" step="1"
+               style="flex:1;min-width:180px;max-width:520px;accent-color:#38bdf8;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:4px">
+          <span style="color:var(--text3,#94a3b8)">velocità</span>
+          <select id="radar-speed" style="background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);border:1px solid var(--border,#334155);border-radius:6px;padding:3px 6px;font-size:12px">
+            <option value="600">0.5×</option>
+            <option value="300" selected>1×</option>
+            <option value="150">2×</option>
+            <option value="80">4×</option>
+          </select>
+        </label>
+        <button id="radar-fs" class="radar-btn" title="Schermo intero mappa">⛶ Fullscreen</button>
         <span id="radar-ts" style="font-family:monospace;color:var(--text2, #64748b)">—</span>
         <span id="radar-status" style="color:var(--text3, #94a3b8)"></span>
       </div>
-      <div style="display:flex;gap:10px">
+      <div id="radar-mapwrap" style="display:flex;gap:10px">
         <div id="arpa-map" style="flex:1"></div>
         <div id="radar-legend" style="width:64px;flex-shrink:0"></div>
       </div>
@@ -404,10 +420,16 @@ function initRadarOverlay(map) {
   let frames = [];        // [{file, ts_utc, bounds}] ordinati per ts crescente
   let idx = -1;           // indice frame corrente in frames[]
   let liveMode = true;
+  let playing = false;    // animazione in corso
+  let playTimer = null;   // handle setInterval animazione
+  let speedMs = 300;      // ms per frame (default 1×)
 
   const elTs = document.getElementById('radar-ts');
   const elStatus = document.getElementById('radar-status');
   const elToggle = document.getElementById('radar-toggle');
+  const elSlider = document.getElementById('radar-slider');
+  const elPlay = document.getElementById('radar-play');
+  const elSpeed = document.getElementById('radar-speed');
 
   ColorMap.renderLegend('dbz', 'dBZ', 'radar-legend');
   function setStatus(msg) { elStatus.textContent = msg || ''; }
@@ -423,6 +445,7 @@ function initRadarOverlay(map) {
       const j = await r.json();
       frames = (j.frames || []).filter(f => f.file && f.bounds);
       frames.sort((a, b) => a.ts_utc.localeCompare(b.ts_utc));
+      if (elSlider) elSlider.max = String(Math.max(0, frames.length - 1));
       return frames.length > 0;
     } catch (e) {
       setStatus('errore caricamento indice: ' + e.message);
@@ -440,6 +463,7 @@ function initRadarOverlay(map) {
     layer = newLayer;
     if (elToggle.checked) layer.addTo(map);
     idx = i;
+    if (elSlider) elSlider.value = String(i);
     const age = Math.round((Date.now() - new Date(fr.ts_utc).getTime()) / 60000);
     elTs.textContent = fmtTs(fr.ts_utc)
       + (liveMode ? (age > 15 ? `  ⚠️ ultimo frame +${age}min` : '') : '  [storico]');
@@ -454,22 +478,76 @@ function initRadarOverlay(map) {
   }
 
   document.getElementById('radar-prev').addEventListener('click', () => {
+    stopPlay();
     if (idx > 0) { liveMode = false; showIdx(idx - 1); }
   });
   document.getElementById('radar-next').addEventListener('click', () => {
+    stopPlay();
     if (idx < frames.length - 1) {
       showIdx(idx + 1);
       if (idx === frames.length - 1) liveMode = true;
     } else { goLive(); }
   });
-  document.getElementById('radar-live').addEventListener('click', goLive);
+  document.getElementById('radar-live').addEventListener('click', () => { stopPlay(); goLive(); });
+
+  // ── PLAYER ANIMAZIONE ──
+  function stepPlay() {
+    if (!frames.length) return;
+    let next = idx + 1;
+    if (next >= frames.length) next = 0;   // loop dall'inizio
+    liveMode = (next === frames.length - 1);
+    showIdx(next);
+  }
+  function startPlay() {
+    if (!frames.length) return;
+    playing = true;
+    elPlay.textContent = '⏸ Pausa';
+    elPlay.style.background = 'var(--accent, #38bdf8)';
+    elPlay.style.color = '#0f172a';
+    if (playTimer) clearInterval(playTimer);
+    // Se siamo all'ultimo frame, riparti dall'inizio per vedere tutta l'animazione
+    if (idx >= frames.length - 1) { liveMode = false; showIdx(0); }
+    playTimer = setInterval(stepPlay, speedMs);
+  }
+  function stopPlay() {
+    playing = false;
+    elPlay.textContent = '▶ Play';
+    elPlay.style.background = '';
+    elPlay.style.color = '';
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  }
+  elPlay.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+
+  elSlider.addEventListener('input', () => {
+    stopPlay();
+    const i = +elSlider.value;
+    liveMode = (i === frames.length - 1);
+    showIdx(i);
+  });
+
+  elSpeed.addEventListener('change', () => {
+    speedMs = +elSpeed.value;
+    if (playing) startPlay();   // riavvia col nuovo intervallo
+  });
+
+  // Fullscreen mappa
+  document.getElementById('radar-fs').addEventListener('click', () => {
+    const wrap = document.getElementById('radar-mapwrap');
+    if (!document.fullscreenElement) {
+      wrap.requestFullscreen?.().then(() => setTimeout(() => map.invalidateSize(), 200));
+    } else {
+      document.exitFullscreen?.().then(() => setTimeout(() => map.invalidateSize(), 200));
+    }
+  });
+  document.addEventListener('fullscreenchange', () => setTimeout(() => map.invalidateSize(), 200));
   elToggle.addEventListener('change', () => {
     if (!layer) return;
     if (elToggle.checked) layer.addTo(map); else map.removeLayer(layer);
   });
 
-  // Auto-refresh in LIVE (l'index si aggiorna quando il collector committa)
-  setInterval(() => { if (liveMode && elToggle.checked) goLive(); }, STEP_MS);
+  // Auto-refresh in LIVE (l'index si aggiorna quando il collector committa).
+  // Non ricarica durante l'animazione per non interromperla.
+  setInterval(() => { if (liveMode && !playing && elToggle.checked) goLive(); }, STEP_MS);
   goLive();
 }
 
