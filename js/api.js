@@ -27,6 +27,14 @@ const RadarAPI = (() => {
 
   const FETCH_TIMEOUT_MS = 20000;
 
+  // Instrada un URL attraverso il proxy CORS se configurato. L'API DPC
+  // (radar-api.protezionecivile.it) non manda header CORS, quindi le chiamate
+  // dirette dal browser falliscono: vanno passate dal worker, che è già
+  // abilitato per quell'host. Senza proxy configurato ritorna l'URL invariato.
+  function _viaProxy(url) {
+    return HAS_CUSTOM_PROXY ? CONFIG.CORS_PROXY + encodeURIComponent(url) : url;
+  }
+
   async function _fetchWithTimeout(url, opts = {}, timeoutMs = FETCH_TIMEOUT_MS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -39,7 +47,7 @@ const RadarAPI = (() => {
 
   /** Ritorna l'ultimo timestamp disponibile per un prodotto */
   async function getLastProduct(type) {
-    const res = await _fetchWithTimeout(`${BASE}${LAST}?type=${type}`);
+    const res = await _fetchWithTimeout(_viaProxy(`${BASE}${LAST}?type=${type}`));
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     if (!data.lastProducts?.length) throw new Error('Nessun prodotto disponibile');
@@ -48,7 +56,7 @@ const RadarAPI = (() => {
 
   /** Ottiene la pre-signed URL S3 per un prodotto e timestamp */
   async function getDownloadUrl(productType, productDate) {
-    const res = await _fetchWithTimeout(`${BASE}${DOWNLOAD}`, {
+    const res = await _fetchWithTimeout(_viaProxy(`${BASE}${DOWNLOAD}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ productType, productDate }),
