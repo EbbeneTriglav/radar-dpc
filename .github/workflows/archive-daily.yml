@@ -48,12 +48,12 @@ jobs:
 
       - name: Run collector
         run: |
-          DAYS="${{ github.event.inputs.days || '1' }}"
+          DAYS="${{ github.event.inputs.days || '3' }}"
           FORCE_FLAG=""
           if [ "${{ github.event.inputs.force }}" = "true" ]; then
             FORCE_FLAG="--force"
           fi
-          python archive/scripts/collect.py --days "$DAYS" $FORCE_FLAG
+          python archive/scripts/collect.py --days "$DAYS" --include-today $FORCE_FLAG
 
       - name: Commit data
         run: |
