@@ -127,6 +127,12 @@
           </select>
         </label>
         <button id="radar-fs" class="radar-btn" title="Schermo intero mappa">⛶ Fullscreen</button>
+        <label style="display:flex;align-items:center;gap:4px;margin-left:8px">
+          <span style="color:var(--text3,#94a3b8)">📼 evento</span>
+          <select id="radar-event" style="background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);border:1px solid var(--border,#334155);border-radius:6px;padding:3px 6px;font-size:12px;max-width:260px">
+            <option value="">— live —</option>
+          </select>
+        </label>
         <span id="radar-ts" style="font-family:monospace;color:var(--text2, #64748b)">—</span>
         <span id="radar-status" style="color:var(--text3, #94a3b8)"></span>
       </div>
@@ -415,6 +421,8 @@ function initRadarOverlay(map) {
   // inventato: la georeferenziazione viene dal file, non da assunzioni).
   const RAW = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/archive/data/radar_arpa/';
   const STEP_MS = 5 * 60_000;
+  const elEvent = document.getElementById('radar-event');
+  let eventMode = false;   // true = stiamo guardando un evento archiviato
 
   let layer = null;
   let frames = [];        // [{file, ts_utc, bounds}] ordinati per ts crescente
@@ -453,10 +461,12 @@ function initRadarOverlay(map) {
     }
   }
 
+  let framePathPrefix = RAW;   // live: radar_arpa/ ; evento: radar_arpa/events/<id>/
+
   function showIdx(i) {
     if (i < 0 || i >= frames.length) return;
     const fr = frames[i];
-    const newLayer = L.imageOverlay(RAW + fr.file + '?_=' + Date.now(), fr.bounds, {
+    const newLayer = L.imageOverlay(framePathPrefix + fr.file + '?_=' + Date.now(), fr.bounds, {
       opacity: 0.72, interactive: false,
     });
     if (layer) map.removeLayer(layer);
@@ -471,11 +481,60 @@ function initRadarOverlay(map) {
   }
 
   async function goLive() {
+    eventMode = false;
+    framePathPrefix = RAW;
     liveMode = true;
+    if (elEvent) elEvent.value = '';
     const ok = await loadIndex();
     if (!ok) { setStatus('nessun frame radar disponibile'); return; }
     showIdx(frames.length - 1);   // il più recente
   }
+
+  // ── EVENTI ARCHIVIATI (replay) ──
+  async function loadEventsList() {
+    try {
+      const r = await fetch(RAW + 'events_index.json?_=' + Date.now(), { cache: 'no-cache' });
+      if (!r.ok) return;   // nessun archivio eventi ancora
+      const j = await r.json();
+      const evs = j.events || [];
+      if (!evs.length) return;
+      for (const ev of evs) {
+        const opt = document.createElement('option');
+        opt.value = ev.event_id;
+        const d = new Date(ev.start_utc).toLocaleString('it-IT', { timeZone: 'Europe/Rome',
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        opt.textContent = `${ev.area} · ${d} (${ev.n_frames}f)`;
+        elEvent.appendChild(opt);
+      }
+      setStatus(`${evs.length} eventi archiviati disponibili`);
+    } catch (e) { /* silenzioso: archivio opzionale */ }
+  }
+
+  async function loadEvent(eventId) {
+    stopPlay();
+    eventMode = true;
+    liveMode = false;
+    framePathPrefix = RAW + 'events/' + eventId + '/';
+    try {
+      const r = await fetch(framePathPrefix + 'index.json?_=' + Date.now(), { cache: 'no-cache' });
+      if (!r.ok) { setStatus('evento non trovato'); return; }
+      const j = await r.json();
+      frames = (j.frames || []).filter(f => f.file && f.bounds);
+      frames.sort((a, b) => a.ts_utc.localeCompare(b.ts_utc));
+      if (elSlider) { elSlider.max = String(Math.max(0, frames.length - 1)); }
+      if (!frames.length) { setStatus('evento senza frame'); return; }
+      showIdx(0);
+      setStatus(`evento: ${frames.length} frame — premi ▶ per animare`);
+      // centra la mappa sull'area dell'evento
+      const b = frames[0].bounds;
+      map.fitBounds([[b[0][0], b[0][1]], [b[1][0], b[1][1]]], { padding: [20, 20] });
+    } catch (e) { setStatus('errore caricamento evento: ' + e.message); }
+  }
+
+  elEvent.addEventListener('change', () => {
+    if (elEvent.value) loadEvent(elEvent.value);
+    else goLive();
+  });
 
   document.getElementById('radar-prev').addEventListener('click', () => {
     stopPlay();
@@ -547,8 +606,9 @@ function initRadarOverlay(map) {
 
   // Auto-refresh in LIVE (l'index si aggiorna quando il collector committa).
   // Non ricarica durante l'animazione per non interromperla.
-  setInterval(() => { if (liveMode && !playing && elToggle.checked) goLive(); }, STEP_MS);
+  setInterval(() => { if (liveMode && !playing && !eventMode && elToggle.checked) goLive(); }, STEP_MS);
   goLive();
+  loadEventsList();
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────
