@@ -205,6 +205,41 @@ LABELS = {
     'forecast':    ('Verifica forecast',       'workflow giornaliero in ritardo'),
 }
 
+# ─── AUTO-RIAVVIO WORKFLOW FERMI ─────────────────────────────────────────────
+# Il cron di GitHub Actions è best-effort e può saltare run. Quando un check
+# legato a un workflow va DOWN, oltre a notificare proviamo a riavviarlo via
+# workflow_dispatch (serve permissions: actions: write nel workflow + il
+# GITHUB_TOKEN standard passato come env). 'monitor' (dati DPC) è escluso:
+# lì il problema è lato DPC, non del nostro scheduler.
+KICK_WORKFLOWS = {
+    'monitor_run': 'monitor.yml',
+    'nowcast':     'nowcast.yml',
+    'archive':     'archive-daily.yml',
+    'arpa':        'arpa-collect.yml',
+    'forecast':    'forecast-verify.yml',
+}
+GH_REPO = os.environ.get('GITHUB_REPOSITORY', 'EbbeneTriglav/radar-dpc')
+
+
+def kick_workflow(wf: str) -> bool:
+    """Riavvia un workflow via workflow_dispatch. Ritorna True se accettato."""
+    tok = os.environ.get('GITHUB_TOKEN')
+    if not tok:
+        log.info(f'  kick {wf}: GITHUB_TOKEN assente, skip')
+        return False
+    try:
+        r = requests.post(
+            f'https://api.github.com/repos/{GH_REPO}/actions/workflows/{wf}/dispatches',
+            headers={'Authorization': f'Bearer {tok}',
+                     'Accept': 'application/vnd.github+json'},
+            json={'ref': 'main'}, timeout=20)
+        ok = r.status_code == 204
+        log.info(f'  🔁 kick {wf}: {"inviato" if ok else f"HTTP {r.status_code}"}')
+        return ok
+    except Exception as e:
+        log.warning(f'  kick {wf} fallito: {e}')
+        return False
+
 
 def check(name: str, age: float | None, max_age: float, state: dict) -> tuple[bool, str]:
     """Isteresi: segnala 'fermo' solo dopo CONSECUTIVE_FAILS check oltre soglia.
@@ -264,6 +299,11 @@ def main() -> int:
     statuses = []
     for name, age in ages.items():
         changed, msg = check(name, age, MAX_AGE[name], state)
+        # Auto-riavvio: se il check è appena andato DOWN ed è un workflow
+        # riavviabile, kick via workflow_dispatch e lo dico nel messaggio.
+        if changed and state.get(name, {}).get('down') and name in KICK_WORKFLOWS:
+            ok = kick_workflow(KICK_WORKFLOWS[name])
+            msg += ' → 🔁 riavvio automatico ' + ('inviato' if ok else 'FALLITO (controlla permessi)')
         statuses.append(msg)
         if changed:
             changes.append(msg)
