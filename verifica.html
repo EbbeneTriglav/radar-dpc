@@ -65,12 +65,14 @@
 <div class="vf-wrap">
 
   <h1 style="margin:0 0 4px">✅ Verifica del sistema</h1>
-  <p class="vf-note">Quanto bene il sistema anticipa gli eventi, e quanta pioggia è
-  davvero caduta. Per ogni evento: <b>intensità max radar</b> (mm/h, il picco istantaneo)
-  e soprattutto la <b>cumulata evento</b> in mm — somma dei blocchi CUM3 DPC (3h adiacenti)
-  sulla durata reale dell'evento — confrontata con la <b>cumulata a terra</b> del pluviometro
-  (mm vs mm). Lo scarto è fisiologico: il CUM3 max è il pixel peggiore dell'area, il pluviometro
-  è un punto. Clicca una riga per il grafico per-evento.</p>
+  <p class="vf-note">Quanta pioggia è davvero caduta, secondo <b>due radar indipendenti</b>
+  confrontati con il pluviometro a terra. Per ogni evento: <b>intensità max</b> (mm/h, picco),
+  <b>cumulata radar ARPA</b> (integrale dell'intensità) e <b>cumulata radar DPC</b> (somma
+  blocchi CUM3 3h) sulla durata reale dell'evento, entrambe in mm, ciascuna con il proprio
+  <b>scarto</b> vs il pluviometro. Così si vede quale radar risponde meglio e se un radar
+  sottostima o sovrastima sistematicamente. ARPA copre solo Lombardia (Ruspino, Cepina).
+  Lo scarto è in parte fisiologico: il radar è una stima areale, il pluviometro un punto.
+  Clicca una riga per il grafico per-evento.</p>
 
   <h2 style="font-size:15px;margin:18px 0 8px">Accuratezza forecast</h2>
   <div class="vf-filters">
@@ -113,9 +115,9 @@
   <table class="vf">
     <thead><tr>
       <th>Quando</th><th>Area</th><th>Tipo</th>
-      <th>Previsto 6h prima</th><th>Intensità max radar</th><th>Cumulata radar evento</th><th>Pluviometro a terra</th><th>Scarto</th>
+      <th>Intensità max</th><th>Cum. ARPA (max/mean)</th><th>Cum. DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th>Scarto DPC</th>
     </tr></thead>
-    <tbody id="ev-body"><tr><td colspan="8">Caricamento…</td></tr></tbody>
+    <tbody id="ev-body"><tr><td colspan="9">Caricamento…</td></tr></tbody>
   </table>
 
 </div>
@@ -300,15 +302,18 @@ function cum3EventCumulate(area, winStart, winEnd){
 
 function arpaEventCumulate(area, winStart, winEnd){
   // Integrale dell'intensità ARPA (mm/h ogni 5min) sulla finestra: Σ y·Δt.
-  const pts=(ALL.arpa[area]||[]).filter(r=>r.location_type==='area')
-    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max_mmh||0}))
+  // Calcolo sia MAX (pixel peggiore d'area) che MEAN (media d'area): il
+  // pluviometro puntuale sta tipicamente tra i due.
+  const rows=(ALL.arpa[area]||[]).filter(r=>r.location_type==='area')
+    .map(r=>({x:new Date(r.timestamp_utc).getTime(), mx:+r.max_mmh||0, mn:+r.mean_mmh||0}))
     .filter(p=>p.x>=winStart&&p.x<=winEnd&&isFinite(p.x)).sort((a,b)=>a.x-b.x);
-  let acc=0;
-  for(let i=0;i<pts.length;i++){
-    const dtH=i>0?Math.min((pts[i].x-pts[i-1].x)/3600_000,0.5):5/60;
-    acc+=pts[i].y*dtH;
+  if(!rows.length) return null;
+  let accMax=0, accMean=0;
+  for(let i=0;i<rows.length;i++){
+    const dtH=i>0?Math.min((rows[i].x-rows[i-1].x)/3600_000,0.5):5/60;
+    accMax+=rows[i].mx*dtH; accMean+=rows[i].mn*dtH;
   }
-  return +acc.toFixed(1);
+  return {max:+accMax.toFixed(1), mean:+accMean.toFixed(1)};
 }
 
 function classifyEvent(e){
@@ -346,7 +351,7 @@ function renderEvents(){
   }).sort((a,b)=> new Date(b.event_timestamp_utc)-new Date(a.event_timestamp_utc));
 
   const body = document.getElementById('ev-body');
-  if (!evs.length){ body.innerHTML='<tr><td colspan="8">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
+  if (!evs.length){ body.innerHTML='<tr><td colspan="9">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
 
   const shown = evs.slice(0,200);
   body.innerHTML = shown.map((e,i)=>{
@@ -357,39 +362,37 @@ function renderEvents(){
       : cls==='forecast'?'<span class="pill fore">forecast</span>'
       : cls==='nowcast'?'<span class="pill now">nowcast</span>':'<span class="pill">—</span>';
 
-    // Previsto
-    let prevTxt='—';
-    if (cls==='storm'){
-      const f = eventPrevForecast(e.area_name, tsMs);
-      prevTxt = (f.om!=null?`OM ${f.om.toFixed(1)}`:'OM —')+(f.met!=null?` · MET ${f.met.toFixed(1)}`:'');
-    } else if (cls==='forecast'){
-      prevTxt = (+e.forecast_max_6h_mm||0).toFixed(1)+' mm ('+(e.product||'')+')';
-    }
-
-    // Intensità max radar (mm/h) — il picco istantaneo SRI (informativo)
+    // Intensità max radar (mm/h) — picco istantaneo SRI (informativo)
     const intMax = (+e.observed_mm_max||0);
     const intTxt = intMax>0 ? `${intMax.toFixed(1)} mm/h` : '—';
 
-    // Cumulata radar EVENTO (mm) — somma blocchi CUM3 sulla finestra evento.
-    // Questo è il dato in mm confrontabile col pluviometro.
+    // Finestra evento (durata reale, gestione multi-evento)
     const win = eventWindow(e.area_name, tsMs);
-    const cum = cum3EventCumulate(e.area_name, win.start, win.end);
-    const cumTxt = cum.max>0
-      ? `<b style="color:#2dd4bf">${cum.max.toFixed(0)} mm</b><span style="color:var(--text3);font-size:11px"> (${cum.nBlocks}×3h)</span>`
+
+    // Cumulata radar DPC (mm) — somma blocchi CUM3 sulla finestra (max e mean)
+    const cumDPC = cum3EventCumulate(e.area_name, win.start, win.end);
+    const dpcTxt = cumDPC.max>0
+      ? `<b style="color:#f87171">${cumDPC.max.toFixed(0)}</b> <span style="color:var(--text3);font-size:11px">/ ${cumDPC.mean.toFixed(0)} mm</span><span style="color:var(--text3);font-size:11px"> (${cumDPC.nBlocks}×3h)</span>`
       : '<span style="color:var(--text3)">—</span>';
 
-    // Pluviometro: cella lazy (id), con la finestra evento salvata in data-attr
+    // Cumulata radar ARPA (mm) — integrale intensità (max e mean).
+    // ARPA copre solo Lombardia (Ruspino, Cepina), non Panna.
+    const cumARPA = arpaEventCumulate(e.area_name, win.start, win.end);
+    const arpaTxt = cumARPA && cumARPA.max>0
+      ? `<b style="color:#2dd4bf">${cumARPA.max.toFixed(0)}</b> <span style="color:var(--text3);font-size:11px">/ ${cumARPA.mean.toFixed(0)} mm</span>`
+      : (cumARPA ? '<span style="color:var(--text3)">—</span>' : '<span style="color:var(--text3);font-size:11px">n/d</span>');
+
+    // Pluviometro + scarti: lazy. Salvo max/mean di entrambi i radar.
     const hasGround = !!GROUND_SENSORS[e.area_name];
     const groundCell = hasGround
-      ? `<span id="grd-${i}" data-ws="${win.start}" data-we="${win.end}" data-cum="${cum.max}" style="color:var(--text3)">…</span>`
+      ? `<span id="grd-${i}" data-ws="${win.start}" data-we="${win.end}" data-dpcmax="${cumDPC.max}" data-dpcmean="${cumDPC.mean}" data-arpamax="${cumARPA?cumARPA.max:''}" data-arpamean="${cumARPA?cumARPA.mean:''}" style="color:var(--text3)">…</span>`
       : '<span style="color:var(--text3)">n/d</span>';
-
-    // Scarto: calcolato dopo il fetch pluviometro (id per aggiornamento lazy)
-    const scartoCell = hasGround ? `<span id="scr-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">—</span>';
+    const scrArpa = hasGround ? `<span id="scra-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">—</span>';
+    const scrDpc  = hasGround ? `<span id="scrd-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">—</span>';
 
     return `<tr class="ev" data-i="${i}">
       <td>${when}</td><td>${e.area_name||''}</td><td>${pill}</td>
-      <td>${prevTxt}</td><td>${intTxt}</td><td>${cumTxt}</td><td>${groundCell}</td><td>${scartoCell}</td>
+      <td>${intTxt}</td><td>${arpaTxt}</td><td>${dpcTxt}</td><td>${groundCell}</td><td>${scrArpa}</td><td>${scrDpc}</td>
     </tr>`;
   }).join('');
 
@@ -397,44 +400,53 @@ function renderEvents(){
     tr.addEventListener('click',()=> openChart(shown[+tr.dataset.i]));
   });
 
-  // Pluviometro + scarto: fetch lazy sulla FINESTRA EVENTO (non il giorno),
-  // così multi-eventi nello stesso giorno restano distinti.
+  // Pluviometro + scarti (ARPA e DPC) sulla FINESTRA EVENTO
   populateGroundColumn(shown.slice(0,20));
 }
 
 async function populateGroundColumn(events){
+  // Scarto vs pluviometro, mostrando max (picco) e mean (media area). Il
+  // pluviometro puntuale sta tipicamente tra i due. Colore sul max.
+  const scartoHtml=(rmax, rmean, ground)=>{
+    if(rmax==null||rmax==='') return '<span style="color:var(--text3)">—</span>';
+    const dMax=rmax-ground, pMax=ground>0?dMax/ground*100:0;
+    const dMean=(rmean!=null&&rmean!=='')?rmean-ground:null;
+    const col=Math.abs(pMax)<=40?'#4ade80':(dMax<0?'#f87171':'#fbbf24');
+    const sMax=dMax>=0?'+':'';
+    let html=`<span style="color:${col}">${sMax}${dMax.toFixed(0)}</span>`;
+    if(dMean!=null){ const sMean=dMean>=0?'+':''; html+=`<span style="color:var(--text3);font-size:11px"> / ${sMean}${dMean.toFixed(0)} mm</span>`; }
+    else html+='<span style="color:var(--text3);font-size:11px"> mm</span>';
+    return html;
+  };
   for (let i=0;i<events.length;i++){
     const e=events[i];
     const cell=document.getElementById(`grd-${i}`);
-    const scr=document.getElementById(`scr-${i}`);
+    const scra=document.getElementById(`scra-${i}`);
+    const scrd=document.getElementById(`scrd-${i}`);
     if(!cell || !GROUND_SENSORS[e.area_name]) continue;
-    const ws=+cell.dataset.ws, we=+cell.dataset.we, radarCum=+cell.dataset.cum||0;
+    const ws=+cell.dataset.ws, we=+cell.dataset.we;
+    const dpcMax=+cell.dataset.dpcmax||0, dpcMean=+cell.dataset.dpcmean||0;
+    const arpaMax=cell.dataset.arpamax!==''?+cell.dataset.arpamax:null;
+    const arpaMean=cell.dataset.arpamean!==''?+cell.dataset.arpamean:null;
     try{
       const g=await fetchGroundRain(e.area_name, ws, we);
       if(g && g.total>0){
         const tot=g.total;
         const tag = g.type==='sir_daily' ? '(SIR)' : g.name.split(' ')[0];
-        cell.innerHTML=`<b style="color:#ec4899">${tot.toFixed(0)} mm</b>`
-          + `<span style="color:var(--text3);font-size:11px"> ${tag}</span>`;
-        // Scarto radar vs pluviometro (mele con mele, entrambi cumulate mm)
-        if(scr && radarCum>0){
-          const diff=radarCum-tot;
-          const pct=tot>0?(diff/tot*100):0;
-          const col = Math.abs(pct)<=30 ? '#4ade80' : pct<0 ? '#f87171' : '#fbbf24';
-          const sign=diff>=0?'+':'';
-          scr.innerHTML=`<span style="color:${col}">${sign}${diff.toFixed(0)} mm</span>`
-            +`<span style="color:var(--text3);font-size:11px"> (${sign}${pct.toFixed(0)}%)</span>`;
-        } else if(scr){ scr.innerHTML='<span style="color:var(--text3)">—</span>'; }
+        cell.innerHTML=`<b style="color:#ec4899">${tot.toFixed(0)} mm</b><span style="color:var(--text3);font-size:11px"> ${tag}</span>`;
+        if(scra) scra.innerHTML = (arpaMax!=null&&arpaMax>0) ? scartoHtml(arpaMax, arpaMean, tot) : '<span style="color:var(--text3)">—</span>';
+        if(scrd) scrd.innerHTML = dpcMax>0 ? scartoHtml(dpcMax, dpcMean, tot) : '<span style="color:var(--text3)">—</span>';
       } else if (g && g.err){
         cell.innerHTML=`<span style="color:var(--text3);font-size:11px">n/d</span>`;
-        if(scr) scr.innerHTML='<span style="color:var(--text3)">—</span>';
+        if(scra) scra.innerHTML='—'; if(scrd) scrd.innerHTML='—';
       } else {
         cell.innerHTML=`<span style="color:var(--text3)">0 mm</span>`;
-        if(scr) scr.innerHTML='<span style="color:var(--text3)">—</span>';
+        if(scra) scra.innerHTML='<span style="color:var(--text3)">—</span>';
+        if(scrd) scrd.innerHTML='<span style="color:var(--text3)">—</span>';
       }
     }catch{
       cell.innerHTML=`<span style="color:var(--text3)">—</span>`;
-      if(scr) scr.innerHTML='<span style="color:var(--text3)">—</span>';
+      if(scra) scra.innerHTML='—'; if(scrd) scrd.innerHTML='—';
     }
   }
 }
