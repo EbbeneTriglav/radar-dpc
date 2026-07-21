@@ -362,6 +362,14 @@ function renderEvents(){
     const pill = cls==='storm'?'<span class="pill storm">temporale</span>'
       : cls==='forecast'?'<span class="pill fore">forecast</span>'
       : cls==='nowcast'?'<span class="pill now">nowcast</span>':'<span class="pill">—</span>';
+    const reconBadge = /ricostruito/i.test(e.note||'')
+      ? ' <span class="pill" style="background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed55" title="Evento non registrato dal nowcast (Actions fermo), ricostruito dai dati radar grezzi">⟲ ricostruito</span>'
+      : '';
+    // Ritardo di notifica (dalla nota RITARDO~Xmin scritta dal nowcast)
+    const delayMatch = (e.note||'').match(/RITARDO~(\d+)min/);
+    const delayBadge = delayMatch
+      ? ` <span class="pill" style="background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b55" title="Notifica arrivata in ritardo: lo scheduler era fermo">⏱ +${delayMatch[1]}min</span>`
+      : '';
 
     // Intensità max radar (mm/h) — picco istantaneo SRI (informativo)
     const intMax = (+e.observed_mm_max||0);
@@ -392,7 +400,7 @@ function renderEvents(){
     const scrDpc  = hasGround ? `<span id="scrd-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">—</span>';
 
     return `<tr class="ev" data-i="${i}">
-      <td>${when}</td><td>${e.area_name||''}</td><td>${pill}</td>
+      <td>${when}</td><td>${e.area_name||''}</td><td>${pill}${reconBadge}${delayBadge}</td>
       <td>${intTxt}</td><td>${arpaTxt}</td><td>${dpcTxt}</td><td>${groundCell}</td><td>${scrArpa}</td><td>${scrDpc}</td>
     </tr>`;
   }).join('');
