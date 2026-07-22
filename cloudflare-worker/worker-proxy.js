@@ -10,12 +10,27 @@
  */
 
 const ALLOWED_HOSTS = [
+  // Bucket S3 attuale dei prodotti radar DPC (VMI, SRI, SRT1, ...).
+  's3-prod-dpc-radar.s3.eu-south-1.amazonaws.com',
+  // Bucket storico: tenuto per compatibilita' con eventuali URL vecchie.
   'dpc-radar.s3.eu-south-1.amazonaws.com',
   'radar-api.protezionecivile.it',
   // Composito radar ARPA Lombardia (Desio+Flero, CMPyymmddhhMM.MAX.tif.gz):
   // usato da arpa.html per visualizzare il segnale radar live sulla mappa.
   'radarlive.arpalombardia.it',
 ];
+
+// Fallback: il DPC ha gia' rinominato il bucket una volta (dpc-radar ->
+// s3-prod-dpc-radar). Accettiamo qualunque bucket S3 AWS che contenga
+// "dpc-radar" nel nome, cosi' un rename futuro non blocca la mappa live.
+const ALLOWED_PATTERNS = [
+  /^[a-z0-9.-]*dpc-radar[a-z0-9.-]*\.s3\.[a-z0-9-]+\.amazonaws\.com$/i,
+];
+
+function hostAllowed(hostname) {
+  return ALLOWED_HOSTS.includes(hostname) ||
+         ALLOWED_PATTERNS.some((re) => re.test(hostname));
+}
 
 // User-Agent realistico: emula Chrome desktop per non essere bloccati dai WAF
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
@@ -30,72 +45,7 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400',
 };
 
-// ─── WATCHDOG WORKFLOW GITHUB ────────────────────────────────────────────────
-// Il cron di GitHub Actions è "best-effort": nei momenti di carico i run
-// slittano di 30-200 min o saltano (→ allerte mancate). I cron trigger di
-// Cloudflare invece sono affidabili: questo watchdog, eseguito dal cron del
-// Worker (configurare "*/10 * * * *" nei Triggers), controlla l'ultimo run di
-// ogni workflow critico e, se è più vecchio della soglia, lo riavvia via
-// workflow_dispatch. Il dispatch crea subito un run nuovo, quindi il check
-// successivo lo vede fresco: auto-limitante, niente kick a raffica.
-// Secret richiesto sul Worker: GH_TOKEN (PAT fine-grained, repo radar-dpc,
-// permesso Actions: Read and write). Opzionali: TG_BOT_TOKEN + TG_CHAT_ID per
-// notifica Telegram quando il watchdog riavvia qualcosa.
-const GH_REPO = 'EbbeneTriglav/radar-dpc';
-const WATCHED_WORKFLOWS = [
-  { wf: 'monitor.yml',        maxAgeMin: 35 },   // cron ogni 15'
-  { wf: 'nowcast.yml',        maxAgeMin: 45 },   // ogni 20'
-  { wf: 'arpa-collect.yml',   maxAgeMin: 30 },   // ogni 10'
-  { wf: 'forecast-alert.yml', maxAgeMin: 165 },  // ogni 2h
-];
-
-async function watchdog(env) {
-  if (!env.GH_TOKEN) return;   // watchdog disattivo senza token
-  const headers = {
-    'Authorization': `Bearer ${env.GH_TOKEN}`,
-    'Accept': 'application/vnd.github+json',
-    'User-Agent': 'radar-dpc-watchdog',
-  };
-  const kicked = [];
-  for (const w of WATCHED_WORKFLOWS) {
-    try {
-      const r = await fetch(
-        `https://api.github.com/repos/${GH_REPO}/actions/workflows/${w.wf}/runs?per_page=1`,
-        { headers });
-      if (!r.ok) continue;
-      const j = await r.json();
-      const last = j.workflow_runs && j.workflow_runs[0];
-      const ageMin = last
-        ? (Date.now() - new Date(last.created_at).getTime()) / 60000
-        : Infinity;
-      if (ageMin > w.maxAgeMin) {
-        const d = await fetch(
-          `https://api.github.com/repos/${GH_REPO}/actions/workflows/${w.wf}/dispatches`,
-          { method: 'POST', headers, body: JSON.stringify({ ref: 'main' }) });
-        if (d.status === 204) kicked.push(`${w.wf} (fermo da ${Math.round(ageMin)} min)`);
-      }
-    } catch (e) { /* singolo workflow: best-effort, si riprova al giro dopo */ }
-  }
-  if (kicked.length && env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
-    try {
-      await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: env.TG_CHAT_ID,
-          text: '🔁 Watchdog Cloudflare: riavviati workflow fermi:\n' +
-                kicked.map(k => `• ${k}`).join('\n'),
-        }),
-      });
-    } catch (e) { /* notifica opzionale */ }
-  }
-}
-
 export default {
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(watchdog(env));
-  },
-
   async fetch(request) {
     // Preflight CORS
     if (request.method === 'OPTIONS') {
@@ -127,7 +77,7 @@ export default {
       return jsonError('Invalid url parameter (not a valid URL)', 400);
     }
 
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    if (!hostAllowed(targetUrl.hostname)) {
       return jsonError(`Hostname not allowed: ${targetUrl.hostname}`, 403);
     }
 
