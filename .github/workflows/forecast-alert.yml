@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: forecast-alert
+  cancel-in-progress: false
+
 jobs:
   forecast:
     runs-on: ubuntu-latest
