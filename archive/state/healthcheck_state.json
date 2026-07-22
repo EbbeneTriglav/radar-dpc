@@ -1,7 +1,7 @@
 {
   "archive": {
     "down": false,
-    "fail_count": 0
+    "fail_count": 1
   },
   "arpa": {
     "down": false,
@@ -9,8 +9,7 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-07-22T07:16:50.268312Z"
+    "fail_count": 0
   },
   "monitor": {
     "down": false,
