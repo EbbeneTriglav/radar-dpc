@@ -80,5 +80,10 @@ jobs:
           git add archive/state/ archive/data/ 2>/dev/null || true
           if git diff --cached --quiet; then echo "No changes."; else
             git commit -m "forecast-24h: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git push || (git pull --rebase --autostash && git push)
+            for i in 1 2 3 4 5; do
+              if git push; then break; fi
+              echo "Push fallito, retry $i/5..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
           fi

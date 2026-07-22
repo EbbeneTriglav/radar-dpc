@@ -64,5 +64,14 @@ jobs:
             echo "No new data to commit."
           else
             git commit -m "data: archive run $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git push
+            # Retry con rebase: monitor/nowcast/arpa-collect possono pushare
+            # sullo stesso ref nello stesso istante. Senza questo loop il push
+            # viene rifiutato (non-fast-forward), il run va in errore e i dati
+            # gia' committati in locale vengono persi con il runner.
+            for i in 1 2 3 4 5; do
+              if git push; then break; fi
+              echo "Push fallito, retry $i/5..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
           fi
