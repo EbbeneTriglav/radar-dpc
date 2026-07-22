@@ -169,7 +169,8 @@ function parseCSV(text){
   return lines.slice(1).map(l=>{ const c=split(l); const o={}; h.forEach((k,i)=>o[k]=c[i]??''); return o; });
 }
 
-let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {} };
+let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {},
+            groundPts: {}, groundCover: new Set() };
 
 async function loadAll(){
   const [ev, vf] = await Promise.allSettled([
@@ -193,6 +194,25 @@ async function loadAll(){
   await Promise.allSettled(['ruspino','cepina'].map(async a=>{
     try{ ALL.arpa[a]=parseCSV(await (await fetchData(`archive/data/${a}_arpa.csv`)).text()); }catch{ ALL.arpa[a]=[]; }
   }));
+
+  // Archivio pluviometri a terra (ground_collect.py, 1×/giorno). Le misure ARPA
+  // sono salvate nel repo: la tabella non deve piu' interrogare Socrata evento
+  // per evento, e i dati restano anche quando ARPA li cancella dal realtime.
+  await Promise.allSettled([
+    (async()=>{
+      const rows = parseCSV(await (await fetchData('archive/data/ground_rain.csv')).text());
+      for(const r of rows){
+        const t=new Date(r.ts_utc).getTime(), v=+r.mm;
+        if(!isFinite(t)||!isFinite(v)) continue;
+        (ALL.groundPts[r.sensor_id] ||= []).push({x:t, y:v});
+      }
+      for(const sid in ALL.groundPts) ALL.groundPts[sid].sort((a,b)=>a.x-b.x);
+    })(),
+    (async()=>{
+      const rows = parseCSV(await (await fetchData('archive/data/ground_index.csv')).text());
+      for(const r of rows) ALL.groundCover.add(`${r.area_name}|${r.event_ts_utc}`);
+    })(),
+  ]);
 }
 
 // ── ACCURATEZZA: aggrega forecast_verification per source×horizon ──
@@ -410,7 +430,9 @@ function renderEvents(){
   });
 
   // Pluviometro + scarti (ARPA e DPC) sulla FINESTRA EVENTO
-  populateGroundColumn(shown.slice(0,20));
+  // Nessun limite di righe: gli eventi archiviati non fanno chiamate di rete,
+  // e per i pochi non ancora archiviati (ultime ore) si va live.
+  populateGroundColumn(shown);
 }
 
 async function populateGroundColumn(events){
@@ -438,7 +460,7 @@ async function populateGroundColumn(events){
     const arpaMax=cell.dataset.arpamax!==''?+cell.dataset.arpamax:null;
     const arpaMean=cell.dataset.arpamean!==''?+cell.dataset.arpamean:null;
     try{
-      const g=await fetchGroundRain(e.area_name, ws, we);
+      const g=await fetchGroundRain(e.area_name, ws, we, e.event_timestamp_utc);
       if(g && g.total>0){
         const tot=g.total;
         const tag = g.type==='sir_daily' ? '(SIR)' : g.name.split(' ')[0];
@@ -534,8 +556,48 @@ const GROUND_SENSORS={
     name:'Monte di Fò'},
 };
 
-async function fetchGroundRain(area, winStart, winEnd){
+// CSV giornaliero SIR (Monte di Fò): una sola fetch per sessione, non una per
+// evento. Il file vive nel repo dati_idro, quindi non ha problemi di ritenzione.
+let _sirCsv=null;
+function loadSirCsv(url){
+  if(!_sirCsv) _sirCsv = fetch(url+'?_='+Date.now()).then(r=>{
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.text();
+  });
+  return _sirCsv;
+}
+
+// Ricostruisce la serie pluviometrica dall'archivio locale (ground_rain.csv).
+// Ritorna null se l'evento non è ancora stato archiviato → si va live.
+function groundFromArchive(area, winStart, winEnd, evTs){
+  const s=GROUND_SENSORS[area];
+  if(!s || s.type!=='arpa' || !evTs) return null;
+  if(!ALL.groundCover.has(`${area}|${evTs}`)) return null;
+  const all=ALL.groundPts[String(s.id)]||[];
+  const pts=all.filter(p=>p.x>=winStart && p.x<=winEnd);
+  return {name:s.name, type:'arpa', archived:true, ...cumulate(pts)};
+}
+
+// Cumulata mobile 3h (confronto col CUM3 radar) e cumulata PROGRESSIVA evento.
+// Nota: nell'archivio i punti a 0 mm non sono salvati (non cambiano le somme),
+// quindi i totali coincidono con quelli calcolati sui dati live.
+function cumulate(pts){
+  const cum3=[], cumTot=[]; let running=0;
+  for(let i=0;i<pts.length;i++){
+    let sum=0; const t0=pts[i].x-3*3600_000;
+    for(let j=0;j<=i;j++) if(pts[j].x>t0) sum+=pts[j].y;
+    cum3.push({x:pts[i].x, y:+sum.toFixed(1)});
+    running+=pts[i].y; cumTot.push({x:pts[i].x, y:+running.toFixed(1)});
+  }
+  return {pts, cum3, cumTot, total:running};
+}
+
+async function fetchGroundRain(area, winStart, winEnd, evTs){
   const s=GROUND_SENSORS[area]; if(!s) return null;
+  // Prima l'archivio locale: zero chiamate di rete, e copre anche gli eventi
+  // che ARPA non espone più nel dataset realtime.
+  const arch=groundFromArchive(area, winStart, winEnd, evTs);
+  if(arch) return arch;
   try{
     let pts=[];
     if(s.type==='arpa'){
@@ -555,9 +617,9 @@ async function fetchGroundRain(area, winStart, winEnd){
       // CSV giornaliero SIR (Data;Precip_mm) da dati_idro. Granularità daily:
       // non c'è andamento orario, solo il totale del giorno. Restituiamo il
       // totale dei giorni civili coperti dalla finestra evento.
-      const r=await fetch(s.url+'?_='+Date.now());
-      if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, daily:true, pts:[]};
-      const txt=await r.text();
+      let txt;
+      try{ txt=await loadSirCsv(s.url); }
+      catch(e){ return {name:s.name, err:e.message, daily:true, pts:[]}; }
       const days=new Set();
       for(let t=winStart; t<=winEnd+86400000; t+=86400000) days.add(new Date(t).toISOString().slice(0,10));
       let tot=0; const perDay=[];
@@ -583,15 +645,7 @@ async function fetchGroundRain(area, winStart, winEnd){
       }
     }
     pts.sort((a,b)=>a.x-b.x);
-    // Cumulata mobile 3h (confronto col CUM3 radar) e cumulata PROGRESSIVA evento
-    const cum3=[], cumTot=[]; let running=0;
-    for(let i=0;i<pts.length;i++){
-      let sum=0; const t0=pts[i].x-3*3600_000;
-      for(let j=0;j<=i;j++) if(pts[j].x>t0) sum+=pts[j].y;
-      cum3.push({x:pts[i].x, y:+sum.toFixed(1)});
-      running+=pts[i].y; cumTot.push({x:pts[i].x, y:+running.toFixed(1)});
-    }
-    return {name:s.name, type:s.type, pts, cum3, cumTot, total:running};
+    return {name:s.name, type:s.type, ...cumulate(pts)};
   }catch(e){ return {name:s.name, err:e.message, pts:[]}; }
 }
 
