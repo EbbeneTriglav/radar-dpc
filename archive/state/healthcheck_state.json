@@ -8,9 +8,9 @@
     "fail_count": 0
   },
   "forecast": {
-    "down": true,
-    "fail_count": 2,
-    "since": "2026-07-22T03:59:31.300337Z"
+    "down": false,
+    "fail_count": 0,
+    "recovered_at": "2026-07-22T07:16:50.268312Z"
   },
   "monitor": {
     "down": false,
