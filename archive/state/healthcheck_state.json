@@ -8,8 +8,9 @@
     "fail_count": 0
   },
   "forecast": {
-    "down": false,
-    "fail_count": 1
+    "down": true,
+    "fail_count": 2,
+    "since": "2026-07-23T07:13:00.296058Z"
   },
   "monitor": {
     "down": false,
