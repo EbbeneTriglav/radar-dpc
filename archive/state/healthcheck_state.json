@@ -9,8 +9,7 @@
   },
   "forecast": {
     "down": false,
-    "fail_count": 0,
-    "recovered_at": "2026-07-23T10:50:08.077307Z"
+    "fail_count": 0
   },
   "monitor": {
     "down": false,
