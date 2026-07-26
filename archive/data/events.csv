@@ -167,3 +167,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-26T14:40:28Z,ruspino,storm_on_area,10.0,6.07,19.61,SRI,2026-07-26T14:20:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-07-26T14:40:28Z,ruspino,storm_on_area,10.0,3.51,11.43,SRI,2026-07-26T14:15:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
 2026-07-26T14:40:28Z,ruspino,storm_on_area,10.0,3.36,11.43,SRI,2026-07-26T14:10:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T15:00:44Z,ruspino,storm_on_area,10.0,8.45,20.17,SRI,2026-07-26T14:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
