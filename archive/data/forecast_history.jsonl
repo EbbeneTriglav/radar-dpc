@@ -1348,3 +1348,6 @@
 {"area_name": "cepina", "horizon_hours": 6, "metno": {"max_1h": 0.0, "max_3h": 0.0}, "openmeteo": {"max_1h": 8.6, "max_3h": 10.4}, "updated_at_utc": "2026-07-26T01:01:59Z", "vmi_nowcast": null}
 {"area_name": "panna", "horizon_hours": 6, "metno": {"max_1h": 1.0, "max_3h": 2.3}, "openmeteo": {"max_1h": 0.0, "max_3h": 0.0}, "updated_at_utc": "2026-07-26T01:01:55Z", "vmi_nowcast": null}
 {"area_name": "ruspino", "horizon_hours": 6, "metno": {"max_1h": 0.8, "max_3h": 1.5}, "openmeteo": {"max_1h": 1.4, "max_3h": 2.4}, "updated_at_utc": "2026-07-26T01:01:17Z", "vmi_nowcast": null}
+{"area_name": "cepina", "horizon_hours": 6, "metno": {"max_1h": 1.2, "max_3h": 1.4}, "openmeteo": {"max_1h": 4.1, "max_3h": 6.4}, "updated_at_utc": "2026-07-26T04:50:30Z", "vmi_nowcast": null}
+{"area_name": "panna", "horizon_hours": 6, "metno": {"max_1h": 0.9, "max_3h": 1.9}, "openmeteo": {"max_1h": 1.4, "max_3h": 2.0}, "updated_at_utc": "2026-07-26T04:50:29Z", "vmi_nowcast": null}
+{"area_name": "ruspino", "horizon_hours": 6, "metno": {"max_1h": 0.6, "max_3h": 1.2}, "openmeteo": {"max_1h": 0.2, "max_3h": 0.3}, "updated_at_utc": "2026-07-26T04:50:25Z", "vmi_nowcast": null}
