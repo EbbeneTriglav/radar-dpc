@@ -8128,3 +8128,4 @@ timestamp_utc,area_name,location_type,location_name,lat,lon,max_dbz,mean_dbz,min
 2026-07-26T07:55:00Z,cepina,area,cepina,,,5.00,0.52,0.00,0.075,0.008,29,2026-07-26T08:10:32Z
 2026-07-26T08:00:00Z,cepina,area,cepina,,,0.00,0.00,0.00,0.000,0.000,26,2026-07-26T08:10:32Z
 2026-07-26T08:05:00Z,cepina,area,cepina,,,5.50,0.20,0.00,0.080,0.003,27,2026-07-26T08:10:32Z
+2026-07-26T08:10:00Z,cepina,area,cepina,,,6.50,1.08,0.00,0.093,0.016,32,2026-07-26T08:20:22Z
