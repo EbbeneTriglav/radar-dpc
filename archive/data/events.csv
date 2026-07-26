@@ -139,3 +139,6 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.26,8.79,SRI,2026-07-26T03:45:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.26,8.46,SRI,2026-07-26T03:40:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
 2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.53,13.72,SRI,2026-07-26T03:35:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T04:25:25Z,panna,storm_on_area,5.0,3.05,8.05,SRI,2026-07-26T04:10:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-07-26T04:25:25Z,panna,storm_on_area,5.0,3.42,10.73,SRI,2026-07-26T04:05:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T04:25:25Z,panna,storm_on_area,5.0,4.42,15.74,SRI,2026-07-26T04:00:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
