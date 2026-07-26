@@ -162,3 +162,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-26T06:00:36Z,panna,storm_on_area,5.0,3.52,9.69,SRI,2026-07-26T05:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
 2026-07-26T14:05:00Z,ruspino,storm_on_area,10.0,,25.45,ARPA,2026-07-26T14:10:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-07-26T14:15:00Z,ruspino,storm_cleared,10.0,,25.45,ARPA,2026-07-26T14:15:00Z,,recon,recon,ricostruito
+2026-07-26T14:18:46Z,ruspino,storm_on_area,10.0,3.36,25.45,SRI,2026-07-26T14:10:00Z,,true,true,cella su area
