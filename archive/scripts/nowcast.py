@@ -439,6 +439,16 @@ def _ts_local(ts_iso):
         return ts_iso
 
 
+def _iso_ms(iso):
+    """ISO UTC → epoch ms, o None se assente/non parsabile."""
+    if not iso:
+        return None
+    try:
+        return int(datetime.fromisoformat(iso.replace('Z', '+00:00')).timestamp() * 1000)
+    except Exception:
+        return None
+
+
 def compose(area, product, trigger, signal, motion, prob, buffer_km):
     label, lvl, icon = area['label'], trigger['level'], trigger['icon']
     thr, val = trigger['value'], signal['max']
@@ -552,7 +562,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             'notified_email': em, 'notified_telegram': tg,
             'note': f"cella uscita dopo ~{dur_min}min, caduti {cum_fallen if cum_fallen is not None else '?'}mm",
         })
-        state[key] = {'active': False, 'cleared_utc': now_iso}
+        state[key] = {'active': False, 'since': st.get('since'), 'cleared_utc': now_iso}
         log.info(f"  ✓ cell_on_area CLEARED: durata~{dur_min}min, cum={cum_fallen}")
         return False
 
@@ -856,6 +866,7 @@ def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
     che una cella È PASSATA e quanta pioggia risulta caduta (CUM3 se presente).
     """
     now_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+    COVER_MARGIN_MS = 6 * 60_000  # ±1 frame di tolleranza sui bordi finestra
     for area in areas:
         name = area['name']
         try:
@@ -867,11 +878,34 @@ def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
         geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)
         cum3_in = stats_in_geom_tm(cum3_tiff, geom_area) if cum3_tiff else None
 
+        # Stato del tracciamento continuo (cella su area) per quest'area.
+        # Il catch-up serve SOLO a recuperare celle entrate E uscite dentro un
+        # buco dello scheduler, quando il tracciamento non si è mai attivato.
+        # Se invece la cella è (o era appena) seguita dal tracciamento, i frame
+        # intermedi NON sono "persi": sono l'evento già notificato. Emetterli
+        # di nuovo genera doppioni e spam (una mail per frame da 5'). Li saltiamo.
+        cell_st = state.get(f"{name}:nowcast:cell_on_area", {})
+        cell_active = cell_st.get('active', False)
+        cell_since_ms = _iso_ms(cell_st.get('since'))
+        cell_cleared_ms = _iso_ms(cell_st.get('cleared_utc'))
+
         # Frame intermedi (escluso il più recente, già valutato da process_area)
         for ts_ms, tiff in sri_frames[1:]:
             key = f"{name}:nowcast:catchup:{ts_ms}"
             if state.get(key, {}).get('done'):
                 continue  # già valutato in un run precedente
+
+            # Cella attualmente attiva → tutti i frame recenti sono parte
+            # dell'evento in corso: nessun catch-up.
+            if cell_active:
+                state[key] = {'done': True}
+                continue
+            # Cella appena chiusa → salta i frame dentro la finestra dell'evento
+            # [inizio, chiusura] (con tolleranza di un frame sui bordi).
+            if (cell_since_ms is not None and cell_cleared_ms is not None
+                    and cell_since_ms - COVER_MARGIN_MS <= ts_ms <= cell_cleared_ms + COVER_MARGIN_MS):
+                state[key] = {'done': True}
+                continue
             st = stats_in_geom_tm(tiff, geom_area)
             if not st:
                 continue
