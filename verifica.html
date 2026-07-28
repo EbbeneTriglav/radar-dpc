@@ -111,6 +111,9 @@
       <option value="14">Ultimi 14 giorni</option>
       <option value="9999">Tutto</option>
     </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2,#94a3b8);cursor:pointer;user-select:none" title="Unisce in un solo evento le allerte consecutive della stessa area (temporale continuo). Il CSV resta sempre a righe singole.">
+      <input type="checkbox" id="ev-cluster" checked style="cursor:pointer"> Raggruppa eventi continui
+    </label>
     <button id="dlAll" style="font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);cursor:pointer;margin-left:auto">⬇ Scarica tutti gli eventi (CSV)</button>
   </div>
   <table class="vf">
@@ -171,6 +174,11 @@ function parseCSV(text){
 
 let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {},
             groundPts: {}, groundCover: new Set() };
+
+// Distanza massima (minuti) tra due allerte consecutive della stessa area per
+// considerarle lo stesso evento continuo. Il monitoraggio gira ogni ~20',
+// 90' tollera qualche buco dello scheduler senza fondere temporali distinti.
+const EVENT_GAP_MIN = 90;
 
 async function loadAll(){
   const [ev, vf] = await Promise.allSettled([
@@ -345,6 +353,55 @@ function classifyEvent(e){
   return 'other';
 }
 
+// Raggruppa allerte consecutive della stessa area e stessa classe (temporale/
+// forecast/nowcast) entro EVENT_GAP_MIN in un solo "evento". events.csv resta
+// intatto (audit): il raggruppamento è solo di visualizzazione. Rappresentante
+// = allerta col picco d'intensità più alto. Ritorna oggetti con area_name ed
+// event_timestamp_utc del rappresentante, così le funzioni a valle
+// (populateGroundColumn, openChart) restano invariate.
+function clusterEvents(evs, gapMin){
+  const GAP = gapMin*60_000;
+  const byKey = {};
+  for(const e of evs){
+    const k = `${e.area_name}||${classifyEvent(e)}`;
+    (byKey[k] ||= []).push(e);
+  }
+  const clusters = [];
+  for(const k in byKey){
+    const list = byKey[k].slice().sort((a,b)=>
+      new Date(a.event_timestamp_utc)-new Date(b.event_timestamp_utc));
+    let cur = null;
+    for(const e of list){
+      const t = new Date(e.event_timestamp_utc).getTime();
+      if(cur && t - cur.maxTs <= GAP){
+        cur.members.push(e); cur.maxTs = t;
+      } else {
+        cur = {area_name:e.area_name, minTs:t, maxTs:t, members:[e]};
+        clusters.push(cur);
+      }
+    }
+  }
+  for(const c of clusters){
+    c.rep = c.members.reduce((a,b)=>
+      (+b.observed_mm_max||0)>(+a.observed_mm_max||0)?b:a);
+    c.event_timestamp_utc = c.rep.event_timestamp_utc;  // per le funzioni a valle
+    c.note = c.rep.note;
+    c.level = c.rep.level;
+  }
+  return clusters.sort((a,b)=>b.maxTs-a.maxTs);
+}
+
+// Finestra evento del cluster = unione delle finestre dei membri (si
+// sovrappongono, essendo entro GAP): copre l'intero temporale continuo.
+function clusterWindow(c){
+  let s=Infinity, e=-Infinity;
+  for(const m of c.members){
+    const w = eventWindow(c.area_name, new Date(m.event_timestamp_utc).getTime());
+    if(w.start<s) s=w.start; if(w.end>e) e=w.end;
+  }
+  return {start:s, end:e};
+}
+
 function renderEvents(){
   const area = document.getElementById('ev-area').value;
   const type = document.getElementById('ev-type').value;
@@ -374,11 +431,24 @@ function renderEvents(){
   const body = document.getElementById('ev-body');
   if (!evs.length){ body.innerHTML='<tr><td colspan="9">Nessun evento nel periodo/filtri selezionati.</td></tr>'; return; }
 
-  const shown = evs.slice(0,200);
+  const doCluster = document.getElementById('ev-cluster').checked;
+  const clusters = clusterEvents(evs, doCluster ? EVENT_GAP_MIN : -1);
+  const shown = clusters.slice(0,200);
+  const fmt = (ms,withDate)=> new Date(ms).toLocaleString('it-IT',
+    withDate ? {timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}
+             : {timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'});
   body.innerHTML = shown.map((e,i)=>{
-    const tsMs = new Date(e.event_timestamp_utc).getTime();
-    const cls = classifyEvent(e);
-    const when = new Date(e.event_timestamp_utc).toLocaleString('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const tsMs = new Date(e.event_timestamp_utc).getTime();  // rappresentante (picco)
+    const cls = classifyEvent(e.rep);
+    const n = e.members.length;
+    // Orario: singolo evento → istante; evento continuo → intervallo inizio–fine
+    const sameDay = new Date(e.minTs).toDateString()===new Date(e.maxTs).toDateString();
+    const when = n>1
+      ? `${fmt(e.minTs,true)}–${fmt(e.maxTs, !sameDay)}`
+      : fmt(e.minTs,true);
+    const countBadge = n>1
+      ? ` <span class="pill" style="background:#0ea5e922;color:#38bdf8;border:1px solid #0ea5e955" title="${n} allerte consecutive raggruppate in un unico evento continuo">×${n} allerte</span>`
+      : '';
     const pill = cls==='storm'?'<span class="pill storm">temporale</span>'
       : cls==='forecast'?'<span class="pill fore">forecast</span>'
       : cls==='nowcast'?'<span class="pill now">nowcast</span>':'<span class="pill">—</span>';
@@ -392,11 +462,11 @@ function renderEvents(){
       : '';
 
     // Intensità max radar (mm/h) — picco istantaneo SRI (informativo)
-    const intMax = (+e.observed_mm_max||0);
+    const intMax = e.members.reduce((m,x)=>Math.max(m,+x.observed_mm_max||0),0);
     const intTxt = intMax>0 ? `${intMax.toFixed(1)} mm/h` : '—';
 
     // Finestra evento (durata reale, gestione multi-evento)
-    const win = eventWindow(e.area_name, tsMs);
+    const win = clusterWindow(e);
 
     // Cumulata radar DPC (mm) — somma blocchi CUM3 sulla finestra (max e mean)
     const cumDPC = cum3EventCumulate(e.area_name, win.start, win.end);
@@ -420,13 +490,13 @@ function renderEvents(){
     const scrDpc  = hasGround ? `<span id="scrd-${i}" style="color:var(--text3)">…</span>` : '<span style="color:var(--text3)">—</span>';
 
     return `<tr class="ev" data-i="${i}">
-      <td>${when}</td><td>${e.area_name||''}</td><td>${pill}${reconBadge}${delayBadge}</td>
+      <td>${when}</td><td>${e.area_name||''}</td><td>${pill}${countBadge}${reconBadge}${delayBadge}</td>
       <td>${intTxt}</td><td>${arpaTxt}</td><td>${dpcTxt}</td><td>${groundCell}</td><td>${scrArpa}</td><td>${scrDpc}</td>
     </tr>`;
   }).join('');
 
   [...body.querySelectorAll('tr.ev')].forEach(tr=>{
-    tr.addEventListener('click',()=> openChart(shown[+tr.dataset.i]));
+    tr.addEventListener('click',()=> openChart(shown[+tr.dataset.i].rep));
   });
 
   // Pluviometro + scarti (ARPA e DPC) sulla FINESTRA EVENTO
@@ -969,7 +1039,7 @@ function renderForecastSites(){
 
 
 ['acc-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderAccuracy));
-['ev-area','ev-type','ev-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderEvents));
+['ev-area','ev-type','ev-window','ev-cluster'].forEach(id=>document.getElementById(id).addEventListener('change',renderEvents));
 
 (async()=>{
   await loadAll();
