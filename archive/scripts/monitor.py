@@ -473,6 +473,53 @@ def send_email(subject, body_text, body_html=None, to=None):
         return 'false'
 
 
+def _tg_send_one(tok, chat, md):
+    """Invia un Telegram a UNA chat con resilienza (ritorna True se consegnato):
+    - 429 rate limit  -> rispetta retry_after e riprova (il bot e' condiviso tra
+      monitor/nowcast/forecast: durante il maltempo la chat va in rate limit e
+      i forecast venivano persi silenziosamente)
+    - 5xx             -> backoff e riprova
+    - 400 (Markdown non valido) -> riprova UNA volta in testo semplice, cosi' il
+      messaggio arriva comunque (meglio senza grassetti che perso)
+    Logga sempre il motivo del fallimento (prima erano silenziati)."""
+    url = "https://api.telegram.org/bot" + tok + "/sendMessage"
+    payload = {"chat_id": chat, "text": md, "parse_mode": "Markdown",
+               "disable_web_page_preview": True}
+    plain_tried = False
+    for attempt in range(4):
+        try:
+            r = _session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+        except Exception as e:
+            log.warning("  telegram %s: rete KO (%s), retry %d/4" % (chat, e, attempt + 1))
+            time.sleep(2 * (attempt + 1)); continue
+        if r.status_code == 200:
+            return True
+        if r.status_code == 429:
+            try:
+                wait = int(r.json().get("parameters", {}).get("retry_after", 3))
+            except Exception:
+                wait = 3
+            log.warning("  telegram %s: 429 rate limit, attendo %ds" % (chat, wait))
+            time.sleep(min(wait, 30) + 1); continue
+        if r.status_code == 400 and not plain_tried:
+            plain_tried = True
+            payload.pop("parse_mode", None)   # ritenta in testo semplice
+            log.warning("  telegram %s: 400 (Markdown?), riprovo in testo semplice" % chat)
+            continue
+        if r.status_code >= 500:
+            log.warning("  telegram %s: HTTP %d, retry %d/4" % (chat, r.status_code, attempt + 1))
+            time.sleep(2 * (attempt + 1)); continue
+        body = ""
+        try:
+            body = r.text[:200]
+        except Exception:
+            pass
+        log.warning("  telegram %s: HTTP %d non recuperabile: %s" % (chat, r.status_code, body))
+        return False
+    log.warning("  telegram %s: non consegnato dopo i tentativi" % chat)
+    return False
+
+
 def send_telegram(text_markdown, chat_ids=None):
     """Invia Telegram. Se `chat_ids` (lista o stringa CSV) viene passato,
     override del default TELEGRAM_CHAT_ID. Invia ad ognuno; se uno fallisce
@@ -487,21 +534,7 @@ def send_telegram(text_markdown, chat_ids=None):
     if not (token and chat_ids):
         log.info('  telegram: secrets/chat_ids mancanti, skip')
         return 'skipped'
-    n_ok = 0
-    for chat in chat_ids:
-        try:
-            r = _http('POST', f'https://api.telegram.org/bot{token}/sendMessage', json={
-                'chat_id': chat,
-                'text': text_markdown,
-                'parse_mode': 'Markdown',
-                'disable_web_page_preview': True,
-            })
-            if r and r.ok:
-                n_ok += 1
-            else:
-                log.warning(f'  telegram chat {chat}: HTTP {r.status_code if r else "?"}')
-        except Exception as e:
-            log.warning(f'  telegram chat {chat} fallito: {e}')
+    n_ok = sum(1 for chat in chat_ids if _tg_send_one(token, chat, text_markdown))
     if n_ok:
         log.info(f'  telegram inviato a {n_ok}/{len(chat_ids)} chat')
         return 'true'
