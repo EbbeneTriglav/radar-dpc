@@ -44,7 +44,7 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from forecast_ensemble_alert import (  # noqa: E402
     CONTROL_POINTS, MODELS, METNO_API, METNO_UA, OPENMETEO_API,
-    _http, send_email, _area_recipients,
+    _http, send_email, send_telegram, _area_recipients,
 )
 
 log = logging.getLogger('forecast_matrix')
@@ -503,6 +503,37 @@ def decide_send(state, area, rank, worsts, today, now_dt):
     return False, 'già avvisato oggi, nessuna escalation/salto', 'none'
 
 
+def compose_telegram_matrix(res, label, now_iso):
+    """Versione compatta per Telegram della matrice/soglie previsionali.
+    Gestisce sia il formato 'days' (Panna/Cepina, cumulata giornaliera) sia
+    'rows' (Ruspino, matrice 24/48/72h). Va agli stessi destinatari dell'email
+    (telegram_chat_ids in areas.json, o chat di default). Markdown semplice;
+    se dovesse fallire il parse, il sender robusto ripiega in testo semplice."""
+    if 'days' in res:
+        levels = PANNA_LEVELS
+        lvl_name = levels[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
+        lines = [f"\U0001F327 *Forecast soglie \u2014 {label}*",
+                 f"Livello: *{lvl_name.upper()}* (worst-case giornaliero)", ""]
+        for i, d in enumerate(res['days']):
+            lvn = levels[d['level_idx']] if d['level_idx'] >= 0 else 'sotto soglia'
+            val = f"*{d['worst']:.1f} mm/g*" if d['level_idx'] >= 0 else f"{d['worst']:.1f} mm/g"
+            lines.append(f"G{i+1} {d['date'][5:]}: {val} \u2014 {lvn}")
+    else:
+        levels = MATRIX2['levels']
+        lvl_name = levels[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
+        head = ("\u26D4 *SCARICO PREVENTIVO consigliato*" if res.get('sp3')
+                else f"Livello: *{lvl_name.upper()}*")
+        lines = [f"\U0001F6B1 *Matrice scarico \u2014 {label}*", head, ""]
+        for r in res['rows']:
+            lvn = levels[r['level_idx']] if r['level_idx'] >= 0 else 'sotto soglia'
+            val = f"*{r['worst']:.0f} mm*" if r['level_idx'] >= 0 else f"{r['worst']:.0f} mm"
+            lines.append(f"{r['hz']['label']}: {val} \u2014 {lvn}")
+    lines.append("")
+    lines.append(f"_Ensemble {res['n_models']}/5 modelli \u00b7 "
+                 f"{res['n_points_ok']}/11 punti \u00b7 MET Norway indip._")
+    return "\n".join(lines)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--dry-run', action='store_true', help='Calcola ma non invia')
@@ -571,10 +602,18 @@ def main():
             log.info(f'[{label}] DRY-RUN — subject: {subject}\n{text[:200]}')
             continue
 
-        rcpt_email, _ = _area_recipients(area)
+        rcpt_email, rcpt_tg = _area_recipients(area)
         status = send_email(subject, text, html, to=rcpt_email)
         log.info(f'[{label}] email matrice: {status}')
-        if status == 'true':
+        # Stesso contenuto, compatto, anche su Telegram. Stesso gate
+        # anti-spam dell'email (decide_send): nessuna raffica in piu'.
+        tg_md = compose_telegram_matrix(res, label, now_iso)
+        if kind == 'jump':
+            tg_md = f'\u26a1 *CAMBIO REPENTINO PREVISIONI* \u2014 {reason}\n\n' + tg_md
+        tg_status = send_telegram(tg_md, chat_ids=rcpt_tg)
+        log.info(f'[{label}] telegram matrice: {tg_status}')
+        # Notifica considerata inviata se ha funzionato almeno un canale.
+        if status == 'true' or tg_status == 'true':
             entry = {'date': today, 'rank': max(rank, 0), 'last_sent_utc': now_iso,
                      'worsts': worsts}
             # Preserva il rank del giorno: un invio da salto sotto soglia non
