@@ -53,9 +53,9 @@ jobs:
             python archive/scripts/forecast_ensemble_alert.py
           fi
 
-      - name: Matrice SP3 previsionale (24/48/72h, solo email)
-        # La matrice va SOLO via email ai destinatari dell'area: niente
-        # Telegram, niente events.csv, niente pagine pubbliche.
+      - name: Matrice SP3 previsionale (24/48/72h, email + Telegram)
+        # Email dettagliata (matrice completa) + Telegram compatto, agli stessi
+        # destinatari dell'area. Niente events.csv, niente pagine pubbliche.
         # continue-on-error: un problema qui non deve bloccare il commit
         # dello stato dell'alert 24h sopra.
         continue-on-error: true
@@ -65,6 +65,8 @@ jobs:
           SMTP_USER:        ${{ secrets.SMTP_USER }}
           SMTP_PASS:        ${{ secrets.SMTP_PASS }}
           SMTP_TO:          ${{ secrets.SMTP_TO }}
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ "$MODE" = "dry-run" ]; then
