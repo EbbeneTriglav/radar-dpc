@@ -538,6 +538,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--dry-run', action='store_true', help='Calcola ma non invia')
     ap.add_argument('--force', action='store_true', help='Invia anche se sotto soglia / già inviata oggi')
+    ap.add_argument('--resend', action='store_true',
+                    help='Reinvia le allerte dei siti SOPRA soglia ignorando il cap '
+                         'giornaliero anti-spam (test/verifica). I siti sotto soglia '
+                         'restano silenziati: nessun rumore al comitato.')
     args = ap.parse_args()
 
     archive_dir = Path(__file__).resolve().parents[1]
@@ -578,6 +582,8 @@ def main():
         send, reason, kind = decide_send(state, area, rank, worsts, today, now_dt)
         if args.force:
             send, reason, kind = True, 'forzato', kind if kind != 'none' else 'threshold'
+        elif args.resend and res['max_level'] >= 0:
+            send, reason, kind = True, 'reinvio forzato (sopra soglia)', 'threshold'
         if not send:
             log.info(f'[{label}] nessun invio ({reason})')
             # Aggiorno comunque i worst salvati per il confronto del prossimo run
