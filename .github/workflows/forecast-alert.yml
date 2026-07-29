@@ -12,7 +12,7 @@ on:
         description: 'Modalità'
         default: 'normal'
         type: choice
-        options: ['normal', 'dry-run', 'test-alert', 'test-radar']
+        options: ['normal', 'dry-run', 'test-alert', 'test-radar', 'force-matrix']
 
 permissions:
   contents: write
@@ -49,6 +49,8 @@ jobs:
             python archive/scripts/forecast_ensemble_alert.py --test-radar
           elif [ "$MODE" = "dry-run" ]; then
             python archive/scripts/forecast_ensemble_alert.py --dry-run
+          elif [ "$MODE" = "force-matrix" ]; then
+            echo "force-matrix: salto l'alert 24h Panna, reinvio solo la matrice sopra soglia."
           else
             python archive/scripts/forecast_ensemble_alert.py
           fi
@@ -71,6 +73,8 @@ jobs:
           MODE="${{ github.event.inputs.mode }}"
           if [ "$MODE" = "dry-run" ]; then
             python archive/scripts/forecast_matrix.py --dry-run
+          elif [ "$MODE" = "force-matrix" ]; then
+            python archive/scripts/forecast_matrix.py --resend
           elif [ "$MODE" = "normal" ] || [ -z "$MODE" ]; then
             python archive/scripts/forecast_matrix.py
           fi
