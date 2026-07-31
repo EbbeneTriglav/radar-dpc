@@ -173,3 +173,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-29T17:59:14Z,cepina,storm_cleared,5.0,0.44,1.94,SRI,2026-07-29T17:50:00Z,,true,true,"cella uscita dopo ~83min, caduti 11.0mm"
 2026-07-29T18:20:32Z,cepina,nowcast_emergency,20,4.14,21.14,SRT1,2026-07-29T18:10:00Z,,true,true,nowcast buffer=5km
 2026-07-31T14:06:13Z,cepina,storm_on_area,5.0,1.20,5.28,SRI,2026-07-31T13:45:00Z,,true,true,catch-up: cella rilevata a posteriori +21min
+2026-07-31T14:46:20Z,cepina,storm_on_area,5.0,9.04,28.02,SRI,2026-07-31T14:35:00Z,,true,true,cella su area dwell~126min
