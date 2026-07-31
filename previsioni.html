@@ -9,7 +9,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/style.css?v=20260721prev">
   <style>
-    .pv-wrap{max-width:1600px;margin:0 auto;padding:18px 28px}
+    /* Il body condiviso è overflow:hidden (per la mappa a tutto schermo):
+       questa pagina è lunga, quindi il contenuto scrolla dentro .pv-wrap,
+       come già fanno verifica/eventi/storico. */
+    .pv-wrap{max-width:1600px;margin:0 auto;padding:18px 28px;
+             height:calc(100vh - var(--topbar-h));overflow-y:auto}
     .pv-note{color:var(--text3,#94a3b8);font-size:13px;line-height:1.5;margin:4px 0 14px}
     .pv-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 16px}
     .pv-toolbar select,.pv-toolbar button{background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);
