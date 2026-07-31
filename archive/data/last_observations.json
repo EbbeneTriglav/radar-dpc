@@ -2,7 +2,7 @@
   "_cum3_available": true,
   "_forecast24h_last_run_utc": "2026-07-31T07:26:40Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
-  "_monitor_last_run_utc": "2026-07-31T08:06:16Z",
+  "_monitor_last_run_utc": "2026-07-31T08:21:07Z",
   "_nowcast_cum3_available": true,
   "_nowcast_last_run_utc": "2026-07-31T08:08:52Z",
   "_nowcast_sri_frames": 6,
@@ -14,15 +14,15 @@
       "count": 11,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:30:00Z",
-      "updated_at_utc": "2026-07-31T08:06:15Z"
+      "timestamp_utc": "2026-07-31T08:00:00Z",
+      "updated_at_utc": "2026-07-31T08:21:07Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:55:00Z",
-      "updated_at_utc": "2026-07-31T08:06:15Z"
+      "timestamp_utc": "2026-07-31T08:10:00Z",
+      "updated_at_utc": "2026-07-31T08:21:07Z"
     },
     "buffers": {
       "10km": {
@@ -48,7 +48,7 @@
         "max_1h": 20.3,
         "max_3h": 20.3
       },
-      "updated_at_utc": "2026-07-31T08:06:14Z"
+      "updated_at_utc": "2026-07-31T08:21:06Z"
     },
     "forecast_24h": {
       "mean_ensemble": 13.77,
@@ -86,15 +86,15 @@
       "count": 13,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:30:00Z",
-      "updated_at_utc": "2026-07-31T08:06:14Z"
+      "timestamp_utc": "2026-07-31T08:00:00Z",
+      "updated_at_utc": "2026-07-31T08:21:06Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:55:00Z",
-      "updated_at_utc": "2026-07-31T08:06:14Z"
+      "timestamp_utc": "2026-07-31T08:10:00Z",
+      "updated_at_utc": "2026-07-31T08:21:05Z"
     },
     "buffers": {
       "10km": {
@@ -120,7 +120,7 @@
         "max_1h": 0.0,
         "max_3h": 0.0
       },
-      "updated_at_utc": "2026-07-31T08:06:13Z"
+      "updated_at_utc": "2026-07-31T08:21:05Z"
     },
     "forecast_24h": {
       "mean_ensemble": 0.0,
@@ -158,15 +158,15 @@
       "count": 16,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:30:00Z",
-      "updated_at_utc": "2026-07-31T08:06:11Z"
+      "timestamp_utc": "2026-07-31T08:00:00Z",
+      "updated_at_utc": "2026-07-31T08:21:04Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-07-31T07:55:00Z",
-      "updated_at_utc": "2026-07-31T08:06:11Z"
+      "timestamp_utc": "2026-07-31T08:10:00Z",
+      "updated_at_utc": "2026-07-31T08:21:03Z"
     },
     "buffers": {
       "10km": {
@@ -192,7 +192,7 @@
         "max_1h": 2.4,
         "max_3h": 5.15
       },
-      "updated_at_utc": "2026-07-31T08:06:08Z"
+      "updated_at_utc": "2026-07-31T08:21:00Z"
     },
     "forecast_24h": {
       "mean_ensemble": 3.49,
