@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-08-01T16:16:09Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-08-01T15:56:04Z",
+  "_nowcast_last_run_utc": "2026-08-01T16:16:10Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -62,24 +62,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 52.74,
-          "sri_mean": 3.89,
-          "srt1_max": 18.52,
-          "srt1_mean": 1.08
+          "sri_max": 35.02,
+          "sri_mean": 2.53,
+          "srt1_max": 25.93,
+          "srt1_mean": 2.18
         },
         "5km": {
-          "sri_max": 15.18,
-          "sri_mean": 0.63,
-          "srt1_max": 4.93,
-          "srt1_mean": 0.28
+          "sri_max": 30.94,
+          "sri_mean": 2.59,
+          "srt1_max": 13.59,
+          "srt1_mean": 0.75
         }
       },
       "motion": {
-        "bearing_deg": 93.63581292177949,
+        "bearing_deg": 111.41494490737738,
         "compass": "E",
-        "speed_kmh": 7.9
+        "speed_kmh": 12.5
       },
-      "timestamp_utc": "2026-08-01T15:56:04Z",
+      "timestamp_utc": "2026-08-01T16:16:10Z",
       "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -151,7 +151,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-01T15:56:04Z",
+      "timestamp_utc": "2026-08-01T16:16:10Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -214,9 +214,9 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.0,
-          "sri_mean": 0.0,
-          "srt1_max": 0.0,
+          "sri_max": 0.62,
+          "sri_mean": 0.01,
+          "srt1_max": 0.06,
           "srt1_mean": 0.0
         },
         "5km": {
@@ -226,8 +226,12 @@
           "srt1_mean": 0.0
         }
       },
-      "motion": null,
-      "timestamp_utc": "2026-08-01T15:56:04Z",
+      "motion": {
+        "bearing_deg": 85.99025504262401,
+        "compass": "E",
+        "speed_kmh": 27.0
+      },
+      "timestamp_utc": "2026-08-01T16:16:10Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
