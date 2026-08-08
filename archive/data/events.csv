@@ -192,3 +192,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-08T13:30:36Z,panna,storm_on_area,5.0,1.06,11.19,SRI,2026-08-08T13:05:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
 2026-08-08T13:50:37Z,panna,storm_on_area,5.0,2.51,8.60,SRI,2026-08-08T13:40:00Z,,true,true,cella su area
 2026-08-08T14:25:34Z,panna,nowcast_emergency,20,4.49,20.14,SRT1,2026-08-08T14:15:00Z,,true,true,nowcast buffer=5km
+2026-08-08T14:45:38Z,panna,storm_cleared,5.0,0.45,1.04,SRI,2026-08-08T14:35:00Z,,true,true,"cella uscita dopo ~55min, caduti 7.014999866485596mm"
