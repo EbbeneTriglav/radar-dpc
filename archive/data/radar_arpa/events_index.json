@@ -1,5 +1,5 @@
 {
- "updated_at_utc": "2026-08-08T18:15:35Z",
+ "updated_at_utc": "2026-08-08T18:25:44Z",
  "events": [
   {
    "event_id": "ruspino_20260807_091345",
@@ -12,8 +12,8 @@
    "event_id": "cepina_20260806_220108",
    "area": "cepina",
    "start_utc": "2026-08-06T21:10:00Z",
-   "end_utc": "2026-08-08T18:10:00Z",
-   "n_frames": 535
+   "end_utc": "2026-08-08T18:20:00Z",
+   "n_frames": 537
   },
   {
    "event_id": "cepina_20260806_214911",
