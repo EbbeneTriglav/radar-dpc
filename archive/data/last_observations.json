@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-08-09T21:53:15Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-08-09T21:45:29Z",
+  "_nowcast_last_run_utc": "2026-08-09T22:05:29Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -64,18 +64,18 @@
         "10km": {
           "sri_max": 0.0,
           "sri_mean": 0.0,
-          "srt1_max": 0.26,
-          "srt1_mean": 0.01
+          "srt1_max": 0.0,
+          "srt1_mean": 0.0
         },
         "5km": {
           "sri_max": 0.0,
           "sri_mean": 0.0,
-          "srt1_max": 0.0,
+          "srt1_max": 0.06,
           "srt1_mean": 0.0
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-09T21:45:29Z",
+      "timestamp_utc": "2026-08-09T22:05:29Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -147,7 +147,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-09T21:45:29Z",
+      "timestamp_utc": "2026-08-09T22:05:29Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -210,24 +210,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.49,
-          "sri_mean": 0.01,
-          "srt1_max": 0.16,
+          "sri_max": 0.0,
+          "sri_mean": 0.0,
+          "srt1_max": 0.14,
           "srt1_mean": 0.01
         },
         "5km": {
-          "sri_max": 0.49,
-          "sri_mean": 0.07,
-          "srt1_max": 0.17,
-          "srt1_mean": 0.04
+          "sri_max": 0.15,
+          "sri_mean": 0.0,
+          "srt1_max": 0.18,
+          "srt1_mean": 0.05
         }
       },
       "motion": {
-        "bearing_deg": 342.03557266062217,
-        "compass": "N",
-        "speed_kmh": 20.1
+        "bearing_deg": 238.03381233030854,
+        "compass": "SW",
+        "speed_kmh": 18.8
       },
-      "timestamp_utc": "2026-08-09T21:45:29Z",
+      "timestamp_utc": "2026-08-09T22:05:29Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
