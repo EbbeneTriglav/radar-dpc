@@ -9,7 +9,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:CUM3:last_eval_ms": 1786462200000,
+  "cepina:CUM3:last_eval_ms": 1786464000000,
   "cepina:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -25,7 +25,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:SRT1:last_eval_ms": 1786464300000,
+  "cepina:SRT1:last_eval_ms": 1786465200000,
   "cepina:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -71,7 +71,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "panna:CUM3:last_eval_ms": 1786462200000,
+  "panna:CUM3:last_eval_ms": 1786464000000,
   "panna:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -87,7 +87,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "panna:SRT1:last_eval_ms": 1786464300000,
+  "panna:SRT1:last_eval_ms": 1786465200000,
   "panna:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -148,7 +148,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:CUM3:last_eval_ms": 1786462200000,
+  "ruspino:CUM3:last_eval_ms": 1786464000000,
   "ruspino:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -164,7 +164,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:SRT1:last_eval_ms": 1786464300000,
+  "ruspino:SRT1:last_eval_ms": 1786465200000,
   "ruspino:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
