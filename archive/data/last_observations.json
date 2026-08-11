@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-08-11T01:36:08Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-08-11T01:21:03Z",
+  "_nowcast_last_run_utc": "2026-08-11T01:41:01Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -75,7 +75,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-11T01:21:03Z",
+      "timestamp_utc": "2026-08-11T01:41:01Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -147,7 +147,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-11T01:21:03Z",
+      "timestamp_utc": "2026-08-11T01:41:01Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -223,7 +223,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-11T01:21:03Z",
+      "timestamp_utc": "2026-08-11T01:41:01Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
