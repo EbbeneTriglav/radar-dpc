@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-08-14T12:08:40Z",
+  "_last_run_utc": "2026-08-14T13:42:46Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": true,
     "last_trigger_utc": "2026-06-20T17:16:18Z"
@@ -47,63 +47,6 @@
   "cepina:nowcast:SRT1:5:warning": {
     "active": true,
     "last_trigger_utc": "2026-06-20T17:16:18Z"
-  },
-  "cepina:nowcast:catchup:1786687800000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786688100000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786688400000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786688700000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786689000000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786689300000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786689600000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786689900000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786690200000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786690500000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786690800000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786691100000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786691400000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786691700000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786692000000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786692300000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786692600000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786692900000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1786693200000": {
-    "done": true
   },
   "cepina:nowcast:catchup:1786693500000": {
     "done": true
@@ -231,6 +174,21 @@
   "cepina:nowcast:catchup:1786708500000": {
     "done": true
   },
+  "cepina:nowcast:catchup:1786713000000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1786713300000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1786713600000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1786713900000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1786714200000": {
+    "done": true
+  },
   "cepina:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-08-12T17:51:14Z",
@@ -283,63 +241,6 @@
   "panna:nowcast:SRT1:5:warning": {
     "active": true,
     "last_trigger_utc": "2026-07-26T04:05:30Z"
-  },
-  "panna:nowcast:catchup:1786687800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786688100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786688400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786688700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786689000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786689300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786689600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786689900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786690200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786690500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786690800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786691100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786691400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786691700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786692000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786692300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786692600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786692900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1786693200000": {
-    "done": true
   },
   "panna:nowcast:catchup:1786693500000": {
     "done": true
@@ -467,6 +368,21 @@
   "panna:nowcast:catchup:1786708500000": {
     "done": true
   },
+  "panna:nowcast:catchup:1786713000000": {
+    "done": true
+  },
+  "panna:nowcast:catchup:1786713300000": {
+    "done": true
+  },
+  "panna:nowcast:catchup:1786713600000": {
+    "done": true
+  },
+  "panna:nowcast:catchup:1786713900000": {
+    "done": true
+  },
+  "panna:nowcast:catchup:1786714200000": {
+    "done": true
+  },
   "panna:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-08-08T14:45:38Z",
@@ -519,63 +435,6 @@
   "ruspino:nowcast:SRT1:5:warning": {
     "active": true,
     "last_trigger_utc": "2026-06-08T20:02:41Z"
-  },
-  "ruspino:nowcast:catchup:1786687800000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786688100000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786688400000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786688700000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786689000000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786689300000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786689600000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786689900000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786690200000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786690500000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786690800000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786691100000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786691400000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786691700000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786692000000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786692300000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786692600000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786692900000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1786693200000": {
-    "done": true
   },
   "ruspino:nowcast:catchup:1786693500000": {
     "done": true
@@ -701,6 +560,21 @@
     "done": true
   },
   "ruspino:nowcast:catchup:1786708500000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1786713000000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1786713300000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1786713600000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1786713900000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1786714200000": {
     "done": true
   },
   "ruspino:nowcast:cell_on_area": {
