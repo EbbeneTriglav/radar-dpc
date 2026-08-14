@@ -1,4 +1,4 @@
-file: CMP2608141055.MAX.tif.gz
+file: CMP2608141225.MAX.tif.gz
 crs.to_epsg(): None
 crs.is_geographic: False
 crs.to_proj4(): +proj=aeqd +lat_0=45.6599999405444 +lon_0=9.48000004515052 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs=True
