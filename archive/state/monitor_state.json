@@ -9,10 +9,10 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:CUM3:last_eval_ms": 1787335200000,
+  "cepina:CUM3:last_eval_ms": 1787337000000,
   "cepina:CUM3:warning": {
-    "active": true,
-    "last_below_utc": "2026-08-21T18:00:00Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-08-21T09:00:00Z"
   },
   "cepina:SRT1:alarm": {
@@ -25,7 +25,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:SRT1:last_eval_ms": 1787336700000,
+  "cepina:SRT1:last_eval_ms": 1787337600000,
   "cepina:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -62,8 +62,8 @@
     "last_trigger_utc": "2026-08-21T08:31:06Z"
   },
   "panna:CUM3:alarm": {
-    "active": true,
-    "last_below_utc": "2026-08-21T18:00:00Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-08-21T12:00:00Z"
   },
   "panna:CUM3:emergency": {
@@ -71,10 +71,10 @@
     "last_below_utc": null,
     "last_trigger_utc": "2026-08-21T12:30:00Z"
   },
-  "panna:CUM3:last_eval_ms": 1787335200000,
+  "panna:CUM3:last_eval_ms": 1787337000000,
   "panna:CUM3:warning": {
-    "active": true,
-    "last_below_utc": "2026-08-21T18:00:00Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-08-21T12:00:00Z"
   },
   "panna:SRT1:alarm": {
@@ -87,7 +87,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "panna:SRT1:last_eval_ms": 1787336700000,
+  "panna:SRT1:last_eval_ms": 1787337600000,
   "panna:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -148,7 +148,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:CUM3:last_eval_ms": 1787335200000,
+  "ruspino:CUM3:last_eval_ms": 1787337000000,
   "ruspino:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -164,7 +164,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:SRT1:last_eval_ms": 1787336700000,
+  "ruspino:SRT1:last_eval_ms": 1787337600000,
   "ruspino:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
