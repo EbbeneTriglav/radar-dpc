@@ -265,3 +265,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-21T08:25:51Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T08:15:00Z,,true,true,"cella uscita dopo ~39min, caduti 6.464999675750732mm"
 2026-08-21T08:31:06Z,cepina,forecast_warning,5,,,SRT1,,9.30,true,true,forecast 1h prossime 6h
 2026-08-21T08:31:06Z,cepina,forecast_warning,10,,,CUM3,,23.10,true,true,forecast 3h prossime 6h
+2026-08-21T09:15:57Z,cepina,storm_cleared,5.0,0.80,2.40,SRI,2026-08-21T09:05:00Z,,true,true,"cella uscita dopo ~114min, caduti 3.634999990463257mm"
