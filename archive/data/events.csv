@@ -283,3 +283,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-21T14:36:04Z,cepina,storm_on_area,5.0,2.84,13.02,SRI,2026-08-21T14:25:00Z,,true,true,cella su area
 2026-08-21T14:50:30Z,panna,storm_on_area,5.0,2.53,7.55,SRI,2026-08-21T14:40:00Z,,true,true,cella su area dwell~101min
 2026-08-21T15:10:57Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T15:00:00Z,,true,true,"cella uscita dopo ~34min, caduti 9.029999732971191mm"
+2026-08-21T15:30:57Z,panna,storm_cleared,5.0,0.61,1.58,SRI,2026-08-21T15:20:00Z,,true,true,"cella uscita dopo ~40min, caduti 5.190000057220459mm"
