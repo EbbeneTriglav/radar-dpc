@@ -292,3 +292,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-24T23:01:04Z,ruspino,storm_on_area,10.0,4.08,15.69,SRI,2026-08-24T22:30:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
 2026-08-24T23:47:18Z,panna,storm_on_area,5.0,1.64,10.69,SRI,2026-08-24T23:35:00Z,,true,true,cella su area
 2026-08-25T00:06:12Z,cepina,storm_on_area,5.0,1.97,6.62,SRI,2026-08-24T23:50:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
+2026-08-25T01:06:13Z,ruspino,storm_on_area,10.0,6.27,21.09,SRI,2026-08-25T00:55:00Z,,true,true,cella su area
