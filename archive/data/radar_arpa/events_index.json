@@ -1,12 +1,12 @@
 {
- "updated_at_utc": "2026-08-25T09:05:40Z",
+ "updated_at_utc": "2026-08-25T09:16:22Z",
  "events": [
   {
    "event_id": "ruspino_20260825_080607",
    "area": "ruspino",
    "start_utc": "2026-08-25T07:15:00Z",
-   "end_utc": "2026-08-25T09:00:00Z",
-   "n_frames": 22
+   "end_utc": "2026-08-25T09:10:00Z",
+   "n_frames": 24
   },
   {
    "event_id": "ruspino_20260825_074604",
@@ -19,8 +19,8 @@
    "event_id": "cepina_20260825_043104",
    "area": "cepina",
    "start_utc": "2026-08-25T03:35:00Z",
-   "end_utc": "2026-08-25T09:00:00Z",
-   "n_frames": 66
+   "end_utc": "2026-08-25T09:10:00Z",
+   "n_frames": 68
   },
   {
    "event_id": "ruspino_20260825_010613",
