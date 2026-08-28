@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-08-28T03:11:11Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-08-28T03:06:04Z",
+  "_nowcast_last_run_utc": "2026-08-28T03:26:04Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -62,8 +62,8 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.0,
-          "sri_mean": 0.0,
+          "sri_max": 0.68,
+          "sri_mean": 0.01,
           "srt1_max": 0.0,
           "srt1_mean": 0.0
         },
@@ -75,7 +75,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-28T03:06:04Z",
+      "timestamp_utc": "2026-08-28T03:26:04Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -147,7 +147,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-08-28T03:06:04Z",
+      "timestamp_utc": "2026-08-28T03:26:04Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -210,25 +210,25 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 3.3,
-          "sri_mean": 0.34,
-          "srt1_max": 0.25,
-          "srt1_mean": 0.02
+          "sri_max": 32.24,
+          "sri_mean": 3.24,
+          "srt1_max": 2.21,
+          "srt1_mean": 0.31
         },
         "5km": {
-          "sri_max": 2.76,
-          "sri_mean": 0.19,
-          "srt1_max": 0.19,
-          "srt1_mean": 0.01
+          "sri_max": 12.67,
+          "sri_mean": 3.85,
+          "srt1_max": 1.21,
+          "srt1_mean": 0.42
         }
       },
       "motion": {
-        "bearing_deg": 170.59820733693286,
+        "bearing_deg": 177.33027579741855,
         "compass": "S",
-        "speed_kmh": 23.9
+        "speed_kmh": 14.7
       },
-      "timestamp_utc": "2026-08-28T03:06:04Z",
-      "triggered": false
+      "timestamp_utc": "2026-08-28T03:26:04Z",
+      "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
     "triggered": false
