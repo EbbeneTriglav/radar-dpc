@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-09-09T10:21:07Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-09-09T10:06:08Z",
+  "_nowcast_last_run_utc": "2026-09-09T10:25:56Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -75,7 +75,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-09-09T10:06:08Z",
+      "timestamp_utc": "2026-09-09T10:25:56Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -134,25 +134,25 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 7.64,
-          "sri_mean": 1.19,
-          "srt1_max": 4.28,
-          "srt1_mean": 0.6
+          "sri_max": 8.81,
+          "sri_mean": 1.57,
+          "srt1_max": 5.82,
+          "srt1_mean": 0.98
         },
         "5km": {
-          "sri_max": 5.96,
-          "sri_mean": 1.63,
-          "srt1_max": 3.09,
-          "srt1_mean": 0.83
+          "sri_max": 9.84,
+          "sri_mean": 2.89,
+          "srt1_max": 4.58,
+          "srt1_mean": 1.41
         }
       },
       "motion": {
-        "bearing_deg": 62.69336877870424,
-        "compass": "NE",
-        "speed_kmh": 4.5
+        "bearing_deg": 202.7177468874892,
+        "compass": "SW",
+        "speed_kmh": 7.2
       },
-      "timestamp_utc": "2026-09-09T10:06:08Z",
-      "triggered": false
+      "timestamp_utc": "2026-09-09T10:25:56Z",
+      "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
     "triggered": false
@@ -214,24 +214,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 40.45,
-          "sri_mean": 2.12,
-          "srt1_max": 4.54,
-          "srt1_mean": 0.31
+          "sri_max": 59.53,
+          "sri_mean": 4.02,
+          "srt1_max": 12.62,
+          "srt1_mean": 1.05
         },
         "5km": {
-          "sri_max": 40.06,
-          "sri_mean": 4.58,
-          "srt1_max": 4.53,
-          "srt1_mean": 0.39
+          "sri_max": 102.7,
+          "sri_mean": 18.57,
+          "srt1_max": 17.16,
+          "srt1_mean": 3.52
         }
       },
       "motion": {
-        "bearing_deg": 56.11239732004136,
-        "compass": "NE",
-        "speed_kmh": 21.2
+        "bearing_deg": 343.3675471358747,
+        "compass": "N",
+        "speed_kmh": 12.2
       },
-      "timestamp_utc": "2026-09-09T10:06:08Z",
+      "timestamp_utc": "2026-09-09T10:25:56Z",
       "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
