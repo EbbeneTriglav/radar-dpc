@@ -372,3 +372,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-10T03:20:41Z,cepina,alarm,15,17.184,18.478,CUM3,2026-09-10T03:00:00Z,4.00,true,true,
 2026-09-10T03:30:37Z,panna,storm_on_area,5.0,1.62,5.25,SRI,2026-09-10T03:10:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-09-10T07:05:45Z,ruspino,storm_on_area,10.0,1.72,13.88,SRI,2026-09-10T06:50:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-09-10T07:50:38Z,panna,forecast_warning,5,,,SRT1,,5.10,true,true,forecast 1h prossime 6h
