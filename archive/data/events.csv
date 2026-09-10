@@ -388,3 +388,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-10T15:00:00Z,panna,storm_on_area,10.0,,12.65,CUM3,2026-09-10T15:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-09-10T15:05:00Z,panna,storm_cleared,10.0,,12.65,CUM3,2026-09-10T15:05:00Z,,recon,recon,ricostruito
 2026-09-10T20:05:27Z,panna,storm_on_area,5.0,1.78,5.15,SRI,2026-09-10T19:50:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-09-10T20:26:13Z,panna,storm_on_area,5.0,2.23,6.19,SRI,2026-09-10T20:15:00Z,,true,true,cella su area
