@@ -9,7 +9,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:CUM3:last_eval_ms": 1789084800000,
+  "cepina:CUM3:last_eval_ms": 1789086600000,
   "cepina:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -25,7 +25,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:SRT1:last_eval_ms": 1789086300000,
+  "cepina:SRT1:last_eval_ms": 1789087200000,
   "cepina:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -71,7 +71,7 @@
     "last_below_utc": null,
     "last_trigger_utc": "2026-09-10T23:00:00Z"
   },
-  "panna:CUM3:last_eval_ms": 1789084800000,
+  "panna:CUM3:last_eval_ms": 1789086600000,
   "panna:CUM3:warning": {
     "active": true,
     "last_below_utc": null,
@@ -87,7 +87,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "panna:SRT1:last_eval_ms": 1789086300000,
+  "panna:SRT1:last_eval_ms": 1789087200000,
   "panna:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -129,8 +129,8 @@
     "last_trigger_utc": null
   },
   "panna:forecast:SRT1:warning": {
-    "active": true,
-    "last_below_utc": "2026-09-11T00:11:12Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-09-10T07:50:38Z"
   },
   "panna:warning": {
@@ -148,7 +148,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:CUM3:last_eval_ms": 1789084800000,
+  "ruspino:CUM3:last_eval_ms": 1789086600000,
   "ruspino:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -164,7 +164,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:SRT1:last_eval_ms": 1789086300000,
+  "ruspino:SRT1:last_eval_ms": 1789087200000,
   "ruspino:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -181,8 +181,8 @@
     "last_trigger_utc": null
   },
   "ruspino:forecast:CUM3:warning": {
-    "active": true,
-    "last_below_utc": "2026-09-11T00:11:06Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-09-10T00:35:34Z"
   },
   "ruspino:forecast:SRT1:alarm": {
@@ -196,8 +196,8 @@
     "last_trigger_utc": null
   },
   "ruspino:forecast:SRT1:warning": {
-    "active": true,
-    "last_below_utc": "2026-09-11T00:11:06Z",
+    "active": false,
+    "last_below_utc": null,
     "last_trigger_utc": "2026-09-10T02:05:37Z"
   }
 }
