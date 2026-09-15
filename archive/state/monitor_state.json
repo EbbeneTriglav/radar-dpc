@@ -9,7 +9,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:CUM3:last_eval_ms": 1789480800000,
+  "cepina:CUM3:last_eval_ms": 1789482600000,
   "cepina:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -71,7 +71,7 @@
     "last_below_utc": null,
     "last_trigger_utc": "2026-09-10T23:00:00Z"
   },
-  "panna:CUM3:last_eval_ms": 1789480800000,
+  "panna:CUM3:last_eval_ms": 1789482600000,
   "panna:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
@@ -148,7 +148,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:CUM3:last_eval_ms": 1789480800000,
+  "ruspino:CUM3:last_eval_ms": 1789482600000,
   "ruspino:CUM3:warning": {
     "active": false,
     "last_below_utc": null,
