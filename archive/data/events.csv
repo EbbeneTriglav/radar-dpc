@@ -397,3 +397,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-11T00:05:00Z,panna,storm_cleared,10.0,,23.39,CUM3,2026-09-11T00:05:00Z,,recon,recon,ricostruito
 2026-09-16T18:26:28Z,cepina,storm_on_area,5.0,3.48,14.44,SRI,2026-09-16T18:15:00Z,,true,true,cella su area
 2026-09-16T19:21:30Z,cepina,warning,10,13.569,16.721,CUM3,2026-09-16T19:00:00Z,5.90,true,true,
+2026-09-16T19:51:25Z,cepina,alarm,15,18.869,24.105,CUM3,2026-09-16T19:30:00Z,2.70,true,true,
