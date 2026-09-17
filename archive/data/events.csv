@@ -410,3 +410,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-17T00:06:16Z,cepina,storm_cleared,5.0,0.37,1.14,SRI,2026-09-16T23:55:00Z,,true,true,"cella uscita dopo ~59min, caduti 3.309999942779541mm"
 2026-09-17T00:51:49Z,ruspino,storm_on_area,10.0,3.64,12.45,SRI,2026-09-17T00:40:00Z,,true,true,cella su area
 2026-09-17T01:51:26Z,ruspino,storm_cleared,10.0,0.89,1.88,SRI,2026-09-17T01:40:00Z,,true,true,"cella uscita dopo ~59min, caduti 9.779999732971191mm"
+2026-09-17T02:31:38Z,ruspino,storm_on_area,10.0,7.40,18.65,SRI,2026-09-17T02:20:00Z,,true,true,cella su area dwell~96min
