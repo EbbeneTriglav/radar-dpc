@@ -215,7 +215,9 @@ async function fetchGroundDaily(area){
       for(const line of txt.trim().split(/\r?\n/).slice(1)){
         const [d,v] = line.split(';');
         const mm = +v;
-        if(d && isFinite(mm)) byDay[d] = mm;   // già giornaliero
+        // Giorno idrologico SIR: il valore datato D copre 09:00 di D-1 → 09:00 di D,
+        // cioè quasi tutto il giorno D-1: lo attribuisco a D-1 (approssimazione dichiarata).
+        if(d && isFinite(mm)){ const k=new Date(Date.parse(d+'T00:00:00Z')-DAY_MS).toISOString().slice(0,10); byDay[k] = mm; }
       }
     }
   }catch(e){ /* pluviometro opzionale */ }

@@ -7,6 +7,11 @@
   CARTO ora richiede API key (watermark): sostituito con Esri Gray Canvas (scuro/chiaro, no key).
   Il radar ha un pane dedicato (z 350) sopra qualunque basemap; etichette Esri sopra il radar.
 
+### Verifica dati (05/10 sera)
+- 🐞 Pluviometro SIR Monte di Fò (Panna) letto come giorno civile: è **giorno idrologico 09→09**
+  (valore datato D = 09:00 di D-1 → 09:00 di D). Corretti `episodes.py`, `verifica.html`, `previsioni.html`.
+  Effetto: sparisce il falso "pluviometro a 0 mm mentre radar e CUM3 vedono 15–30 mm" (20/08, 09/09).
+
 ### Verifica dati (05/10 pomeriggio)
 - 🔎 La CUM3 DPC **non è radar**: per la doc DPC le cumulate 3/6/12/24h sono ottenute solo dai
   pluviometri a terra interpolati. Il suo accordo col pluviometro (r≈0.96) è in parte circolare.

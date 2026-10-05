@@ -134,6 +134,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   accordo col pluviometro è in parte circolare (r≈0.96 sugli episodi, ott-2026).
 - **Orari Socrata ARPA = ora solare (UTC+1)** senza fuso nella stringa. Query e lettura
   vanno convertite (ground_collect, verifica, previsioni). Dati archiviati corretti il 05/10/2026.
+- **SIR Toscana (Monte di Fò) = giorno idrologico 09→09**: il valore datato D copre
+  09:00 di D-1 → 09:00 di D (verificato: r con CUM3 0.61 → 0.98). Mai leggerlo come giorno civile.
 - **CUM3 gap serale/notturno**: `collect.py` deve processare da IERI, non oggi,
   altrimenti i blocchi 21:00/24:00 non esistono ancora → cumulata mancante per
   eventi serali. Già corretto; non regredire.

@@ -837,7 +837,11 @@ async function fetchGroundRain(area, winStart, winEnd, evTs){
       try{ txt=await loadSirCsv(s.url); }
       catch(e){ return {name:s.name, err:e.message, daily:true, pts:[]}; }
       const days=new Set();
-      for(let t=winStart; t<=winEnd+86400000; t+=86400000) days.add(new Date(t).toISOString().slice(0,10));
+      // Il SIR è in GIORNO IDROLOGICO: il valore datato D copre 09:00 di D-1 →
+      // 09:00 di D (verificato sui dati). Istante t → giorno SIR = data locale di t+15h.
+      const sirDay=t=>new Date(t+15*3600_000).toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
+      for(let t=winStart; t<=winEnd; t+=3600_000) days.add(sirDay(t));
+      days.add(sirDay(winEnd));
       let tot=0; const perDay=[];
       for(const line of txt.trim().split(/\r?\n/).slice(1)){
         const [d,v]=line.split(';');

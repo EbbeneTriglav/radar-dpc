@@ -287,14 +287,18 @@ def attach_gauge(eps, area, gpts, gcover, sir):
                 ep['gauge_type'] = '10min'
         elif area == 'panna' and sir:
             ep['gauge_name'] = SIR_NAME
-            # giorni civili italiani toccati dall'episodio (il SIR è giornaliero)
-            d, days = ep['start'].astimezone(ROME).date(), []
-            while d <= ep['end'].astimezone(ROME).date():
+            # Il SIR è giornaliero in GIORNO IDROLOGICO: il valore datato D copre
+            # dalle 09:00 di D-1 alle 09:00 di D (verificato sui dati: r 0.34 ->
+            # 0.80 con SRI, 0.61 -> 0.98 con CUM3). Un istante t appartiene al
+            # giorno SIR = data locale di (t + 15h).
+            sir_day = lambda t: (t.astimezone(ROME) + timedelta(hours=15)).date()
+            d, days = sir_day(ep['start']), []
+            while d <= sir_day(ep['end']):
                 days.append(d.isoformat()); d += timedelta(days=1)
             ep['_days'] = days
             if all(x in sir for x in days):
                 ep['gauge_mm'] = sum(sir[x] for x in days)
-                ep['gauge_type'] = f'giornaliero ({len(days)} g)'
+                ep['gauge_type'] = f'giornaliero 9→9 ({len(days)} g)'
     # Panna: se più episodi toccano lo stesso giorno, il totale giornaliero è
     # CONDIVISO -> non confrontabile col singolo episodio. Lo dichiaro.
     day_eps = defaultdict(int)
