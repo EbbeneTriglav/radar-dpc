@@ -5,6 +5,9 @@ name: SRI Backfill / Probe
 # finestre episodio ancora disponibili (SRI_MAX_FRAMES per run, dal più recente).
 # 'backfill-ring' = anello 10 km attorno a Ruspino, [inizio-3h, inizio+3h] di ogni
 # episodio (dati di studio per la pre-allerta; nessuna allerta li legge).
+# AUTOMATICO: con 'continua' attivo, a fine run si rilancia da solo finché restano
+# frame E il run ha archiviato qualcosa (i frame oltre la memoria dell'API DPC non
+# bloccano: un run a 0 frame ferma la catena). Massimo 25 giri.
 
 on:
   workflow_dispatch:
@@ -17,9 +20,17 @@ on:
       max_frames:
         description: 'Frame massimi per run (backfill)'
         default: '400'
+      auto:
+        description: 'Continua da solo finché non ha finito'
+        type: boolean
+        default: true
+      round:
+        description: 'Giro (gestito in automatico, lasciare 1)'
+        default: '1'
 
 permissions:
   contents: write
+  actions: write               # per rilanciare se stesso (workflow_dispatch)
 
 concurrency:
   group: sri-backfill          # file separati (*_sri_backfill.csv): nessun conflitto con arpa-collect
@@ -37,7 +48,8 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'archive/scripts/requirements.txt'
       - run: pip install -r archive/scripts/requirements.txt
-      - name: SRI ${{ github.event.inputs.mode }}
+      - name: SRI ${{ github.event.inputs.mode }} (giro ${{ inputs.round }})
+        id: run
         env:
           SRI_MAX_FRAMES: ${{ github.event.inputs.max_frames }}
         run: |
@@ -62,4 +74,22 @@ jobs:
               git pull --rebase --autostash || true
               sleep $((i * 5))
             done
+          fi
+      - name: Continua automaticamente
+        if: github.event.inputs.mode != 'probe' && inputs.auto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+          MAXF: ${{ inputs.max_frames }}
+          ROUND: ${{ inputs.round }}
+          PROGRESS: ${{ steps.run.outputs.progress }}
+          REMAINING: ${{ steps.run.outputs.remaining }}
+        run: |
+          echo "giro $ROUND: archiviati ${PROGRESS:-0}, restano ${REMAINING:-0}"
+          if [ "${REMAINING:-0}" -gt 0 ] && [ "${PROGRESS:-0}" -gt 0 ] && [ "$ROUND" -lt 25 ]; then
+            gh workflow run sri-backfill.yml --ref main -f mode="$MODE" -f max_frames="$MAXF" \
+              -f auto=true -f round=$((ROUND + 1))
+            echo "rilanciato: giro $((ROUND + 1))"
+          else
+            echo "fine catena (finito, nessun progresso o limite giri)"
           fi

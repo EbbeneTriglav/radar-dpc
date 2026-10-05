@@ -8,6 +8,10 @@
   invariata). Fuori dominio del modello (es. Panna se non coperta) → nessun valore.
 - ✏️ `forecast_history.py`, `forecast_verify.py` — terza fonte `meteoswiss` archiviata e verificata
   come le altre; `verifica.html` e `report.html` la mostrano come "MeteoSwiss ICON-CH1 (solo verifica)".
+- ⚙️ `sri-backfill.yml` — backfill **automatico**: con "continua" attivo (default) il workflow si
+  rilancia da solo (`gh workflow run`, GITHUB_TOKEN + `actions: write`) finché restano frame e il giro
+  ha archiviato qualcosa; un giro a 0 frame (frame oltre la memoria API DPC) o 25 giri fermano la catena.
+  `sri_collect.py` scrive `progress`/`remaining` in `GITHUB_OUTPUT`.
 - 📌 Dopo 3–4 settimane di confronti: decidere se usarlo nelle allerte (es. OpenMeteo E (MET Norway O MeteoSwiss)).
 
 ## Sessione 2026-10-05 (notte) — Cepina radar DPC, anticipo Ruspino, SP3

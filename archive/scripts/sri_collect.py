@@ -72,6 +72,14 @@ _session = requests.Session()
 _session.headers['User-Agent'] = 'radar-dpc-sri-collect/1.0'
 
 
+def report_progress(n_ok, remaining):
+    """Per l'auto-concatenamento del backfill: scrive progress/remaining in GITHUB_OUTPUT."""
+    out = os.environ.get('GITHUB_OUTPUT')
+    if out:
+        with open(out, 'a', encoding='utf-8') as f:
+            f.write(f'progress={n_ok}\nremaining={remaining}\n')
+
+
 def iso(d):
     return d.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -265,6 +273,7 @@ def collect(timestamps, areas, now, write_missing=True, newest_first=False):
     ring_have = {a['name']: ring_existing(a['name']) for a in areas} if RING_KM > 0 else {}
     todo = sorted((t for t in set(timestamps) if any(iso(t) not in have[a['name']] for a in areas)),
                   reverse=newest_first)
+    remaining = max(0, len(todo) - MAX_FRAMES)
     if len(todo) > MAX_FRAMES:
         log.info(f'{len(todo)} frame da scaricare, limite {MAX_FRAMES}: il resto ai prossimi run')
         todo = todo[:MAX_FRAMES]
@@ -304,6 +313,7 @@ def collect(timestamps, areas, now, write_missing=True, newest_first=False):
                 _append_ring(ts, a, tiff, fetched)
                 ring_have[a['name']].add(iso(ts))
     log.info(f'SRI: {n_ok} frame archiviati, {n_miss} mancanti')
+    report_progress(n_ok, remaining)
     return n_ok
 
 
@@ -335,6 +345,7 @@ def collect_ring(timestamps, areas, now):
                 _append_ring(ts, a, tiff, iso(now))
                 have[a['name']].add(iso(ts))
     log.info(f'anello: {n_ok} frame archiviati, restano {max(0, len(todo) - MAX_FRAMES)}')
+    report_progress(n_ok, max(0, len(todo) - MAX_FRAMES))
     return n_ok
 
 
