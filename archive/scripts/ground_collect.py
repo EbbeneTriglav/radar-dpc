@@ -68,6 +68,11 @@ WINDOW_H = 13            # semi-ampiezza finestra archiviata (ore)
 MAX_EVENTS_PER_RUN = int(os.environ.get('GROUND_MAX_EVENTS', '250'))
 SLEEP_S = 0.4            # pausa tra chiamate Socrata (cortesia verso l'API)
 HTTP_TIMEOUT = 60
+# Il campo 'data' di Socrata ARPA Lombardia è in ORA SOLARE (UTC+1) tutto
+# l'anno, senza fuso nella stringa. Verificato sui dati (ott-2026): radar DPC e
+# ARPA si allineano al pluviometro solo spostandolo di -1h. Fino al 05/10/2026
+# veniva letto come UTC (pluviometro 1h in ritardo): dati archiviati corretti.
+ARPA_SOLAR = timezone(timedelta(hours=1))
 
 RAIN_FIELDS = ['sensor_id', 'ts_utc', 'mm']
 INDEX_FIELDS = ['event_ts_utc', 'area_name', 'sensor_id', 'win_start_utc',
@@ -110,9 +115,10 @@ def fetch_socrata(sensor_id, start, end):
     """Misure grezze del sensore nella finestra. Ritorna [(datetime, mm)].
     Solleva eccezione in caso di errore di rete/HTTP: l'evento non viene
     marcato come archiviato e si riprova al giro dopo."""
+    # la query va espressa in ora solare, come il campo 'data'
     where = ("data >= '%s' AND data <= '%s'"
-             % (start.strftime('%Y-%m-%dT%H:%M:%S'),
-                end.strftime('%Y-%m-%dT%H:%M:%S')))
+             % (start.astimezone(ARPA_SOLAR).strftime('%Y-%m-%dT%H:%M:%S'),
+                end.astimezone(ARPA_SOLAR).strftime('%Y-%m-%dT%H:%M:%S')))
     qs = urllib.parse.urlencode({
         'idsensore': sensor_id,
         '$where': where,
@@ -126,7 +132,11 @@ def fetch_socrata(sensor_id, start, end):
         rows = json.load(resp)
     out = []
     for row in rows:
-        ts = parse_ts(row.get('data'))
+        raw = (row.get('data') or '')[:19]
+        try:
+            ts = datetime.fromisoformat(raw).replace(tzinfo=ARPA_SOLAR).astimezone(timezone.utc)
+        except ValueError:
+            ts = None
         try:
             mm = float(row.get('valore'))
         except (TypeError, ValueError):

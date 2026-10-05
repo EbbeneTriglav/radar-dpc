@@ -200,13 +200,14 @@ async function fetchGroundDaily(area){
   try{
     if(g.type==='arpa'){
       const now = Date.now();
-      const start = new Date(now - 8*DAY_MS).toISOString().slice(0,19);
-      const end = new Date(now + DAY_MS).toISOString().slice(0,19);
+      // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1) senza fuso
+      const start = new Date(now - 8*DAY_MS + 3600_000).toISOString().slice(0,19);
+      const end = new Date(now + DAY_MS + 3600_000).toISOString().slice(0,19);
       const where = `data >= '${start}' AND data <= '${end}'`;
       const url = `${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`;
       const rows = await (await fetch(url)).json();
       for(const row of rows){
-        const t = new Date(row.data).getTime(); const v = +row.valore;
+        const t = new Date(String(row.data).slice(0,19)+'+01:00').getTime(); const v = +row.valore;
         if(isFinite(t)&&isFinite(v)&&v>=0){ const k=dayKey(t); byDay[k]=(byDay[k]||0)+v; }
       }
     } else if(g.type==='sir'){

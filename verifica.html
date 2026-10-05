@@ -807,13 +807,15 @@ async function fetchGroundRain(area, winStart, winEnd, evTs){
       // Filtro TEMPORALE su Socrata (non $limit generico): prendo esattamente
       // la finestra dell'evento, così funziona anche per eventi di settimane fa
       // (con $limit=2000 gli eventi oltre ~14 giorni cadevano fuori → 0 mm, bug).
-      const iso=t=>new Date(t).toISOString().slice(0,19);  // YYYY-MM-DDTHH:MM:SS
+      // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1), senza fuso → query e
+      // lettura vanno convertite (prima: browser in ora locale = errore di 1h).
+      const iso=t=>new Date(t+3600_000).toISOString().slice(0,19);  // UTC → ora solare
       const where=`data >= '${iso(winStart)}' AND data <= '${iso(winEnd)}'`;
       const r=await fetch(`${SOCRATA}?idsensore=${s.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`);
       if(!r.ok) return {name:s.name, err:`HTTP ${r.status}`, pts:[]};
       const rows=await r.json();
       for(const row of rows){
-        const t=new Date(row.data).getTime(); const v=+row.valore;
+        const t=new Date(String(row.data).slice(0,19)+'+01:00').getTime(); const v=+row.valore;
         if(isFinite(t)&&isFinite(v)&&v>=0&&t>=winStart&&t<=winEnd) pts.push({x:t,y:v});
       }
     } else if(s.type==='sir_daily'){
