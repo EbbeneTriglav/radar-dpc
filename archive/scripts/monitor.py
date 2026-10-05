@@ -785,8 +785,10 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
 def arpa_confirmation(area_name, archive_dir=None, max_age_min=20):
     """Legge l'ultimo record ARPA (<area>_arpa.csv). Se fresco (<max_age_min),
     ritorna stringa di conferma incrociata da inserire nei messaggi.
-    Ritorna '' se area non coperta da ARPA, file assente o dato vecchio."""
-    if area_name not in ('ruspino', 'cepina'):
+    Ritorna '' se area non coperta da ARPA, file assente o dato vecchio.
+    Cepina esclusa: ARPA lì non è affidabile (verifica ott-2026) e scriverebbe
+    "nessuna pioggia" anche quando piove."""
+    if area_name not in ('ruspino',):
         return ''
     try:
         base = archive_dir if archive_dir else Path(__file__).resolve().parents[1]

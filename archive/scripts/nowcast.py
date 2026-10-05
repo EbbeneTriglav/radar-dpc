@@ -47,6 +47,12 @@ DPC_API = 'https://radar-api.protezionecivile.it'
 UA = 'radar-dpc-nowcast/1.0'
 HTTP_TIMEOUT = 30
 
+# Ruolo del radar ARPA per area (verifica ott-2026, episodi vs pluviometro):
+#   'or'     -> ARPA affidabile (Ruspino, r≈0.7): allerta se DPC OPPURE ARPA supera soglia
+#   'backup' -> ARPA non affidabile (Cepina, r≈0.1-0.3, fascio schermato): decide il
+#               radar DPC SRI; ARPA entra SOLO se l'SRI non è disponibile o è vecchio.
+ARPA_ROLE = {'ruspino': 'or', 'cepina': 'backup'}
+SRI_MAX_AGE_MIN = 20   # oltre questa età il frame SRI è considerato non disponibile
 BUFFERS_KM = [5, 10]               # doppio anello dal bordo poligono
 SRI_THRESHOLDS = [                 # mm/h istantanea
     {'level': 'warning',   'value': 10, 'icon': '🌧️'},
@@ -401,8 +407,8 @@ def _arpa_max_mmh(area_name, max_age_min=20):
 
 
 def _arpa_confirm(area_name, max_age_min=20):
-    """Conferma incrociata ARPA per i messaggi nowcast (solo ruspino/cepina)."""
-    if area_name not in ('ruspino', 'cepina'):
+    """Conferma incrociata ARPA per i messaggi nowcast (solo aree con ARPA 'or')."""
+    if ARPA_ROLE.get(area_name) != 'or':
         return ''
     try:
         f = Path(__file__).resolve().parents[1] / 'data' / f'{area_name}_arpa.csv'
@@ -504,21 +510,37 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
     geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)  # ~poligono puro
     sri_now_ts, sri_now_tiff = sri_frames[0]
     sri_stat = stats_in_geom_tm(sri_now_tiff, geom_area)
+    sri_age_min = (datetime.now(timezone.utc).timestamp() * 1000 - sri_now_ts) / 60000
+    sri_ok = bool(sri_stat) and sri_age_min <= SRI_MAX_AGE_MIN
+    role = ARPA_ROLE.get(name)
+    arpa_mmh, arpa_age = _arpa_max_mmh(name)
+
+    arpa_backup = False
+    if role == 'backup':
+        # ── ARPA solo di riserva (Cepina): decide l'SRI; ARPA se SRI assente/vecchio ──
+        if sri_ok:
+            arpa_mmh = None                       # ARPA ignorato (e non mostrato)
+        elif arpa_mmh is not None:
+            arpa_backup = True
+            log.warning(f'  {name}: SRI non disponibile (età {sri_age_min:.0f} min) → ARPA di riserva')
+            sri_stat = {'max': arpa_mmh, 'mean': 0.0}
+            sri_now_ts = int((datetime.now(timezone.utc).timestamp() - arpa_age * 60) * 1000)
     if not sri_stat:
         return st.get('active', False)
-    sri_max_dpc = sri_stat['max']
+    sri_max_dpc = 0.0 if arpa_backup else sri_stat['max']   # SRI vecchio senza ARPA: meglio di niente
     ts_iso = datetime.fromtimestamp(sri_now_ts/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
 
-    # ── Canale ARPA in OR (solo ruspino/cepina) ──
-    # Se ARPA vede pioggia sopra soglia ma il DPC no (sottostima o buco dati),
-    # l'allerta parte comunque: sri_max effettivo = max(DPC, ARPA). Traccia la
-    # fonte per il messaggio, così si sa quale radar ha rilevato.
-    arpa_mmh, arpa_age = _arpa_max_mmh(name)
+    # ── Canale ARPA ──
+    # 'or' (Ruspino): se ARPA vede pioggia sopra soglia ma il DPC no (sottostima
+    # o buco dati), l'allerta parte comunque: sri_max effettivo = max(DPC, ARPA).
+    # 'backup' (Cepina): ARPA arriva qui solo se l'SRI manca (sopra).
     sri_max = sri_max_dpc
     trigger_src = 'DPC'
     if arpa_mmh is not None and arpa_mmh > sri_max_dpc:
         sri_max = arpa_mmh
         trigger_src = 'ARPA' if sri_max_dpc < sri_threshold else 'DPC+ARPA'
+        if role == 'backup':
+            trigger_src = 'ARPA-backup'
     elif arpa_mmh is not None and arpa_mmh >= sri_threshold and sri_max_dpc >= sri_threshold:
         trigger_src = 'DPC+ARPA'
 
@@ -588,7 +610,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             dwell_min = None
             rain_proj = None
 
-        # PIOGGIA REALMENTE CADUTA: dal CUM3 misurato (cumulata 3h del radar),
+        # PIOGGIA REALMENTE CADUTA: dal CUM3 DPC (cumulata 3h dei PLUVIOMETRI interpolati, non radar),
         # non da una stima. Il MAX rappresenta il punto peggiore dell'area
         # (dove la cella ha scaricato), più fedele del mean. Questo è il dato
         # da comunicare come "caduto", separato dalla proiezione teorica.
@@ -599,14 +621,15 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
                      else "  • Cella STAZIONARIA: permanenza prolungata possibile\n" if motion and motion.get('compass') == 'stazionaria'
                      else '')
         # Pioggia CADUTA (misurata dal CUM3) — il dato che conta
-        fallen_str = f"  • Pioggia caduta finora (cum. 3h, radar): {cum_fallen:.1f} mm\n" if cum_fallen is not None else ''
+        fallen_str = f"  • Pioggia caduta finora (CUM3 pluviometri, 3h): {cum_fallen:.1f} mm\n" if cum_fallen is not None else ''
         # Proiezione se la cella persiste (chiaramente etichettata come stima)
         proj_str = f"  • Proiezione se persiste ~{dwell_min}min al picco: ~{rain_proj:.0f} mm\n" if rain_proj else ''
         mot_str = (f"  • Moto: {motion['compass']} a {motion['speed_kmh']} km/h\n"
                    if motion and motion.get('bearing_deg') is not None else '')
 
         src_label = {'DPC': 'radar DPC', 'ARPA': 'radar ARPA Lombardia',
-                     'DPC+ARPA': 'radar DPC + ARPA (concordi)'}.get(trigger_src, 'radar DPC')
+                     'DPC+ARPA': 'radar DPC + ARPA (concordi)',
+                     'ARPA-backup': 'radar ARPA Lombardia — DI RISERVA, radar DPC non disponibile'}.get(trigger_src, 'radar DPC')
         arpa_line = ''
         if arpa_mmh is not None:
             arpa_line = f"  • ARPA Lombardia: {arpa_mmh:.1f} mm/h ({arpa_age:.0f} min fa)\n"
@@ -636,10 +659,10 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             'event_timestamp_utc': now_iso, 'area_name': name,
             'level': 'storm_on_area', 'threshold_mm': sri_threshold,
             'observed_mm_mean': f"{sri_stat.get('mean',0):.2f}", 'observed_mm_max': f"{sri_max:.2f}",
-            'product': 'SRI', 'observation_timestamp_utc': ts_iso,
+            'product': 'ARPA' if trigger_src == 'ARPA-backup' else 'SRI', 'observation_timestamp_utc': ts_iso,
             'forecast_max_6h_mm': '',
             'notified_email': em, 'notified_telegram': tg,
-            'note': "cella su area" + (f" caduti~{cum_fallen:.0f}mm(cum3)" if cum_fallen is not None else '')
+            'note': ("cella su area (ARPA di riserva: SRI DPC non disponibile)" if trigger_src == 'ARPA-backup' else "cella su area") + (f" caduti~{cum_fallen:.0f}mm(cum3)" if cum_fallen is not None else '')
                     + (f" dwell~{dwell_min}min" if dwell_min else ''),
         })
         state[key] = {'active': True, 'since': now_iso, 'cum_alerts': [], 'src': trigger_src}
@@ -955,6 +978,60 @@ def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
             pass
 
 
+def _arpa_only_cell_check(archive_dir, enabled):
+    """Radar DPC SRI del tutto assente: per le aree con ARPA (Ruspino, Cepina)
+    valuta la sola 'cella sull'area' con ARPA, così l'allerta non si perde.
+    Usa la stessa chiave di stato del nowcast (niente doppioni quando l'SRI torna:
+    la chiusura la gestisce il ciclo normale)."""
+    state_file = archive_dir / 'state' / 'nowcast_state.json'
+    state = load_state(state_file)
+    now_iso = datetime.now(tz=timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+    state['_last_run_utc'] = now_iso
+    events_file = archive_dir / 'data' / 'events.csv'
+    write_header = not events_file.exists()
+    with open(events_file, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=EVENT_HEADERS)
+        if write_header: writer.writeheader()
+        for area in enabled:
+            name = area['name']
+            if name not in ARPA_ROLE:
+                continue
+            arpa_mmh, arpa_age = _arpa_max_mmh(name)
+            if arpa_mmh is None:
+                continue
+            try:
+                ths = area.get('monitoring', {}).get('products', {}).get('SRT1', {}).get('thresholds', [])
+                thr = next((float(t['value_mm']) for t in ths if t.get('level') == 'warning'), 10.0)
+            except Exception:
+                thr = 10.0
+            key = f"{name}:nowcast:cell_on_area"
+            st = state.get(key, {'active': False})
+            log.info(f'  [{name}] ARPA di riserva: {arpa_mmh:.1f} mm/h ({arpa_age:.0f} min fa), soglia {thr}')
+            if st.get('active') or arpa_mmh < thr:
+                continue
+            mon = area.get('monitoring', {})
+            channels = set(mon.get('channels', ['email', 'telegram']))
+            rcpt = mon.get('recipients', {}) or {}
+            label = area['label']
+            text = (f"⛈️ CELLA SULL'AREA — {label}\n\n"
+                    f"Radar ARPA Lombardia (DI RISERVA: radar DPC non disponibile):\n"
+                    f"  • max in area: {arpa_mmh:.1f} mm/h (soglia {thr}), {arpa_age:.0f} min fa\n"
+                    f"\nIl radar nazionale DPC non ha fornito dati: verifica con il pluviometro.\n")
+            md = (f"⛈️ *CELLA SULL'AREA — {label}*\nARPA (riserva, DPC non disponibile): *{arpa_mmh:.1f} mm/h* (soglia {thr})")
+            subject = f"⛈️ {label} — CELLA SULL'AREA {arpa_mmh:.0f}mm/h (ARPA di riserva)"
+            em = send_email(subject, text, to=rcpt.get('email') or None) if 'email' in channels else 'skipped'
+            tg = send_telegram(md, chat_ids=rcpt.get('telegram_chat_ids') or None) if 'telegram' in channels else 'skipped'
+            writer.writerow({'event_timestamp_utc': now_iso, 'area_name': name, 'level': 'storm_on_area',
+                             'threshold_mm': thr, 'observed_mm_mean': '', 'observed_mm_max': f'{arpa_mmh:.2f}',
+                             'product': 'ARPA', 'observation_timestamp_utc': '', 'forecast_max_6h_mm': '',
+                             'notified_email': em, 'notified_telegram': tg,
+                             'note': 'cella su area (ARPA di riserva: SRI DPC non disponibile)'})
+            state[key] = {'active': True, 'since': now_iso, 'cum_alerts': [], 'src': 'ARPA-backup'}
+            log.info(f'  ✓ cell_ON_AREA [ARPA-backup] {name}: {arpa_mmh:.1f} mm/h email={em} tg={tg}')
+    save_state(state_file, state)
+    return 0
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -1020,7 +1097,8 @@ def main():
              f'CUM3={"OK" if cum3_tiff else "MANCANTE"}')
 
     if not sri_frames:
-        log.warning('Nessun frame SRI disponibile, esco.'); return 0
+        log.warning('Nessun frame SRI disponibile: provo il radar ARPA di riserva (Lombardia).')
+        return _arpa_only_cell_check(archive_dir, enabled)
 
     # ── Elaborazione aree ──
     state_file = archive_dir / 'state' / 'nowcast_state.json'
