@@ -244,8 +244,8 @@ async function fetchData(path){
 
     if (!_miniMap) {
       _miniMap = L.map('archive-map', { zoomControl: true, attributionControl: false });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© CARTO', subdomains: 'abcd',
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri', maxZoom: 16,
       }).addTo(_miniMap);
     } else {
       if (_miniPolyLayer) _miniMap.removeLayer(_miniPolyLayer);

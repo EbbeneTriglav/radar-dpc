@@ -1,9 +1,9 @@
 /**
  * basemap-picker.js — Controllo Leaflet per selezione basemap
  *
- * Espone 5 layer base gratuiti:
- *   - CARTO Dark      (default scuro)
- *   - CARTO Light     (default chiaro)
+ * Espone 5 layer base gratuiti (nessuna API key):
+ *   - Grigio scuro Esri  (default scuro)
+ *   - Grigio chiaro Esri (default chiaro)
  *   - OpenStreetMap   (standard)
  *   - OSM Humanitario (Humanitarian OSM Team — strade più chiare in aree rurali)
  *   - Satellite Esri  (imagery satellitare ad alta risoluzione)
@@ -13,24 +13,30 @@
  *     → crea i layer, aggiunge il default alla mappa, monta il L.control.layers
  *
  *   BasemapPicker.applyTheme('dark' | 'light')
- *     → se il layer corrente è CARTO Dark/Light, switcha al corrispondente.
+ *     → se il layer corrente è Grigio scuro/chiaro, switcha al corrispondente.
  *       Se l'utente ha scelto un altro layer (OSM, Satellite, ecc), non tocca nulla.
  */
 
 const BasemapPicker = (() => {
 
+  // CARTO da set-2026 richiede API key (watermark "API KEY REQUIRED"):
+  // sostituito con Esri Gray Canvas (nessuna key).
+  const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  const ESRI_ATTR = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
   const LAYERS_DEF = [
     {
-      name: 'CARTO Dark',
-      url:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attr: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-      opts: { subdomains: 'abcd', maxZoom: 19 },
+      name: 'Grigio scuro (Esri)',
+      url:  ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      labels: ESRI + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      attr: ESRI_ATTR,
+      opts: { maxZoom: 16 },
     },
     {
-      name: 'CARTO Light',
-      url:  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      attr: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-      opts: { subdomains: 'abcd', maxZoom: 19 },
+      name: 'Grigio chiaro (Esri)',
+      url:  ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      labels: ESRI + 'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      attr: ESRI_ATTR,
+      opts: { maxZoom: 16 },
     },
     {
       name: 'OpenStreetMap',
@@ -59,13 +65,22 @@ const BasemapPicker = (() => {
   function init(map, defaultName) {
     _map = map;
 
-    LAYERS_DEF.forEach(({ name, url, attr, opts }) => {
-      _layers[name] = L.tileLayer(url, { attribution: attr, ...opts });
+    // Pane dedicati: basemap (tilePane, z 200) < radar (350) < etichette (380).
+    // Così il radar resta SEMPRE sopra qualunque basemap scelta.
+    if (!map.getPane('radar'))  { map.createPane('radar');  map.getPane('radar').style.zIndex  = 350; }
+    if (!map.getPane('labels')) { map.createPane('labels'); map.getPane('labels').style.zIndex = 380;
+                                  map.getPane('labels').style.pointerEvents = 'none'; }
+
+    LAYERS_DEF.forEach(({ name, url, labels, attr, opts }) => {
+      const base = L.tileLayer(url, { attribution: attr, ...opts });
+      _layers[name] = labels
+        ? L.layerGroup([base, L.tileLayer(labels, { pane: 'labels', ...opts })])
+        : base;
     });
 
     const def = defaultName && _layers[defaultName]
       ? defaultName
-      : (document.body.classList.contains('light-theme') ? 'CARTO Light' : 'CARTO Dark');
+      : (document.body.classList.contains('light-theme') ? 'Grigio chiaro (Esri)' : 'Grigio scuro (Esri)');
 
     _currentName = def;
     _layers[def].addTo(map);
@@ -73,6 +88,7 @@ const BasemapPicker = (() => {
     L.control.layers(_layers, null, {
       position: 'topright',
       collapsed: true,
+      autoZIndex: false,   // evita che la basemap scelta finisca sopra il radar
     }).addTo(map);
 
     map.on('baselayerchange', (e) => { _currentName = e.name; });
@@ -80,8 +96,8 @@ const BasemapPicker = (() => {
 
   function applyTheme(theme) {
     if (!_map || !_currentName) return;
-    const target = theme === 'light' ? 'CARTO Light' : 'CARTO Dark';
-    const opposite = theme === 'light' ? 'CARTO Dark' : 'CARTO Light';
+    const target = theme === 'light' ? 'Grigio chiaro (Esri)' : 'Grigio scuro (Esri)';
+    const opposite = theme === 'light' ? 'Grigio scuro (Esri)' : 'Grigio chiaro (Esri)';
     if (_currentName === opposite) {
       _map.removeLayer(_layers[opposite]);
       _layers[target].addTo(_map);

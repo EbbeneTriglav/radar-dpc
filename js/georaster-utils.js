@@ -161,6 +161,7 @@ const GeoRasterUtils = (() => {
       opacity,
       pixelValuesToColorFn: colorFn,
       resolution: 256,
+      pane: _map.getPane('radar') ? 'radar' : 'tilePane',   // sopra qualunque basemap
     });
 
     _activeLayer.addTo(_map);

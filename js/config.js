@@ -28,9 +28,9 @@ const CONFIG = {
   MAP: {
     CENTER: [42.0, 13.0],
     ZOOM: 6,
-    TILE_URL: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    TILE_URL: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     TILE_ATTR: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OSM contributors',
-    TILE_URL_LIGHT: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    TILE_URL_LIGHT: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   },
 
   BUFFER_KM: 2,
