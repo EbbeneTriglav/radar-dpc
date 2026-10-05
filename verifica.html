@@ -77,14 +77,15 @@
 <div class="vf-wrap">
 
   <h1 style="margin:0 0 4px">✅ Verifica del sistema</h1>
-  <p class="vf-note">Quanta pioggia è davvero caduta, secondo <b>due radar indipendenti</b>
-  confrontati con il pluviometro a terra. Per ogni evento: <b>intensità max</b> (mm/h, picco),
-  <b>cumulata radar ARPA</b> (integrale dell'intensità) e <b>cumulata radar DPC</b> (somma
-  blocchi CUM3 3h) sulla durata reale dell'evento, entrambe in mm, ciascuna con il proprio
-  <b>scarto</b> vs il pluviometro. Così si vede quale radar risponde meglio e se un radar
-  sottostima o sovrastima sistematicamente. ARPA copre solo Lombardia (Ruspino, Cepina).
+  <p class="vf-note">Quanta pioggia è davvero caduta, confrontando le stime con il <b>pluviometro a terra</b>
+  sulla stessa finestra dell'evento. Per ogni evento: <b>intensità max</b> (mm/h, picco),
+  <b>cumulata radar ARPA</b> (integrale dell'intensità ARPA, solo Lombardia), <b>cumulata radar DPC SRI</b>
+  (integrale dell'intensità SRI, tutte le aree, quando archiviata) e <b>CUM3 DPC</b> (somma blocchi 3h).
+  <b>Attenzione: la CUM3 DPC NON è radar</b> — è ottenuta solo dai pluviometri a terra interpolati
+  (~3000 stazioni, probabilmente incluse Cornalita e Oga): è un'ottima stima della pioggia osservata, ma
+  il suo accordo col pluviometro non verifica il radar. Per giudicare il radar valgono solo ARPA e SRI.
   Lo scarto è in parte fisiologico: il radar è una stima areale, il pluviometro un punto.
-  Clicca una riga per il grafico per-evento.</p>
+  Clicca una riga per il dettaglio.</p>
 
   <h2 style="font-size:15px;margin:18px 0 8px">Accuratezza forecast</h2>
   <div class="vf-filters">
@@ -135,14 +136,14 @@
   <table class="vf" id="ep-table">
     <thead><tr>
       <th></th><th>Quando</th><th>Area</th><th>Allerte</th>
-      <th title="Picco d'intensità ARPA (pixel peggiore d'area)">Picco</th><th>Cum. ARPA (max/mean)</th><th>Cum. DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th>Scarto DPC</th>
+      <th title="Picco d'intensità ARPA (pixel peggiore d'area)">Picco</th><th title="Radar ARPA Lombardia: integrale dell'intensità">Radar ARPA (max/mean)</th><th title="CUM3 DPC: pluviometri a terra interpolati, NON radar">CUM3 pluviometri DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th title="Scarto della CUM3 (pluviometri interpolati): non è una verifica del radar">Scarto CUM3</th>
     </tr></thead>
     <tbody id="ep-body"><tr><td colspan="10">Caricamento…</td></tr></tbody>
   </table>
   <table class="vf" id="ev-table" style="display:none">
     <thead><tr>
       <th>Quando</th><th>Area</th><th>Tipo</th>
-      <th>Intensità max</th><th>Cum. ARPA (max/mean)</th><th>Cum. DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th>Scarto DPC</th>
+      <th>Intensità max</th><th title="Radar ARPA Lombardia: integrale dell'intensità">Radar ARPA (max/mean)</th><th title="CUM3 DPC: pluviometri a terra interpolati, NON radar">CUM3 pluviometri DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th title="Scarto della CUM3 (pluviometri interpolati): non è una verifica del radar">Scarto CUM3</th>
     </tr></thead>
     <tbody id="ev-body"><tr><td colspan="9">Caricamento…</td></tr></tbody>
   </table>
@@ -477,7 +478,7 @@ function renderEpisodes(){
     const peak=e.peak_mmh!==''?`${(+e.peak_mmh).toFixed(1)} mm/h`:dim(e.source);
     const arpa=e.arpa_max_mm!==''?`<b style="color:#2dd4bf">${(+e.arpa_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.arpa_mean_mm).toFixed(0)+' mm')}`+
       (+e.arpa_cov_pct<80?` ${dim('('+e.arpa_cov_pct+'% dati)')}`:''):dim('n/d');
-    const dpc=`<b style="color:#f87171">${(+e.dpc_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.dpc_mean_mm).toFixed(0)+' mm ('+e.dpc_blocks+'×3h)')}`;
+    const dpc=`<b style="color:#f87171">${(+e.cum3_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.cum3_mean_mm).toFixed(0)+' mm ('+e.cum3_blocks+'×3h)')}`;
     const shared=/condiviso/.test(e.gauge_type);
     const g=e.gauge_mm!==''?+e.gauge_mm:null;
     const gauge=g==null?dim('non archiviato'):
@@ -487,7 +488,7 @@ function renderEpisodes(){
     return `<tr class="ep" data-i="${i}"><td class="tg">▸</td><td>${when}</td><td>${e.area_name}</td><td>${alerts}</td><td>${peak}</td>
       <td>${arpa}</td><td>${dpc}</td><td>${gauge}</td>
       <td>${ok&&e.arpa_max_mm!==''?scartoCell(e.arpa_max_mm,e.arpa_mean_mm,g):dim('—')}</td>
-      <td>${ok?scartoCell(e.dpc_max_mm,e.dpc_mean_mm,g):dim('—')}</td></tr>`;
+      <td>${ok?scartoCell(e.cum3_max_mm,e.cum3_mean_mm,g):dim('—')}</td></tr>`;
   }).join('');
   [...body.querySelectorAll('tr.ep')].forEach(tr=>tr.addEventListener('click',()=>toggleEpisode(tr, eps[+tr.dataset.i])));
 }
@@ -968,9 +969,9 @@ async function openChart(ev){
   // ── Cumulate (asse Y destro, mm) — colori nettamente diversi dall'intensità ──
   if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1', _grp:'cum',
     borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:0, tension:.2, borderWidth:3.5});
-  if (cum3MaxPts.length) ds.push({label:'DPC CUM3 max (mm/3h)', data:cum3MaxPts, yAxisID:'y1', _grp:'cum',
+  if (cum3MaxPts.length) ds.push({label:'CUM3 pluviometri DPC max (mm/3h)', data:cum3MaxPts, yAxisID:'y1', _grp:'cum',
     borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:3, tension:0, borderWidth:2.5, stepped:true});
-  if (cum3MeanPts.length) ds.push({label:'DPC CUM3 mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1', _grp:'cum',
+  if (cum3MeanPts.length) ds.push({label:'CUM3 pluviometri DPC mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1', _grp:'cum',
     borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:1.5, borderDash:[2,3], stepped:true});
   if (ground && ground.daily && ground.total>0 && arpaPts.length){
     const xs=arpaPts.map(p=>p.x); const x0=Math.min(...xs), x1=Math.max(...xs);
@@ -1027,7 +1028,7 @@ async function openChart(ev){
     }
   } else if ((ev.level||'').includes('forecast')){
     note = `Allerta previsionale: soglia ${ev.threshold_mm} mm, valore previsto ${(+ev.forecast_max_6h_mm||0).toFixed(1)} mm. `+
-           `Le serie ARPA/DPC mostrano cosa è poi realmente caduto nella finestra.`;
+           `Le serie radar e CUM3 (pluviometri) mostrano cosa è poi realmente caduto nella finestra.`;
   }
   // Confronto CUMULATA RADAR EVENTO (mm) vs pluviometro (mm) — mele con mele.
   // Uso la stessa logica della tabella: somma blocchi CUM3 sulla finestra.
@@ -1035,14 +1036,14 @@ async function openChart(ev){
   if (ground && ground.total>0){
     const gtot = ground.total;
     const src = ground.daily ? 'SIR, giornaliero' : 'pluviometro';
-    note += ` Cumulata evento: radar DPC ${radarCum.max.toFixed(0)} mm (somma ${radarCum.nBlocks} blocchi CUM3 3h)`;
+    note += ` Cumulata evento: CUM3 pluviometri DPC ${radarCum.max.toFixed(0)} mm (somma ${radarCum.nBlocks} blocchi 3h, dato a terra interpolato, non radar)`;
     note += ` vs ${ground.name.split(' ')[0]} ${gtot.toFixed(0)} mm (${src}).`;
     const diff = radarCum.max - gtot;
     const pct = gtot>0 ? diff/gtot*100 : 0;
     if (Math.abs(pct)>=30){
       note += diff>0
-        ? ` Radar sovrastima di ${diff.toFixed(0)} mm (+${pct.toFixed(0)}%): il CUM3 max è il pixel peggiore dell'area, il pluviometro è un punto.`
-        : ` Radar sottostima di ${(-diff).toFixed(0)} mm (${pct.toFixed(0)}%): tipico dei picchi convettivi; il dato a terra è il riferimento.`;
+        ? ` La CUM3 supera il pluviometro di ${diff.toFixed(0)} mm (+${pct.toFixed(0)}%): il max è la cella interpolata più piovosa dell'area, il pluviometro è un punto.`
+        : ` La CUM3 è sotto il pluviometro di ${(-diff).toFixed(0)} mm (${pct.toFixed(0)}%): l'interpolazione smussa i picchi locali; il dato a terra è il riferimento.`;
     } else {
       note += ` Scarto ${diff>=0?'+':''}${diff.toFixed(0)} mm (${pct>=0?'+':''}${pct.toFixed(0)}%): buon accordo.`;
     }

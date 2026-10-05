@@ -431,7 +431,7 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
 
   return `
     <div class="mon-panel">
-      <h3>${prod} <span class="pill">${prod === 'SRT1' ? '1h reali' : '3h reali'}</span></h3>
+      <h3>${prod} <span class="pill" title="${prod === 'SRT1' ? 'SRT1 DPC: radar SRI integrato con i pluviometri a terra' : 'CUM3 DPC: SOLO pluviometri a terra interpolati (non radar)'}">${prod === 'SRT1' ? '1h radar+pluvio' : '3h pluviometri'}</span></h3>
       ${valueHtml}
       ${fcHtml}
       <div class="mon-thresh-list">${tags}</div>

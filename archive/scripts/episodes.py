@@ -21,7 +21,10 @@ COSA FA (solo lettura dei dati archiviati, nessuna chiamata di rete)
      mezzanotte resta UN episodio, e due celle separate da ore restano due.
   3. Per ogni episodio calcola sulla STESSA finestra [inizio, fine]:
        - cumulata ARPA (integrale mm/h x dt) max e media d'area + copertura %
-       - cumulata DPC (somma blocchi CUM3 che intersecano la finestra)
+       - CUM3 DPC (somma blocchi 3h che intersecano la finestra). ATTENZIONE:
+         la CUM3 DPC è ottenuta SOLO dai pluviometri a terra interpolati
+         (~3000 stazioni), NON dal radar: è "pioggia osservata", non serve a
+         verificare il radar (il suo accordo col pluviometro è in parte circolare).
        - pluviometro a terra (ground_rain.csv) SOLO se la finestra è coperta
          dall'archivio (ground_index.csv); altrimenti vuoto = "non disponibile".
          Panna: totale giornaliero SIR Monte di Fò (dati_idro) dei giorni
@@ -218,17 +221,17 @@ def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
             ep['arpa_cov'] = min(100, round(100 * len(frames) / exp))
         else:
             ep['arpa_cov'] = 0
-        # DPC CUM3: blocchi che intersecano la finestra
+        # CUM3 DPC (pluviometri interpolati, NON radar): blocchi che intersecano la finestra
         blocks = [(t, v) for t, v in cum3.items() if t > s and t - timedelta(hours=3) < e]
-        ep['dpc_max_mm'] = sum(v[0] for _, v in blocks)
-        ep['dpc_mean_mm'] = sum(v[1] for _, v in blocks)
-        ep['dpc_blocks'] = len(blocks)
+        ep['cum3_max_mm'] = sum(v[0] for _, v in blocks)
+        ep['cum3_mean_mm'] = sum(v[1] for _, v in blocks)
+        ep['cum3_blocks'] = len(blocks)
         if 'peak_time' not in ep and blocks:
             b = max(blocks, key=lambda x: x[1][0])
             ep['peak_time'] = b[0] - timedelta(minutes=90)   # centro del blocco (3h)
         ep['source'] = ('ARPA 5′' if ep['arpa_cov'] >= 80 else
-                        'ARPA+DPC' if ep['arpa_cov'] > 0 else 'DPC 3h')
-        if ep.get('arpa_mean_mm', 0) < min_mm and ep['dpc_mean_mm'] < min_mm:
+                        'ARPA+CUM3' if ep['arpa_cov'] > 0 else 'CUM3 3h (pluviometri)')
+        if ep.get('arpa_mean_mm', 0) < min_mm and ep['cum3_mean_mm'] < min_mm:
             continue
         eps.append(ep)
     return eps
@@ -321,7 +324,7 @@ def attach_alerts(eps, events):
 # ── Scrittura ────────────────────────────────────────────────────────────────
 COLS = ['episode_id', 'area_name', 'start_utc', 'end_utc', 'duration_h', 'source',
         'peak_mmh', 'peak_utc', 'arpa_max_mm', 'arpa_mean_mm', 'arpa_cov_pct',
-        'dpc_max_mm', 'dpc_mean_mm', 'dpc_blocks',
+        'cum3_max_mm', 'cum3_mean_mm', 'cum3_blocks',
         'gauge_name', 'gauge_mm', 'gauge_type',
         'n_alerts', 'n_storm', 'n_nowcast', 'n_monitor', 'n_forecast',
         'first_alert_utc', 'alert_lead_min', 'forecast_lead_h', 'status']
@@ -344,8 +347,8 @@ def ep_row(ep, now):
         'peak_utc': iso(ep['peak_time']) if ep.get('peak_time') else '',
         'arpa_max_mm': r1(ep.get('arpa_max_mm')), 'arpa_mean_mm': r1(ep.get('arpa_mean_mm')),
         'arpa_cov_pct': ep.get('arpa_cov', 0) or '',
-        'dpc_max_mm': r1(ep['dpc_max_mm']), 'dpc_mean_mm': r1(ep['dpc_mean_mm']),
-        'dpc_blocks': ep['dpc_blocks'],
+        'cum3_max_mm': r1(ep['cum3_max_mm']), 'cum3_mean_mm': r1(ep['cum3_mean_mm']),
+        'cum3_blocks': ep['cum3_blocks'],
         'gauge_name': ep.get('gauge_name', ''), 'gauge_mm': r1(ep.get('gauge_mm')),
         'gauge_type': ep.get('gauge_type', ''),
         'n_alerts': ep['n_alerts'], 'n_storm': ep['n_storm'], 'n_nowcast': ep['n_nowcast'],
@@ -405,7 +408,7 @@ def calibrate(sir_local=None):
     radar; merge = un episodio radar che contiene più episodi a terra."""
     gpts, gcover = load_ground()
     print(f'{"area":8} {"MIT":>4} {"episodi":>8} {"confr.":>7} {"split":>6} {"merge":>6} '
-          f'{"bias ARPA med":>14} {"bias DPC med":>13}')
+          f'{"bias ARPA med":>14} {"bias CUM3 med":>13}')
     for area in ARPA_AREAS:
         arpa, cum3 = load_arpa(area), load_cum3(area)
         sid = GAUGES[area][0]
@@ -435,7 +438,7 @@ def calibrate(sir_local=None):
                 if gmm >= 1.0:
                     n += 1
                     ba.append(ep.get('arpa_mean_mm', 0) - gmm)
-                    bd.append(ep['dpc_mean_mm'] - gmm)
+                    bd.append(ep['cum3_mean_mm'] - gmm)
             med = lambda v: sorted(v)[len(v) // 2] if v else float('nan')
             print(f'{area:8} {mit:>4} {len(eps):>8} {n:>7} {split:>6} {merge:>6} '
                   f'{med(ba):>+14.1f} {med(bd):>+13.1f}')

@@ -63,7 +63,7 @@ const CONFIG = {
       stepMs: 300_000,
       category: 'base',
       colorScale: 'accumulation',
-      description: 'Precipitazione cumulata nell\'ultima ora.',
+      description: 'Cumulata dell\'ultima ora: radar (SRI) integrato con i pluviometri a terra (DPC).',
     },
     IR_108: {
       label: 'IR 10.8 – Infrarosso satellitare',
@@ -79,7 +79,7 @@ const CONFIG = {
       stepMs: 10_800_000,
       category: 'cumulate',
       colorScale: 'accumulation',
-      description: 'Precipitazione cumulata nelle ultime 3 ore.',
+      description: 'Precipitazione cumulata nelle ultime 3 ore. Ottenuta SOLO dai pluviometri a terra interpolati (DPC, ~3000 stazioni): non è un dato radar.',
     },
     CUM6: {
       label: 'CUM6 – Cumulata 6h',
@@ -87,7 +87,7 @@ const CONFIG = {
       stepMs: 21_600_000,
       category: 'cumulate',
       colorScale: 'accumulation',
-      description: 'Precipitazione cumulata nelle ultime 6 ore.',
+      description: 'Precipitazione cumulata nelle ultime 6 ore. Ottenuta SOLO dai pluviometri a terra interpolati (DPC, ~3000 stazioni): non è un dato radar.',
     },
     CUM12: {
       label: 'CUM12 – Cumulata 12h',
@@ -95,7 +95,7 @@ const CONFIG = {
       stepMs: 43_200_000,
       category: 'cumulate',
       colorScale: 'accumulation',
-      description: 'Precipitazione cumulata nelle ultime 12 ore.',
+      description: 'Precipitazione cumulata nelle ultime 12 ore. Ottenuta SOLO dai pluviometri a terra interpolati (DPC, ~3000 stazioni): non è un dato radar.',
     },
     CUM24: {
       label: 'CUM24 – Cumulata 24h',
@@ -103,7 +103,7 @@ const CONFIG = {
       stepMs: 86_400_000,
       category: 'cumulate',
       colorScale: 'accumulation',
-      description: 'Precipitazione cumulata nelle ultime 24 ore.',
+      description: 'Precipitazione cumulata nelle ultime 24 ore. Ottenuta SOLO dai pluviometri a terra interpolati (DPC, ~3000 stazioni): non è un dato radar.',
     },
     TEMP: {
       label: 'TEMP – Temperatura',

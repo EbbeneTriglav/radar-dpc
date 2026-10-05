@@ -125,6 +125,13 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   brevi o lunghi). Per ARPA = integrale `mm/h × Δt`. Confronto col pluviometro
   è mm↔mm. Il `max` d'area sovrastima (pixel peggiore), il `mean` può diluire:
   il pluviometro puntuale sta tra i due → si mostrano entrambi.
+- **CUM3/CUM6/CUM12/CUM24 DPC NON sono radar**: sono pluviometri a terra interpolati
+  (~3000 stazioni, doc DPC). SRT1 = radar SRI integrato con i pluviometri. Radar "puro" =
+  SRI DPC (5', tutte le aree) e ARPA (5', solo Lombardia). Nei report e nelle verifiche
+  **il radar si giudica solo con SRI/ARPA**; la CUM3 è "pioggia osservata" e il suo
+  accordo col pluviometro è in parte circolare (r≈0.96 sugli episodi, ott-2026).
+- **Orari Socrata ARPA = ora solare (UTC+1)** senza fuso nella stringa. Query e lettura
+  vanno convertite (ground_collect, verifica, previsioni). Dati archiviati corretti il 05/10/2026.
 - **CUM3 gap serale/notturno**: `collect.py` deve processare da IERI, non oggi,
   altrimenti i blocchi 21:00/24:00 non esistono ancora → cumulata mancante per
   eventi serali. Già corretto; non regredire.
