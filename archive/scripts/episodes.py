@@ -21,6 +21,8 @@ COSA FA (solo lettura dei dati archiviati, nessuna chiamata di rete)
      mezzanotte resta UN episodio, e due celle separate da ore restano due.
   3. Per ogni episodio calcola sulla STESSA finestra [inizio, fine]:
        - cumulata ARPA (integrale mm/h x dt) max e media d'area + copertura %
+       - cumulata radar DPC SRI (idem, tutte le aree, Panna compresa) dai
+         CSV di sri_collect.py — radar "puro", confrontabile col pluviometro
        - CUM3 DPC (somma blocchi 3h che intersecano la finestra). ATTENZIONE:
          la CUM3 DPC è ottenuta SOLO dai pluviometri a terra interpolati
          (~3000 stazioni), NON dal radar: è "pioggia osservata", non serve a
@@ -113,6 +115,21 @@ def load_arpa(area):
     return out                       # {t: (max_mmh, mean_mmh)}
 
 
+def load_sri(area):
+    """Radar DPC SRI (5', tutte le aree) archiviato da sri_collect.py:
+    raccolta continua + eventuale backfill. Solo frame validi (status ok)."""
+    out = {}
+    for name in (f'{area}_sri.csv', f'{area}_sri_backfill.csv'):
+        for r in read_csv(DATA / name):
+            if r.get('status') != 'ok':
+                continue
+            try:
+                out[ts(r['timestamp_utc'])] = (fnum(r['max_mmh']), fnum(r['mean_mmh']))
+            except ValueError:
+                continue
+    return out                       # {t: (max_mmh, mean_mmh)}
+
+
 def load_cum3(area):
     out = {}
     for r in read_csv(DATA / f'{area}_cum3.csv'):
@@ -186,16 +203,19 @@ def covered(cover, s, e):
     return any(cs <= s and ce >= e for cs, ce in cover)
 
 
-def wet_intervals(arpa, cum3, wet_mmh, wet_cum3):
-    """Intervalli bagnati: ARPA dove c'è, CUM3 per i blocchi dove ARPA manca."""
+def wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri=None):
+    """Intervalli bagnati, per priorità: radar ARPA, poi radar DPC SRI dove ARPA
+    manca, poi CUM3 (pluviometri, 3h) per i blocchi senza radar a 5'."""
+    sri = sri or {}
     iv = [(t, t + STEP) for t, (mx, _) in arpa.items() if mx >= wet_mmh]
+    iv += [(t, t + STEP) for t, (mx, _) in sri.items() if t not in arpa and mx >= wet_mmh]
     for t_end, (mx, _) in cum3.items():
         if mx < wet_cum3:
             continue
         t0 = t_end - timedelta(hours=3)
-        # quanti frame ARPA esistono nel blocco? se il blocco è coperto da ARPA
-        # (>= 80% dei 36 frame) decide ARPA, altrimenti il blocco conta bagnato
-        n = sum(1 for k in range(36) if (t0 + k * STEP) in arpa)
+        # se il blocco è coperto da radar a 5' (>= 80% dei 36 frame) decide il
+        # radar, altrimenti il blocco CUM3 conta bagnato
+        n = sum(1 for k in range(36) if (t0 + k * STEP) in arpa or (t0 + k * STEP) in sri)
         if n < 29:
             iv.append((t0, t_end))
     return iv
@@ -203,8 +223,9 @@ def wet_intervals(arpa, cum3, wet_mmh, wet_cum3):
 
 # ── Episodi ──────────────────────────────────────────────────────────────────
 def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
-                   wet_cum3=WET_CUM3_MM, min_mm=MIN_EP_MM):
-    iv = merge_intervals(wet_intervals(arpa, cum3, wet_mmh, wet_cum3),
+                   wet_cum3=WET_CUM3_MM, min_mm=MIN_EP_MM, sri=None):
+    sri = sri or {}
+    iv = merge_intervals(wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri),
                          timedelta(hours=mit_h))
     eps = []
     for s, e in iv:
@@ -221,6 +242,20 @@ def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
             ep['arpa_cov'] = min(100, round(100 * len(frames) / exp))
         else:
             ep['arpa_cov'] = 0
+        # Radar DPC SRI nella finestra (integrale mm/h x 5')
+        sfr = sorted((t, v) for t, v in sri.items() if s <= t < e)
+        if sfr:
+            ep['sri_max_mm'] = sum(v[0] for _, v in sfr) * 5 / 60
+            ep['sri_mean_mm'] = sum(v[1] for _, v in sfr) * 5 / 60
+            ep['sri_cov'] = min(100, round(100 * len(sfr) / exp))
+            pk = max(sfr, key=lambda x: x[1][0])
+            ep['sri_peak_mmh'] = pk[1][0]
+            if 'peak_time' not in ep:        # senza ARPA il picco lo dà l'SRI
+                ep['peak_mmh'], ep['peak_time'], ep['peak_src'] = pk[1][0], pk[0], 'SRI'
+        else:
+            ep['sri_cov'] = 0
+        if 'peak_src' not in ep and 'peak_mmh' in ep:
+            ep['peak_src'] = 'ARPA'
         # CUM3 DPC (pluviometri interpolati, NON radar): blocchi che intersecano la finestra
         blocks = [(t, v) for t, v in cum3.items() if t > s and t - timedelta(hours=3) < e]
         ep['cum3_max_mm'] = sum(v[0] for _, v in blocks)
@@ -229,9 +264,12 @@ def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
         if 'peak_time' not in ep and blocks:
             b = max(blocks, key=lambda x: x[1][0])
             ep['peak_time'] = b[0] - timedelta(minutes=90)   # centro del blocco (3h)
-        ep['source'] = ('ARPA 5′' if ep['arpa_cov'] >= 80 else
-                        'ARPA+CUM3' if ep['arpa_cov'] > 0 else 'CUM3 3h (pluviometri)')
-        if ep.get('arpa_mean_mm', 0) < min_mm and ep['cum3_mean_mm'] < min_mm:
+        parts = [n for n, c in (('ARPA', ep['arpa_cov']), ('SRI', ep['sri_cov'])) if c > 0]
+        if max(ep['arpa_cov'], ep['sri_cov']) < 80:
+            parts.append('CUM3 3h (pluviometri)')
+        ep['source'] = ' + '.join(parts)
+        if (ep.get('arpa_mean_mm', 0) < min_mm and ep.get('sri_mean_mm', 0) < min_mm
+                and ep['cum3_mean_mm'] < min_mm):
             continue
         eps.append(ep)
     return eps
@@ -323,7 +361,8 @@ def attach_alerts(eps, events):
 
 # ── Scrittura ────────────────────────────────────────────────────────────────
 COLS = ['episode_id', 'area_name', 'start_utc', 'end_utc', 'duration_h', 'source',
-        'peak_mmh', 'peak_utc', 'arpa_max_mm', 'arpa_mean_mm', 'arpa_cov_pct',
+        'peak_mmh', 'peak_source', 'peak_utc', 'arpa_max_mm', 'arpa_mean_mm', 'arpa_cov_pct',
+        'sri_max_mm', 'sri_mean_mm', 'sri_cov_pct', 'sri_peak_mmh',
         'cum3_max_mm', 'cum3_mean_mm', 'cum3_blocks',
         'gauge_name', 'gauge_mm', 'gauge_type',
         'n_alerts', 'n_storm', 'n_nowcast', 'n_monitor', 'n_forecast',
@@ -347,6 +386,9 @@ def ep_row(ep, now):
         'peak_utc': iso(ep['peak_time']) if ep.get('peak_time') else '',
         'arpa_max_mm': r1(ep.get('arpa_max_mm')), 'arpa_mean_mm': r1(ep.get('arpa_mean_mm')),
         'arpa_cov_pct': ep.get('arpa_cov', 0) or '',
+        'peak_source': ep.get('peak_src', ''),
+        'sri_max_mm': r1(ep.get('sri_max_mm')), 'sri_mean_mm': r1(ep.get('sri_mean_mm')),
+        'sri_cov_pct': ep.get('sri_cov', 0) or '', 'sri_peak_mmh': r1(ep.get('sri_peak_mmh')),
         'cum3_max_mm': r1(ep['cum3_max_mm']), 'cum3_mean_mm': r1(ep['cum3_mean_mm']),
         'cum3_blocks': ep['cum3_blocks'],
         'gauge_name': ep.get('gauge_name', ''), 'gauge_mm': r1(ep.get('gauge_mm')),
@@ -378,7 +420,8 @@ def run(sir_local=None, now=None):
     for area in AREAS:
         arpa = load_arpa(area) if area in ARPA_AREAS else {}
         cum3 = load_cum3(area)
-        eps = build_episodes(area, arpa, cum3)
+        sri = load_sri(area)
+        eps = build_episodes(area, arpa, cum3, sri=sri)
         attach_gauge(eps, area, gpts, gcover, sir)
         all_eps += eps
         print(f'  {area}: {len(eps)} episodi')

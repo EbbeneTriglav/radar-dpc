@@ -7,6 +7,18 @@
   CARTO ora richiede API key (watermark): sostituito con Esri Gray Canvas (scuro/chiaro, no key).
   Il radar ha un pane dedicato (z 350) sopra qualunque basemap; etichette Esri sopra il radar.
 
+### Verifica dati (05/10 pomeriggio)
+- 🔎 La CUM3 DPC **non è radar**: per la doc DPC le cumulate 3/6/12/24h sono ottenute solo dai
+  pluviometri a terra interpolati. Il suo accordo col pluviometro (r≈0.96) è in parte circolare.
+  Etichette corrette ovunque ("CUM3 pluviometri"); il radar si giudica solo con ARPA e SRI.
+- 🐞 Orari pluviometri ARPA (Socrata) in **ora solare UTC+1**, letti come UTC → 1h di ritardo.
+  Corretti `ground_collect.py`, lettura live in `verifica.html`/`previsioni.html` e i dati archiviati.
+- 🆕 `archive/scripts/sri_collect.py` — archivio radar DPC SRI (5') per tutte le aree, Panna compresa
+  (`<area>_sri.csv`), nel workflow `arpa-collect` ogni 10'. `--probe` verifica la profondità
+  storica dell'API DPC; `.github/workflows/sri-backfill.yml` recupera i frame delle finestre episodio.
+- ✏️ `episodes.py` / `verifica.html` — colonne "Radar DPC SRI" e "Δ SRI"; per Panna l'SRI
+  definisce l'episodio a 5' (prima solo blocchi CUM3 3h).
+
 ### Episodi di pioggia (Verifica)
 - 🆕 `archive/scripts/episodes.py` — raggruppa la pioggia in episodi (ARPA 5′, DPC CUM3 dove ARPA manca);
   un episodio si chiude dopo **3h asciutte** (MIT calibrato su Cornalita/Oga: `--calibrate`).

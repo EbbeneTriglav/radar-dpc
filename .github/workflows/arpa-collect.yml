@@ -40,11 +40,19 @@ jobs:
       - name: Run arpa_collect
         run: python archive/scripts/arpa_collect.py
 
+      # Radar DPC "puro" (SRI 5') per TUTTE le aree, Panna compresa: serve a
+      # ricalcolare le cumulate evento da radar (la CUM3 DPC è pluviometrica).
+      # Solo raccolta dati, nessuna allerta: un errore qui non blocca ARPA.
+      - name: Run sri_collect (radar DPC SRI)
+        continue-on-error: true
+        timeout-minutes: 4
+        run: python archive/scripts/sri_collect.py
+
       - name: Commit ARPA CSVs
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add archive/data/*_arpa.csv archive/data/radar_arpa/ 2>/dev/null || true
+          git add archive/data/*_arpa.csv archive/data/*_sri.csv archive/data/radar_arpa/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No ARPA data changes."
           else

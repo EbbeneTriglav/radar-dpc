@@ -136,9 +136,15 @@
   <table class="vf" id="ep-table">
     <thead><tr>
       <th></th><th>Quando</th><th>Area</th><th>Allerte</th>
-      <th title="Picco d'intensità ARPA (pixel peggiore d'area)">Picco</th><th title="Radar ARPA Lombardia: integrale dell'intensità">Radar ARPA (max/mean)</th><th title="CUM3 DPC: pluviometri a terra interpolati, NON radar">CUM3 pluviometri DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th title="Scarto della CUM3 (pluviometri interpolati): non è una verifica del radar">Scarto CUM3</th>
+      <th title="Picco d'intensità radar (pixel peggiore d'area): ARPA in Lombardia, SRI DPC altrove">Picco</th>
+      <th title="Radar ARPA Lombardia: integrale dell'intensità (pixel max / media area)">Radar ARPA</th>
+      <th title="Radar DPC SRI (nazionale, 5'): integrale dell'intensità (pixel max / media area). Archiviato da ott-2026">Radar DPC SRI</th>
+      <th title="CUM3 DPC: SOLO pluviometri a terra interpolati, NON radar">CUM3 pluviometri</th>
+      <th>Pluviometro</th>
+      <th title="Radar ARPA − pluviometro (max / mean)">Δ ARPA</th><th title="Radar DPC SRI − pluviometro (max / mean)">Δ SRI</th>
+      <th title="CUM3 − pluviometro: NON verifica il radar (la CUM3 è fatta di pluviometri)">Δ CUM3</th>
     </tr></thead>
-    <tbody id="ep-body"><tr><td colspan="10">Caricamento…</td></tr></tbody>
+    <tbody id="ep-body"><tr><td colspan="12">Caricamento…</td></tr></tbody>
   </table>
   <table class="vf" id="ev-table" style="display:none">
     <thead><tr>
@@ -450,7 +456,7 @@ function scartoCell(rmax, rmean, ground){
 function renderEpisodes(){
   const body=document.getElementById('ep-body'), sum=document.getElementById('ep-sum');
   if (!ALL.episodes){
-    body.innerHTML='<tr><td colspan="10">Episodi non ancora calcolati (il workflow Forecast Verify li genera alle 06:00 e 18:00 UTC). Usa la vista "allerte".</td></tr>';
+    body.innerHTML='<tr><td colspan="12">Episodi non ancora calcolati (il workflow Forecast Verify li genera alle 06:00 e 18:00 UTC). Usa la vista "allerte".</td></tr>';
     sum.textContent=''; return;
   }
   const area=document.getElementById('ev-area').value;
@@ -460,8 +466,9 @@ function renderEpisodes(){
   const nG=eps.filter(e=>e.gauge_mm!=='').length, nA=eps.reduce((s,e)=>s+(+e.n_alerts||0),0);
   const nNoAl=eps.filter(e=>!(+e.n_alerts)).length;
   sum.innerHTML=`<b>${eps.length}</b> episodi · ${nG} con pluviometro · ${nA} allerte agganciate · ${nNoAl} episodi senza allerte. `+
-    `Un episodio si chiude dopo <b>3h asciutte</b>: i temporali a cavallo della mezzanotte restano una riga. Clic su una riga per i dettagli.`;
-  if (!eps.length){ body.innerHTML='<tr><td colspan="10">Nessun episodio nel periodo/filtri selezionati.</td></tr>'; return; }
+    `Un episodio si chiude dopo <b>3h asciutte</b>: i temporali a cavallo della mezzanotte restano una riga. Clic su una riga per i dettagli. `+
+    `<b>Radar</b> = ARPA e DPC SRI; la <b>CUM3</b> è fatta di pluviometri interpolati (non verifica il radar).`;
+  if (!eps.length){ body.innerHTML='<tr><td colspan="12">Nessun episodio nel periodo/filtri selezionati.</td></tr>'; return; }
   const dim=t=>`<span style="color:var(--text3);font-size:11px">${t}</span>`;
   body.innerHTML=eps.map((e,i)=>{
     const s=new Date(e.start_utc), en=new Date(e.end_utc);
@@ -475,7 +482,9 @@ function renderEpisodes(){
     if(+e.n_monitor) b.push(`<span class="pill">soglia ×${e.n_monitor}</span>`);
     if(+e.n_forecast) b.push(`<span class="pill fore">forecast ×${e.n_forecast}</span>`);
     const alerts=b.length?b.join(' '):dim('nessuna');
-    const peak=e.peak_mmh!==''?`${(+e.peak_mmh).toFixed(1)} mm/h`:dim(e.source);
+    const peak=e.peak_mmh!==''?`${(+e.peak_mmh).toFixed(1)} mm/h ${dim(e.peak_source||'')}`:dim('—');
+    const sri=e.sri_max_mm!==''?`<b style="color:#a78bfa">${(+e.sri_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.sri_mean_mm).toFixed(0)+' mm')}`+
+      (+e.sri_cov_pct<80?` ${dim('('+e.sri_cov_pct+'% dati)')}`:''):dim('non archiviato');
     const arpa=e.arpa_max_mm!==''?`<b style="color:#2dd4bf">${(+e.arpa_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.arpa_mean_mm).toFixed(0)+' mm')}`+
       (+e.arpa_cov_pct<80?` ${dim('('+e.arpa_cov_pct+'% dati)')}`:''):dim('n/d');
     const dpc=`<b style="color:#f87171">${(+e.cum3_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.cum3_mean_mm).toFixed(0)+' mm ('+e.cum3_blocks+'×3h)')}`;
@@ -486,8 +495,9 @@ function renderEpisodes(){
       (shared?` <span title="Totale giornaliero condiviso con altri episodi dello stesso giorno: non confrontabile col singolo episodio" style="cursor:help">⚠</span>`:'');
     const ok=g!=null && !shared;
     return `<tr class="ep" data-i="${i}"><td class="tg">▸</td><td>${when}</td><td>${e.area_name}</td><td>${alerts}</td><td>${peak}</td>
-      <td>${arpa}</td><td>${dpc}</td><td>${gauge}</td>
+      <td>${arpa}</td><td>${sri}</td><td>${dpc}</td><td>${gauge}</td>
       <td>${ok&&e.arpa_max_mm!==''?scartoCell(e.arpa_max_mm,e.arpa_mean_mm,g):dim('—')}</td>
+      <td>${ok&&e.sri_max_mm!==''?scartoCell(e.sri_max_mm,e.sri_mean_mm,g):dim('—')}</td>
       <td>${ok?scartoCell(e.cum3_max_mm,e.cum3_mean_mm,g):dim('—')}</td></tr>`;
   }).join('');
   [...body.querySelectorAll('tr.ep')].forEach(tr=>tr.addEventListener('click',()=>toggleEpisode(tr, eps[+tr.dataset.i])));
@@ -504,9 +514,9 @@ function toggleEpisode(tr, e){
       <td style="color:var(--text3)">${(a.note||'').replace(/</g,'&lt;')}</td></tr>`).join('')
     :'<tr><td colspan="6" style="color:var(--text3)">Nessuna allerta: pioggia rimasta sotto le soglie di allerta.</td></tr>';
   const det=document.createElement('tr'); det.className='ep-det';
-  det.innerHTML=`<td colspan="10">
+  det.innerHTML=`<td colspan="12">
     <div class="ep-meta">
-      <span>Fonte: <b>${e.source}</b>${e.arpa_cov_pct!==''?` · copertura ARPA <b>${e.arpa_cov_pct}%</b>`:''}</span>
+      <span>Fonti: <b>${e.source}</b>${e.arpa_cov_pct!==''?` · copertura ARPA <b>${e.arpa_cov_pct}%</b>`:''}${e.sri_cov_pct!==''?` · copertura SRI <b>${e.sri_cov_pct}%</b>`:''}</span>
       <span>Picco: <b>${e.peak_utc?fmtRome(e.peak_utc,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}</b></span>
       <span>Prima allerta: <b>${lead}</b></span>
       ${e.forecast_lead_h!==''?`<span>Prima allerta forecast: <b>${Math.abs(+e.forecast_lead_h)} h ${+e.forecast_lead_h>=0?'prima':'dopo'}</b> il picco</span>`:''}

@@ -84,6 +84,8 @@ helper `fetchData()`. Chart.js + Leaflet.js. Pagine:
 - `collect.py` — cumulate CUM3/CUM24 storiche (processa da IERI + `--include-today`).
 - `forecast_matrix.py` / `forecast_ensemble_alert.py` — allerte forecast.
 - `forecast_verify.py` / `forecast_history.py` — verifica accuratezza.
+- `sri_collect.py` — archivio radar DPC SRI (5', tutte le aree) in `<area>_sri.csv`;
+  `--probe` = profondità storica API, `--backfill-episodes` = recupero finestre episodio.
 - `episodes.py` — episodi di pioggia (chiusura dopo 3h asciutte, MIT calibrato col
   pluviometro): `episodes.csv` è DERIVATO e riscritto, `events.csv` resta il libro mastro.
 - `reconstruct_events.py` — ricostruisce in `events.csv` gli eventi persi quando
