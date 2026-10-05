@@ -1,5 +1,22 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-05 — Episodi di pioggia + mappa
+
+### Mappa
+- ✏️ `js/basemap-picker.js`, `js/georaster-utils.js`, `arpa.html`, `js/archive-tab.js`, `js/config.js` —
+  CARTO ora richiede API key (watermark): sostituito con Esri Gray Canvas (scuro/chiaro, no key).
+  Il radar ha un pane dedicato (z 350) sopra qualunque basemap; etichette Esri sopra il radar.
+
+### Episodi di pioggia (Verifica)
+- 🆕 `archive/scripts/episodes.py` — raggruppa la pioggia in episodi (ARPA 5′, DPC CUM3 dove ARPA manca);
+  un episodio si chiude dopo **3h asciutte** (MIT calibrato su Cornalita/Oga: `--calibrate`).
+  Cumulate ARPA/DPC/pluviometro sulla stessa finestra; allerte agganciate (anticipo vs picco).
+  Output derivati: `archive/data/episodes.csv`, `archive/data/episodes_alerts.csv` (events.csv intatto).
+- ✏️ `archive/scripts/ground_collect.py` — archivia il pluviometro anche per gli episodi senza allerte.
+- ✏️ `.github/workflows/forecast-verify.yml` — episodi → ground_collect → episodi, 2×/giorno (06/18 UTC).
+- ✏️ `verifica.html` — nuova vista "episodi di pioggia" (default) con riga espandibile (allerte, anticipo,
+  grafico); la vista per allerte resta disponibile.
+
 ## Sessione 2026-05-29 (blocchi 1, 2, 3, 4, 4b + estensioni)
 
 ### Blocco 1 — Affidabilità

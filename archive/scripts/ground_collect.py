@@ -177,6 +177,34 @@ def main():
         keys_seen.add(key)
         todo.append((area, ts_raw, ts))
 
+    # Episodi di pioggia (episodes.py) senza allerte: anche per loro serve il
+    # pluviometro, altrimenti il confronto radar/terra resta solo sugli eventi
+    # allertati. Archivio una finestra +/-WINDOW_H centrata sull'episodio, solo
+    # se l'episodio non e' gia' coperto da finestre archiviate.
+    cover = {}
+    for r in read_csv(INDEX_FILE):
+        s0, e0 = parse_ts(r.get('win_start_utc')), parse_ts(r.get('win_end_utc'))
+        if s0 and e0:
+            cover.setdefault(r['area_name'], []).append((s0, e0))
+    for ep in read_csv(DATA / 'episodes.csv'):
+        area = ep.get('area_name', '')
+        s0, e0 = parse_ts(ep.get('start_utc')), parse_ts(ep.get('end_utc'))
+        if area not in SENSORS or not s0 or not e0 or ep.get('status') != 'chiuso':
+            continue
+        if any(cs <= s0 - timedelta(minutes=15) and ce >= e0 + timedelta(minutes=30)
+               for cs, ce in cover.get(area, [])):
+            continue
+        mid = s0 + (e0 - s0) / 2
+        if (e0 - s0) > timedelta(hours=2 * WINDOW_H - 2):
+            log(f'  skip episodio {area} {iso_z(s0)}: piu\' lungo della finestra')
+            continue
+        ts_raw = iso_z(mid.replace(microsecond=0))
+        key = (area, ts_raw)
+        if key in done or key in keys_seen or mid + timedelta(hours=WINDOW_H) > now:
+            continue
+        keys_seen.add(key)
+        todo.append((area, ts_raw, mid))
+
     if not todo:
         log('Nessun evento nuovo da archiviare.')
         return 0

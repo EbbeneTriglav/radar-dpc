@@ -22,6 +22,17 @@
     table.vf th{padding:8px 10px;text-align:left;font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border,#334155)}
     table.vf td{padding:8px 10px;border-bottom:1px solid rgba(120,120,120,.12)}
     table.vf tr.ev{cursor:pointer}
+    table.vf tr.ep{cursor:pointer}
+    table.vf tr.ep:hover{background:rgba(120,160,255,.08)}
+    table.vf tr.ep td.tg{width:18px;color:var(--text3,#64748b);font-size:11px}
+    table.vf tr.ep.open td.tg{color:#38bdf8}
+    table.vf tr.ep-det>td{background:rgba(120,160,255,.04);padding:10px 14px 14px}
+    .ep-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--text2,#94a3b8);margin:0 0 8px}
+    .ep-meta b{color:var(--text,#e2e8f0);font-weight:600}
+    table.ep-al{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 8px}
+    table.ep-al td,table.ep-al th{padding:4px 8px;border-bottom:1px solid var(--border,#334155);text-align:left}
+    table.ep-al th{color:var(--text3,#64748b);font-weight:600;font-size:11px;text-transform:uppercase}
+    .ep-sum{font-size:12px;color:var(--text2,#94a3b8);margin:0 0 8px}
     table.vf tr.ev:hover{background:rgba(120,160,255,.08)}
     .pill{display:inline-block;font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px}
     .pill.storm{background:#7c2d12;color:#fed7aa}
@@ -100,6 +111,10 @@
 
   <h2 style="font-size:15px;margin:24px 0 8px">Eventi — previsto vs osservato</h2>
   <div class="vf-filters">
+    <select id="ev-view" title="Episodi = pioggia reale raggruppata (un temporale = una riga, anche a cavallo della mezzanotte). Allerte = vista precedente, una riga per allerta.">
+      <option value="episodes">Vista: episodi di pioggia</option>
+      <option value="alerts">Vista: allerte (precedente)</option>
+    </select>
     <select id="ev-area"><option value="">Tutte le aree</option></select>
     <select id="ev-type">
       <option value="storm">Solo temporali (cella su area)</option>
@@ -111,12 +126,20 @@
       <option value="14">Ultimi 14 giorni</option>
       <option value="9999">Tutto</option>
     </select>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2,#94a3b8);cursor:pointer;user-select:none" title="Unisce in un solo evento le allerte consecutive della stessa area (temporale continuo). Il CSV resta sempre a righe singole.">
+    <label id="ev-cluster-wrap" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2,#94a3b8);cursor:pointer;user-select:none" title="Unisce in un solo evento le allerte consecutive della stessa area (temporale continuo). Il CSV resta sempre a righe singole.">
       <input type="checkbox" id="ev-cluster" checked style="cursor:pointer"> Raggruppa eventi continui
     </label>
     <button id="dlAll" style="font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);cursor:pointer;margin-left:auto">⬇ Scarica tutti gli eventi (CSV)</button>
   </div>
-  <table class="vf">
+  <p class="ep-sum" id="ep-sum"></p>
+  <table class="vf" id="ep-table">
+    <thead><tr>
+      <th></th><th>Quando</th><th>Area</th><th>Allerte</th>
+      <th title="Picco d'intensità ARPA (pixel peggiore d'area)">Picco</th><th>Cum. ARPA (max/mean)</th><th>Cum. DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th>Scarto DPC</th>
+    </tr></thead>
+    <tbody id="ep-body"><tr><td colspan="10">Caricamento…</td></tr></tbody>
+  </table>
+  <table class="vf" id="ev-table" style="display:none">
     <thead><tr>
       <th>Quando</th><th>Area</th><th>Tipo</th>
       <th>Intensità max</th><th>Cum. ARPA (max/mean)</th><th>Cum. DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th>Scarto DPC</th>
@@ -186,6 +209,14 @@ async function loadAll(){
     fetchData('archive/data/forecast_verification.csv').then(r=>r.text()),
   ]);
   if (ev.status==='fulfilled') ALL.events = parseCSV(ev.value);
+  // Episodi di pioggia (derivati da episodes.py, aggiornati 2×/giorno)
+  const [ep, epa] = await Promise.allSettled([
+    fetchData('archive/data/episodes.csv').then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); }),
+    fetchData('archive/data/episodes_alerts.csv').then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); }),
+  ]);
+  ALL.episodes = ep.status==='fulfilled' ? parseCSV(ep.value) : null;
+  ALL.epAlerts = {};
+  if (epa.status==='fulfilled') for (const r of parseCSV(epa.value)) (ALL.epAlerts[r.episode_id] ||= []).push(r);
   if (vf.status==='fulfilled') ALL.verify = parseCSV(vf.value);
   // forecast_history.jsonl
   try {
@@ -400,6 +431,108 @@ function clusterWindow(c){
     if(w.start<s) s=w.start; if(w.end>e) e=w.end;
   }
   return {start:s, end:e};
+}
+
+// ── EPISODI DI PIOGGIA (episodes.csv) ─────────────────────────────────────
+// Un episodio = pioggia continua; si chiude dopo 3h asciutte (MIT calibrato
+// sul pluviometro: vedi episodes.py --calibrate). Cumulate radar e pluviometro
+// sono calcolate server-side sulla STESSA finestra → niente doppioni.
+const fmtRome = (iso, o) => new Date(iso).toLocaleString('it-IT', {timeZone:'Europe/Rome', ...o});
+function scartoCell(rmax, rmean, ground){
+  if (rmax==='' || rmax==null || ground==null) return '<span style="color:var(--text3)">—</span>';
+  rmax=+rmax; const dMax=rmax-ground, pMax=ground>0?dMax/ground*100:0;
+  const col=Math.abs(pMax)<=40?'#4ade80':(dMax<0?'#f87171':'#fbbf24');
+  let h=`<span style="color:${col}">${dMax>=0?'+':''}${dMax.toFixed(0)}</span>`;
+  if (rmean!==''&&rmean!=null){ const dm=+rmean-ground; h+=`<span style="color:var(--text3);font-size:11px"> / ${dm>=0?'+':''}${dm.toFixed(0)} mm</span>`; }
+  return h;
+}
+function renderEpisodes(){
+  const body=document.getElementById('ep-body'), sum=document.getElementById('ep-sum');
+  if (!ALL.episodes){
+    body.innerHTML='<tr><td colspan="10">Episodi non ancora calcolati (il workflow Forecast Verify li genera alle 06:00 e 18:00 UTC). Usa la vista "allerte".</td></tr>';
+    sum.textContent=''; return;
+  }
+  const area=document.getElementById('ev-area').value;
+  const days=+document.getElementById('ev-window').value;
+  const cutoff=Date.now()-days*86400_000;
+  const eps=ALL.episodes.filter(e=>(!area||e.area_name===area) && new Date(e.end_utc).getTime()>=cutoff);
+  const nG=eps.filter(e=>e.gauge_mm!=='').length, nA=eps.reduce((s,e)=>s+(+e.n_alerts||0),0);
+  const nNoAl=eps.filter(e=>!(+e.n_alerts)).length;
+  sum.innerHTML=`<b>${eps.length}</b> episodi · ${nG} con pluviometro · ${nA} allerte agganciate · ${nNoAl} episodi senza allerte. `+
+    `Un episodio si chiude dopo <b>3h asciutte</b>: i temporali a cavallo della mezzanotte restano una riga. Clic su una riga per i dettagli.`;
+  if (!eps.length){ body.innerHTML='<tr><td colspan="10">Nessun episodio nel periodo/filtri selezionati.</td></tr>'; return; }
+  const dim=t=>`<span style="color:var(--text3);font-size:11px">${t}</span>`;
+  body.innerHTML=eps.map((e,i)=>{
+    const s=new Date(e.start_utc), en=new Date(e.end_utc);
+    const same=fmtRome(e.start_utc,{day:'2-digit',month:'2-digit'})===fmtRome(e.end_utc,{day:'2-digit',month:'2-digit'});
+    const when=`${fmtRome(e.start_utc,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}–`+
+      fmtRome(e.end_utc, same?{hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+
+      ` ${dim(e.duration_h+'h')}`+(e.status==='in corso'?' <span class="pill now">in corso</span>':'');
+    const b=[];
+    if(+e.n_storm) b.push(`<span class="pill storm">temporale ×${e.n_storm}</span>`);
+    if(+e.n_nowcast) b.push(`<span class="pill now">nowcast ×${e.n_nowcast}</span>`);
+    if(+e.n_monitor) b.push(`<span class="pill">soglia ×${e.n_monitor}</span>`);
+    if(+e.n_forecast) b.push(`<span class="pill fore">forecast ×${e.n_forecast}</span>`);
+    const alerts=b.length?b.join(' '):dim('nessuna');
+    const peak=e.peak_mmh!==''?`${(+e.peak_mmh).toFixed(1)} mm/h`:dim(e.source);
+    const arpa=e.arpa_max_mm!==''?`<b style="color:#2dd4bf">${(+e.arpa_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.arpa_mean_mm).toFixed(0)+' mm')}`+
+      (+e.arpa_cov_pct<80?` ${dim('('+e.arpa_cov_pct+'% dati)')}`:''):dim('n/d');
+    const dpc=`<b style="color:#f87171">${(+e.dpc_max_mm).toFixed(0)}</b> ${dim('/ '+(+e.dpc_mean_mm).toFixed(0)+' mm ('+e.dpc_blocks+'×3h)')}`;
+    const shared=/condiviso/.test(e.gauge_type);
+    const g=e.gauge_mm!==''?+e.gauge_mm:null;
+    const gauge=g==null?dim('non archiviato'):
+      `<b style="color:#ec4899${shared?';opacity:.5':''}">${g.toFixed(0)} mm</b> ${dim((e.gauge_name||'').split(' ')[0]+(/giorn/.test(e.gauge_type)?' (giorno)':''))}`+
+      (shared?` <span title="Totale giornaliero condiviso con altri episodi dello stesso giorno: non confrontabile col singolo episodio" style="cursor:help">⚠</span>`:'');
+    const ok=g!=null && !shared;
+    return `<tr class="ep" data-i="${i}"><td class="tg">▸</td><td>${when}</td><td>${e.area_name}</td><td>${alerts}</td><td>${peak}</td>
+      <td>${arpa}</td><td>${dpc}</td><td>${gauge}</td>
+      <td>${ok&&e.arpa_max_mm!==''?scartoCell(e.arpa_max_mm,e.arpa_mean_mm,g):dim('—')}</td>
+      <td>${ok?scartoCell(e.dpc_max_mm,e.dpc_mean_mm,g):dim('—')}</td></tr>`;
+  }).join('');
+  [...body.querySelectorAll('tr.ep')].forEach(tr=>tr.addEventListener('click',()=>toggleEpisode(tr, eps[+tr.dataset.i])));
+}
+function toggleEpisode(tr, e){
+  const nx=tr.nextElementSibling;
+  if (nx && nx.classList.contains('ep-det')){ nx.remove(); tr.classList.remove('open'); tr.querySelector('.tg').textContent='▸'; return; }
+  tr.classList.add('open'); tr.querySelector('.tg').textContent='▾';
+  const al=(ALL.epAlerts[e.episode_id]||[]).slice().sort((a,b)=>new Date(a.event_timestamp_utc)-new Date(b.event_timestamp_utc));
+  const pill=c=>c==='storm'?'<span class="pill storm">temporale</span>':c==='forecast'?'<span class="pill fore">forecast</span>':c==='nowcast'?'<span class="pill now">nowcast</span>':'<span class="pill">soglia</span>';
+  const lead=e.alert_lead_min!==''?(+e.alert_lead_min>=0?`${e.alert_lead_min} min prima del picco`:`${-e.alert_lead_min} min dopo il picco`):'—';
+  const rows=al.length?al.map(a=>`<tr><td>${fmtRome(a.event_timestamp_utc,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${pill(a.class)}</td><td>${a.level}</td><td>${a.product||''}</td><td>${a.observed_mm_max?(+a.observed_mm_max).toFixed(1):''}</td>
+      <td style="color:var(--text3)">${(a.note||'').replace(/</g,'&lt;')}</td></tr>`).join('')
+    :'<tr><td colspan="6" style="color:var(--text3)">Nessuna allerta: pioggia rimasta sotto le soglie di allerta.</td></tr>';
+  const det=document.createElement('tr'); det.className='ep-det';
+  det.innerHTML=`<td colspan="10">
+    <div class="ep-meta">
+      <span>Fonte: <b>${e.source}</b>${e.arpa_cov_pct!==''?` · copertura ARPA <b>${e.arpa_cov_pct}%</b>`:''}</span>
+      <span>Picco: <b>${e.peak_utc?fmtRome(e.peak_utc,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}</b></span>
+      <span>Prima allerta: <b>${lead}</b></span>
+      ${e.forecast_lead_h!==''?`<span>Prima allerta forecast: <b>${Math.abs(+e.forecast_lead_h)} h ${+e.forecast_lead_h>=0?'prima':'dopo'}</b> il picco</span>`:''}
+      <span>Pluviometro: <b>${e.gauge_name||'—'}</b> ${e.gauge_type?`(${e.gauge_type})`:''}</span>
+    </div>
+    <table class="ep-al"><thead><tr><th>Quando</th><th>Classe</th><th>Livello</th><th>Prodotto</th><th>mm</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>
+    <button class="btn-sm ep-chart" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);cursor:pointer">📈 Grafico episodio</button>
+  </td>`;
+  tr.after(det);
+  det.querySelector('.ep-chart').addEventListener('click',ev=>{ ev.stopPropagation();
+    openChart({area_name:e.area_name, event_timestamp_utc:e.peak_utc||e.start_utc, level:'episodio', product:e.source}); });
+}
+function renderEventsView(){
+  const ep=document.getElementById('ev-view').value==='episodes';
+  const areaSel=document.getElementById('ev-area');
+  if (areaSel.options.length<=1){
+    const cur=areaSel.value;
+    [...new Set([...ALL.events, ...(ALL.episodes||[])].map(e=>e.area_name).filter(Boolean))].sort()
+      .forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; areaSel.appendChild(o); });
+    areaSel.value=cur;
+  }
+  document.getElementById('ep-table').style.display=ep?'':'none';
+  document.getElementById('ep-sum').style.display=ep?'':'none';
+  document.getElementById('ev-table').style.display=ep?'none':'';
+  document.getElementById('ev-type').style.display=ep?'none':'';
+  document.getElementById('ev-cluster-wrap').style.display=ep?'none':'flex';
+  if (ep) renderEpisodes(); else renderEvents();
 }
 
 function renderEvents(){
@@ -1039,12 +1172,13 @@ function renderForecastSites(){
 
 
 ['acc-window'].forEach(id=>document.getElementById(id).addEventListener('change',renderAccuracy));
-['ev-area','ev-type','ev-window','ev-cluster'].forEach(id=>document.getElementById(id).addEventListener('change',renderEvents));
+['ev-area','ev-type','ev-window','ev-cluster','ev-view'].forEach(id=>document.getElementById(id).addEventListener('change',renderEventsView));
 
 (async()=>{
   await loadAll();
   renderAccuracy();
-  renderEvents();
+  if (!ALL.episodes) document.getElementById('ev-view').value='alerts';
+  renderEventsView();
   renderForecastSites();
 })();
 </script>

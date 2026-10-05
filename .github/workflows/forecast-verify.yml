@@ -1,11 +1,12 @@
 name: Forecast Verify
 
 # Verifica giornaliera dell'accuratezza dei forecast (OpenMeteo + MET Norway)
-# confrontandoli con l'osservato. Schedulato 1×/giorno alle 06:00 UTC.
+# confrontandoli con l'osservato + episodi di pioggia (episodes.py) e
+# pluviometri a terra. Schedulato 2×/giorno (06:00 e 18:00 UTC).
 
 on:
   schedule:
-    - cron: '0 6 * * *'    # ogni giorno alle 06:00 UTC
+    - cron: '0 6,18 * * *'    # 06:00 e 18:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -31,17 +32,28 @@ jobs:
       - name: Run forecast_verify
         run: python archive/scripts/forecast_verify.py
 
-      # Archivia i pluviometri a terra (ARPA Socrata) per ogni evento nuovo,
+      # Episodi di pioggia: prima passata per sapere QUALI finestre servono
+      # al pluviometro, poi ground_collect le archivia, poi ricalcolo con il
+      # dato a terra. episodes.csv è derivato (riscritto), events.csv intatto.
+      - name: Episodi di pioggia (1a passata)
+        continue-on-error: true
+        run: python archive/scripts/episodes.py
+
+      # Archivia i pluviometri a terra (ARPA Socrata) per ogni evento/episodio nuovo,
       # cosi' verifica.html non deve interrogare l'API riga per riga e il dato
       # resta anche quando ARPA lo rimuove dal dataset realtime.
       - name: Run ground_collect
         run: python archive/scripts/ground_collect.py
 
+      - name: Episodi di pioggia (con pluviometro)
+        continue-on-error: true
+        run: python archive/scripts/episodes.py
+
       - name: Commit verification
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add archive/data/forecast_verification.csv archive/data/ground_rain.csv archive/data/ground_index.csv 2>/dev/null || true
+          git add archive/data/forecast_verification.csv archive/data/ground_rain.csv archive/data/ground_index.csv archive/data/episodes.csv archive/data/episodes_alerts.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No verification changes."
           else
