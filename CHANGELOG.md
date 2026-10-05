@@ -7,6 +7,12 @@
   CARTO ora richiede API key (watermark): sostituito con Esri Gray Canvas (scuro/chiaro, no key).
   Il radar ha un pane dedicato (z 350) sopra qualunque basemap; etichette Esri sopra il radar.
 
+### Episodi Cepina (05/10 notte)
+- 🐞 `episodes.py` — a Cepina il radar ARPA (quasi cieco: r≈0.2 col pluviometro) "cancellava" la pioggia
+  vista da SRI e CUM3. Nuovo `ARPA_TRUSTED = ('ruspino',)`: dove ARPA non è affidabile l'SRI conta sempre
+  e i frame ARPA asciutti non smentiscono la CUM3; il picco viene dall'SRI. Effetto: episodio 20/08 da 10 a
+  19,5 h (pluvio 55 mm), allerte senza episodio 45 → 28. MIT 3h confermato (`--calibrate` ora usa anche l'SRI).
+
 ### Report (05/10 sera)
 - 🆕 `report.html` (menu "📑 Report" su tutte le pagine) — report generato nel browser dai dati del repo,
   per area e periodo: **Sintesi stakeholder** (KPI, testo automatico, stato per area, episodi principali,

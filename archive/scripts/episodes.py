@@ -70,6 +70,11 @@ ALERT_MARGIN_H = 1.0 # allerte nowcast/monitor agganciate entro ±1h dalla fines
 FORECAST_LEAD_H = 24 # allerte forecast agganciate se emesse fino a 24h prima
 
 ARPA_AREAS = ('ruspino', 'cepina')
+# Aree dove il radar ARPA è affidabile (verifica ott-2026: Ruspino r≈0.8 col
+# pluviometro; Cepina r≈0.3, fascio probabilmente schermato dai rilievi).
+# Dove ARPA NON è affidabile, i suoi frame "asciutti" non possono smentire la
+# CUM3 (pluviometri): altrimenti si perdono episodi reali (es. Cepina 21/08).
+ARPA_TRUSTED = ('ruspino',)
 AREAS = ('ruspino', 'cepina', 'panna')
 GAUGES = {'ruspino': ('2278', 'Cornalita'), 'cepina': ('8010', 'Oga S.Colombano')}
 SIR_URL = ('https://raw.githubusercontent.com/EbbeneTriglav/dati_idro/main/'
@@ -203,19 +208,23 @@ def covered(cover, s, e):
     return any(cs <= s and ce >= e for cs, ce in cover)
 
 
-def wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri=None):
+def wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri=None, arpa_trusted=True):
     """Intervalli bagnati, per priorità: radar ARPA, poi radar DPC SRI dove ARPA
     manca, poi CUM3 (pluviometri, 3h) per i blocchi senza radar a 5'."""
     sri = sri or {}
     iv = [(t, t + STEP) for t, (mx, _) in arpa.items() if mx >= wet_mmh]
-    iv += [(t, t + STEP) for t, (mx, _) in sri.items() if t not in arpa and mx >= wet_mmh]
+    # SRI: dove ARPA è affidabile serve solo a riempirne i buchi; dove non lo è
+    # (Cepina) conta sempre, anche se ARPA ha un frame "asciutto" nello stesso istante
+    iv += [(t, t + STEP) for t, (mx, _) in sri.items()
+           if (not arpa_trusted or t not in arpa) and mx >= wet_mmh]
     for t_end, (mx, _) in cum3.items():
         if mx < wet_cum3:
             continue
         t0 = t_end - timedelta(hours=3)
         # se il blocco è coperto da radar a 5' (>= 80% dei 36 frame) decide il
         # radar, altrimenti il blocco CUM3 conta bagnato
-        n = sum(1 for k in range(36) if (t0 + k * STEP) in arpa or (t0 + k * STEP) in sri)
+        n = sum(1 for k in range(36)
+                if (arpa_trusted and (t0 + k * STEP) in arpa) or (t0 + k * STEP) in sri)
         if n < 29:
             iv.append((t0, t_end))
     return iv
@@ -225,7 +234,8 @@ def wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri=None):
 def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
                    wet_cum3=WET_CUM3_MM, min_mm=MIN_EP_MM, sri=None):
     sri = sri or {}
-    iv = merge_intervals(wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri),
+    iv = merge_intervals(wet_intervals(arpa, cum3, wet_mmh, wet_cum3, sri,
+                                       arpa_trusted=area in ARPA_TRUSTED),
                          timedelta(hours=mit_h))
     eps = []
     for s, e in iv:
@@ -250,7 +260,7 @@ def build_episodes(area, arpa, cum3, mit_h=MIT_H, wet_mmh=WET_MMH,
             ep['sri_cov'] = min(100, round(100 * len(sfr) / exp))
             pk = max(sfr, key=lambda x: x[1][0])
             ep['sri_peak_mmh'] = pk[1][0]
-            if 'peak_time' not in ep:        # senza ARPA il picco lo dà l'SRI
+            if 'peak_time' not in ep or area not in ARPA_TRUSTED:   # senza ARPA (o ARPA non affidabile) il picco lo dà l'SRI
                 ep['peak_mmh'], ep['peak_time'], ep['peak_src'] = pk[1][0], pk[0], 'SRI'
         else:
             ep['sri_cov'] = 0
@@ -457,11 +467,11 @@ def calibrate(sir_local=None):
     print(f'{"area":8} {"MIT":>4} {"episodi":>8} {"confr.":>7} {"split":>6} {"merge":>6} '
           f'{"bias ARPA med":>14} {"bias CUM3 med":>13}')
     for area in ARPA_AREAS:
-        arpa, cum3 = load_arpa(area), load_cum3(area)
+        arpa, cum3, sri = load_arpa(area), load_cum3(area), load_sri(area)
         sid = GAUGES[area][0]
         g = sorted(gpts.get(sid, []))
         for mit in (1, 2, 3, 4, 6):
-            eps = build_episodes(area, arpa, cum3, mit_h=mit)
+            eps = build_episodes(area, arpa, cum3, mit_h=mit, sri=sri)
             # episodi a terra: punti >= 0.2 mm uniti con la stessa regola
             giv = merge_intervals([(t - timedelta(minutes=10), t) for t, mm in g if mm >= 0.2],
                                   timedelta(hours=mit))
