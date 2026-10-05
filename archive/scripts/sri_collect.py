@@ -32,6 +32,7 @@ USO
   python archive/scripts/sri_collect.py --probe            # quanto indietro tiene l'API DPC?
   python archive/scripts/sri_collect.py --backfill-episodes  # frame delle finestre episodio
                                                            # (solo se l'API li ha ancora)
+  python archive/scripts/sri_collect.py --backfill-ring-days  # anello continuo da SRI_RING_FROM (tutte le aree)
   python archive/scripts/sri_collect.py --backfill-ring    # anello: finestre [inizio-3h, inizio+3h]
                                                            # degli episodi di SRI_RING_AREAS
 Env: SRI_MAX_FRAMES (default 36 = 3h per run), SRI_LOOKBACK_H (default 6),
@@ -417,6 +418,25 @@ def run_backfill_ring():
     collect_ring(ts, areas, now)
 
 
+def run_backfill_ring_days():
+    """Anello CONTINUO (tutti i frame 5') da SRI_RING_FROM a un'ora fa, per tutte le aree:
+    serve a contare le celle passate vicino SENZA pioggia sull'area (falsi allarmi della
+    pre-allerta), che le sole finestre episodio non possono vedere."""
+    want = {x.strip() for x in os.environ.get('SRI_RING_AREAS', 'ruspino,cepina,panna').split(',') if x.strip()}
+    areas = [a for a in load_areas() if a['name'] in want]
+    now = datetime.now(tz=UTC)
+    t = floor5(parse_iso(os.environ.get('SRI_RING_FROM', '2026-05-15') + 'T00:00:00'))
+    end = floor5(now - timedelta(hours=1))
+    ts = set()
+    while t <= end:
+        ts.add(t)
+        t += STEP
+    log.info(f'backfill anello continuo {sorted(want)}: {len(ts)} frame da {iso(min(ts))}')
+    global BACKFILL
+    BACKFILL = True
+    collect_ring(ts, areas, now)
+
+
 def run_probe():
     """Verifica fino a quando l'API DPC restituisce frame SRI storici."""
     last = latest_ts()
@@ -447,6 +467,7 @@ if __name__ == '__main__':
     ap.add_argument('--probe', action='store_true', help='verifica la profondità storica dell\'API DPC')
     ap.add_argument('--backfill-episodes', action='store_true', help='scarica i frame delle finestre episodio')
     ap.add_argument('--backfill-ring', action='store_true', help='anello attorno alle aree, finestre episodio')
+    ap.add_argument('--backfill-ring-days', action='store_true', help='anello continuo da SRI_RING_FROM, tutte le aree')
     a = ap.parse_args()
     try:
         if a.probe:
@@ -455,6 +476,8 @@ if __name__ == '__main__':
             run_backfill_episodes()
         elif a.backfill_ring:
             run_backfill_ring()
+        elif a.backfill_ring_days:
+            run_backfill_ring_days()
         else:
             run_incremental()
     except Exception as e:

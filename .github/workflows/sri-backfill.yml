@@ -7,7 +7,9 @@ name: SRI Backfill / Probe
 # episodio (dati di studio per la pre-allerta; nessuna allerta li legge).
 # AUTOMATICO: con 'continua' attivo, a fine run si rilancia da solo finché restano
 # frame E il run ha archiviato qualcosa (i frame oltre la memoria dell'API DPC non
-# bloccano: un run a 0 frame ferma la catena). Massimo 25 giri.
+# bloccano: un run a 0 frame ferma la catena). Massimo 80 giri.
+# 'backfill-ring-days' = anello CONTINUO dal 15/05 per tutte le aree (~40k frame, ~40 giri
+# da 1000): misura le celle passate vicino senza piovere sull'area (falsi allarmi).
 
 on:
   workflow_dispatch:
@@ -16,10 +18,10 @@ on:
         description: 'Modalità'
         default: 'probe'
         type: choice
-        options: ['probe', 'backfill-episodes', 'backfill-ring']
+        options: ['probe', 'backfill-episodes', 'backfill-ring', 'backfill-ring-days']
       max_frames:
         description: 'Frame massimi per run (backfill)'
-        default: '400'
+        default: '1000'
       auto:
         description: 'Continua da solo finché non ha finito'
         type: boolean
@@ -39,7 +41,7 @@ concurrency:
 jobs:
   sri:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -57,6 +59,8 @@ jobs:
             python archive/scripts/sri_collect.py --probe
           elif [ "${{ github.event.inputs.mode }}" = "backfill-ring" ]; then
             python archive/scripts/sri_collect.py --backfill-ring
+          elif [ "${{ github.event.inputs.mode }}" = "backfill-ring-days" ]; then
+            python archive/scripts/sri_collect.py --backfill-ring-days
           else
             python archive/scripts/sri_collect.py --backfill-episodes
           fi
@@ -86,7 +90,7 @@ jobs:
           REMAINING: ${{ steps.run.outputs.remaining }}
         run: |
           echo "giro $ROUND: archiviati ${PROGRESS:-0}, restano ${REMAINING:-0}"
-          if [ "${REMAINING:-0}" -gt 0 ] && [ "${PROGRESS:-0}" -gt 0 ] && [ "$ROUND" -lt 25 ]; then
+          if [ "${REMAINING:-0}" -gt 0 ] && [ "${PROGRESS:-0}" -gt 0 ] && [ "$ROUND" -lt 80 ]; then
             gh workflow run sri-backfill.yml --ref main -f mode="$MODE" -f max_frames="$MAXF" \
               -f auto=true -f round=$((ROUND + 1))
             echo "rilanciato: giro $((ROUND + 1))"

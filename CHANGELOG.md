@@ -1,5 +1,16 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — Pre-allerta anello: primo test
+
+- 🔎 Backtest anello 10 km Ruspino (3.134 frame SRI, finestre [inizio−3h, picco] di 43 episodi, 16
+  significativi ≥ 20 mm). Regola "cella ≥ 10 mm/h nell'anello": presi 16/16, anticipo mediano sul picco
+  80' (allerta reale oggi: −3'; stessa soglia dentro l'area a ritardo zero: 20') → **+22' veri** rispetto
+  all'area a parità di ritardo. Costo: scatta in 22/27 episodi non significativi (oggi 16/27) e in un
+  numero NON ancora misurato di passaggi di celle vicine senza pioggia sull'area.
+- 🆕 `sri_collect.py --backfill-ring-days` (+ modalità `backfill-ring-days` in `sri-backfill.yml`):
+  anello continuo dal 15/05 per tutte le aree, per misurare quei falsi allarmi. Frame per giro 1000
+  (era 400), timeout 45', catena fino a 80 giri.
+
 ## Sessione 2026-10-06 — MeteoSwiss ICON-CH1 in verifica
 
 - 🆕 `monitor.py` — `fetch_forecast_meteoswiss`: ICON-CH1 (1 km, run ogni 3h) via Open-Meteo
