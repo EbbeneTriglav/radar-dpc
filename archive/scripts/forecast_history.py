@@ -4,7 +4,7 @@ forecast_history.py — Storicizza forecast e nowcast in append-only JSONL.
 
 Letto da `last_observations.json` (snapshot vivo), produce
 `archive/data/forecast_history.jsonl`: una riga per ogni (area, run) con
-forecast OpenMeteo + MET Norway + nowcast VMI.
+forecast OpenMeteo + MET Norway (+ MeteoSwiss ICON-CH1 dal 10/2026) + nowcast VMI.
 
 Da schedulare ogni ora (o ad ogni run monitor). Append-only e idempotente:
 salta se l'ultimo record per (area, updated_at) è già presente.
@@ -70,6 +70,7 @@ def main() -> int:
                 'updated_at_utc': updated,
                 'openmeteo': fc.get('openmeteo') or {},
                 'metno': fc.get('metno') or {},
+                'meteoswiss': fc.get('meteoswiss') or {},
                 'horizon_hours': fc.get('horizon_hours'),
                 'vmi_nowcast': {
                     'max_dbz': vmi.get('max_dbz'),

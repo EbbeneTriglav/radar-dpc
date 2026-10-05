@@ -370,13 +370,13 @@ function renderTec(S,R){
   // 3. Forecast
   const vv=S.ver.filter(v=>v.horizon==='3h');
   const bySrc={}; vv.forEach(v=>(bySrc[v.source]??=[]).push(v));
-  h+=`<div class="rp-sec"><h2>3 · Previsioni a 3 ore (OpenMeteo, MET Norway)</h2>`+
+  h+=`<div class="rp-sec"><h2>3 · Previsioni a 3 ore (OpenMeteo, MET Norway, MeteoSwiss)</h2>`+
     (Object.keys(bySrc).length?`<table class="rp"><thead><tr><th>Modello</th><th class="n">Confronti</th><th class="n">Errore medio</th><th class="n">Bias (previsto − osservato)</th><th class="n">Hit</th><th class="n">Miss</th><th class="n">Falsi allarmi</th></tr></thead><tbody>`+
     Object.entries(bySrc).map(([src,g])=>{ const n=g.length;
       const mae=g.reduce((s,r)=>s+Math.abs(+r.abs_error_mm||0),0)/n;
       const bias=-g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;   // bias_mm nel CSV = osservato − previsto
       const hit=g.reduce((s,r)=>s+(+r.hit_warning||0),0), miss=g.reduce((s,r)=>s+(+r.missed_warning||0),0), fa=g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
-      return `<tr><td>${src==='openmeteo'?'OpenMeteo':'MET Norway'}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
+      return `<tr><td>${({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 <span class="dim">(solo verifica)</span>'})[src]||src}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
         <td class="n">${bias>=0?'+':''}${bias.toFixed(2)} mm</td><td class="n">${hit}</td><td class="n ${miss?'bad':''}">${miss}</td><td class="n">${fa}</td></tr>`; }).join('')+`</tbody></table>`
     :'<p class="dim">Nessuna verifica previsionale nel periodo.</p>')+
     `<div class="rp-caveat">L'osservato di confronto è la CUM3 DPC (pluviometri interpolati, blocchi di 3 h): per questo si mostra solo l'orizzonte 3 h.

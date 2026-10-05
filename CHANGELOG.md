@@ -1,5 +1,15 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — MeteoSwiss ICON-CH1 in verifica
+
+- 🆕 `monitor.py` — `fetch_forecast_meteoswiss`: ICON-CH1 (1 km, run ogni 3h) via Open-Meteo
+  (`models=meteoswiss_icon_ch1`), max 1h/3h nelle prossime 6h, salvato in `last_observations.json`
+  come `forecast.meteoswiss`. **Solo verifica**: NON entra nella doppia conferma (OpenMeteo + MET Norway
+  invariata). Fuori dominio del modello (es. Panna se non coperta) → nessun valore.
+- ✏️ `forecast_history.py`, `forecast_verify.py` — terza fonte `meteoswiss` archiviata e verificata
+  come le altre; `verifica.html` e `report.html` la mostrano come "MeteoSwiss ICON-CH1 (solo verifica)".
+- 📌 Dopo 3–4 settimane di confronti: decidere se usarlo nelle allerte (es. OpenMeteo E (MET Norway O MeteoSwiss)).
+
 ## Sessione 2026-10-05 (notte) — Cepina radar DPC, anticipo Ruspino, SP3
 
 ### Allerte Cepina — radar DPC primario, ARPA di riserva

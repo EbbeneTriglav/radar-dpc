@@ -13,7 +13,7 @@ Output:
 Schema CSV:
   forecast_made_at_utc  : ISO ts quando il forecast è stato emesso
   area_name             : area
-  source                : 'openmeteo' | 'metno'
+  source                : 'openmeteo' | 'metno' | 'meteoswiss' (ICON-CH1, dal 10/2026)
   horizon               : '1h' | '3h'
   forecast_mm           : valore previsto
   observed_mm           : valore osservato corrispondente (al + vicino disponibile)
@@ -152,7 +152,7 @@ def verify_forecast(record: dict, areas_by_name: dict, observed_by_area: dict,
         return 0
 
     n_written = 0
-    for source in ('openmeteo', 'metno'):
+    for source in ('openmeteo', 'metno', 'meteoswiss'):
         fc = record.get(source) or {}
         for horizon, key in (('1h', 'max_1h'), ('3h', 'max_3h')):
             fc_val = fc.get(key)

@@ -436,6 +436,34 @@ def fetch_forecast_metno(lat, lon, hours=6):
         return None
 
 
+def fetch_forecast_meteoswiss(lat, lon, hours=6):
+    """
+    Forecast MeteoSwiss ICON-CH1 (1 km, run ogni 3h) via Open-Meteo. Oraria.
+    SOLO OSSERVAZIONE/VERIFICA: salvato in last_observations e forecast_history,
+    NON entra nella doppia conferma finché la verifica non ne misura l'affidabilità.
+    Fuori dal dominio del modello (Alpi e dintorni) Open-Meteo restituisce null → None.
+    """
+    try:
+        r = _http('GET', OPENMETEO_API, params={
+            'latitude': lat, 'longitude': lon,
+            'hourly': 'precipitation',
+            'models': 'meteoswiss_icon_ch1',
+            'forecast_hours': hours + 1,
+            'timezone': 'UTC',
+        })
+        if not r or not r.ok:
+            return None
+        prec = [v for v in r.json().get('hourly', {}).get('precipitation', []) if v is not None]
+        if not prec:
+            return None   # punto fuori dominio o run non disponibile
+        max_3h = max((sum(prec[i:i + 3]) for i in range(max(1, len(prec) - 2))), default=0.0)
+        return {'max_1h_next': round(max(prec), 2), 'max_3h_next': round(max_3h, 2),
+                'horizon_hours': hours}
+    except Exception as e:
+        log.warning(f'  MeteoSwiss ICON-CH1 forecast fallito: {e}')
+        return None
+
+
 # ─── Notifiche: Email + Telegram ─────────────────────────────────────────────
 
 def send_email(subject, body_text, body_html=None, to=None):
@@ -575,8 +603,8 @@ def update_last_observation(file, area_name, product, ts_iso, stats):
     file.write_text(json.dumps(data, indent=2, sort_keys=True))
 
 
-def update_forecast_observation(file, area_name, forecast, forecast_metno, now_iso):
-    """Salva i forecast OpenMeteo + MET Norway per il frontend."""
+def update_forecast_observation(file, area_name, forecast, forecast_metno, now_iso, forecast_mch=None):
+    """Salva i forecast OpenMeteo + MET Norway (+ MeteoSwiss ICON-CH1, solo verifica) per il frontend."""
     data = {}
     if file.exists():
         try: data = json.loads(file.read_text())
@@ -587,6 +615,8 @@ def update_forecast_observation(file, area_name, forecast, forecast_metno, now_i
                        'max_3h': (forecast or {}).get('max_3h_next')},
         'metno':      {'max_1h': (forecast_metno or {}).get('max_1h_next'),
                        'max_3h': (forecast_metno or {}).get('max_3h_next')},
+        'meteoswiss': {'max_1h': (forecast_mch or {}).get('max_1h_next'),
+                       'max_3h': (forecast_mch or {}).get('max_3h_next')},
         'horizon_hours': (forecast or forecast_metno or {}).get('horizon_hours', 6),
         'updated_at_utc': now_iso,
     }
@@ -1031,9 +1061,17 @@ def process_area(area, archive_dir, events_writer):
                                   hours=mon['forecast'].get('lookahead_hours', 6))
         forecast_done = True
 
-    # Salva i forecast (OpenMeteo + MET Norway) in last_observations per il frontend
+    # MeteoSwiss ICON-CH1: solo archiviato per la verifica (NON entra nelle allerte)
+    forecast_mch = None
+    if mon.get('forecast', {}).get('enabled'):
+        forecast_mch = fetch_forecast_meteoswiss(area['centroid']['lat'], area['centroid']['lon'],
+                                                 hours=mon['forecast'].get('lookahead_hours', 6))
+        if forecast_mch:
+            log.info(f'  forecast MeteoSwiss ICON-CH1 (solo verifica): 1h={forecast_mch["max_1h_next"]:.1f} 3h={forecast_mch["max_3h_next"]:.1f} mm')
+
+    # Salva i forecast (OpenMeteo + MET Norway + MeteoSwiss) in last_observations per il frontend
     if forecast or forecast_metno:
-        update_forecast_observation(last_obs_file, area['name'], forecast, forecast_metno, now_iso)
+        update_forecast_observation(last_obs_file, area['name'], forecast, forecast_metno, now_iso, forecast_mch)
 
     if forecast:
         fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct)

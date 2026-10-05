@@ -275,7 +275,7 @@ function renderAccuracy(){
     const key = `${r.source}·${r.horizon}`;
     (groups[key] ??= []).push(r);
   }
-  const order = ['openmeteo·1h','openmeteo·3h','metno·1h','metno·3h'];
+  const order = ['openmeteo·1h','openmeteo·3h','metno·1h','metno·3h','meteoswiss·1h','meteoswiss·3h'];
   const cardsEl = document.getElementById('acc-cards');
   const keys = Object.keys(groups).sort((a,b)=>{
     const ia=order.indexOf(a), ib=order.indexOf(b);
@@ -291,7 +291,7 @@ function renderAccuracy(){
     const miss = g.reduce((s,r)=>s+(+r.missed_warning||0),0);
     const fa = g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
     const [src,hz] = k.split('·');
-    const label = (src==='openmeteo'?'OpenMeteo':'MET Norway')+' · '+hz;
+    const label = ({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 (solo verifica)'}[src]||src)+' · '+hz;
     return `<div class="vf-card">
       <div class="k">${label}</div>
       <div class="v">MAE ${mae.toFixed(2)} <span style="font-size:14px">mm</span></div>

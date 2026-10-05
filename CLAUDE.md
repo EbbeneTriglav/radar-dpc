@@ -151,6 +151,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Panna: niente ARPA.
 - **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
   latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
+- **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni): dal 10/2026
+  archiviato e verificato come terza fonte, ma **non** vota nelle allerte finché la verifica non lo giustifica.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
 - **Ground sensors**: Cornalita (Ruspino) idsensore ARPA `2278`, Oga
   S.Colombano (Cepina) `8010`, endpoint `dati.lombardia.it/resource/647i-nhxk.json`.
