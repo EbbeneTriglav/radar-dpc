@@ -385,7 +385,8 @@ def _panna_recipients():
     return (None, None)
 
 
-def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm):
+def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm,
+                area_label='Sorgenti Panna'):
     """Build HTML email body for forecast 24h alert."""
     return (
         '<div style="font-family:Arial,sans-serif;max-width:600px">'
@@ -444,7 +445,8 @@ def compose_24h(trigger, ensemble, prefix="", area_label='Sorgenti Panna'):
     )
 
     color = {"warning": "#e0a800", "alarm": "#e85e2c", "emergency": "#c41e3a"}.get(lvl, "#888")
-    html = _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm)
+    html = _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm,
+                       area_label=area_label)
 
     subject = f'{prefix}{icon} {area_label} \u2014 FORECAST 24H {lvl.upper()} ({worst_v:.1f} mm worst-case)'
     return subject, text, html, md
@@ -483,9 +485,13 @@ def update_observations(file, ensemble, now_iso, area_name='panna'):
     log.info(f'  last_observations.json aggiornato (forecast_24h)')
 
 
-def run_test_alert():
-    """Invia notifica TEST forecast con dati finti sopra soglia."""
-    log.info('=== TEST ALERT FORECAST 24H ===')
+TEST_AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
+
+
+def run_test_alert(area='panna'):
+    """Invia notifica TEST forecast con dati finti sopra soglia,
+    ai soli destinatari dell'area indicata (areas.json)."""
+    log.info(f'=== TEST ALERT FORECAST 24H — area={area} ===')
     fake_trigger = {
         'level': 'warning', 'value_mm': 10, 'icon': '🌧️',
         'mean_val': 12.5, 'worst_val': 18.3, 'metno_val': 11.8,
@@ -499,8 +505,10 @@ def run_test_alert():
                 'meteofrance_arome_france_hd': 18.3},
             'om_mean': 13.5, 'om_worst': 18.3, 'metno': 11.8}],
     }
-    subject, text, html, md = compose_24h(fake_trigger, fake_ensemble, prefix='[TEST] ')
-    rcpt_email, rcpt_tg = _panna_recipients()
+    subject, text, html, md = compose_24h(fake_trigger, fake_ensemble, prefix='[TEST] ',
+                                          area_label=TEST_AREA_LABELS.get(area, area))
+    rcpt_email, rcpt_tg = _area_recipients(area)
+    log.info(f'  destinatari email: {rcpt_email or "SMTP_TO (default)"}')
     em = send_email(subject, text, html, to=rcpt_email)
     tg = send_telegram(md, chat_ids=rcpt_tg)
     log.info(f'TEST alert inviato: email={em} telegram={tg}')
@@ -559,6 +567,8 @@ def main():
     ap.add_argument('--dry-run', action='store_true', help='No notifiche')
     ap.add_argument('--test-alert', action='store_true', help='Invia TEST forecast')
     ap.add_argument('--test-radar', action='store_true', help='Invia TEST radar DPC')
+    ap.add_argument('--area', default='panna', choices=['panna', 'ruspino', 'cepina'],
+                    help='Area destinatari per --test-alert (default panna)')
     args = ap.parse_args()
 
     if args.dry_run:
@@ -567,7 +577,7 @@ def main():
         log.info('=== DRY-RUN ===')
 
     if args.test_alert:
-        return run_test_alert()
+        return run_test_alert(args.area)
     if args.test_radar:
         return run_test_radar()
 

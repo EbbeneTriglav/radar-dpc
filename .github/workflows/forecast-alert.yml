@@ -13,6 +13,11 @@ on:
         default: 'normal'
         type: choice
         options: ['normal', 'dry-run', 'test-alert', 'test-radar', 'force-matrix']
+      area:
+        description: 'Area destinatari (solo test-alert)'
+        default: 'panna'
+        type: choice
+        options: ['panna', 'ruspino', 'cepina']
 
 permissions:
   contents: write
@@ -44,7 +49,8 @@ jobs:
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ "$MODE" = "test-alert" ]; then
-            python archive/scripts/forecast_ensemble_alert.py --test-alert
+            AREA="${{ github.event.inputs.area }}"
+            python archive/scripts/forecast_ensemble_alert.py --test-alert --area "${AREA:-panna}"
           elif [ "$MODE" = "test-radar" ]; then
             python archive/scripts/forecast_ensemble_alert.py --test-radar
           elif [ "$MODE" = "dry-run" ]; then
