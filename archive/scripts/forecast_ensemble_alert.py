@@ -508,7 +508,7 @@ def run_test_alert(area='panna'):
     subject, text, html, md = compose_24h(fake_trigger, fake_ensemble, prefix='[TEST] ',
                                           area_label=TEST_AREA_LABELS.get(area, area))
     rcpt_email, rcpt_tg = _area_recipients(area)
-    log.info(f'  destinatari email: {rcpt_email or "SMTP_TO (default)"}')
+    log.info(f'  destinatari email: {len(rcpt_email) if rcpt_email else "SMTP_TO (default)"}')
     em = send_email(subject, text, html, to=rcpt_email)
     tg = send_telegram(md, chat_ids=rcpt_tg)
     log.info(f'TEST alert inviato: email={em} telegram={tg}')
