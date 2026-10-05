@@ -9,36 +9,94 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/style.css?v=20260721prev">
   <style>
-    /* Il body condiviso è overflow:hidden (per la mappa a tutto schermo):
-       questa pagina è lunga, quindi il contenuto scrolla dentro .pv-wrap,
-       come già fanno verifica/eventi/storico. */
-    .pv-wrap{max-width:1600px;margin:0 auto;padding:18px 28px;
+    /* ── Colori serie: uno per FONTE, fisso in tutta la pagina (validati CVD, dark e light) ── */
+    body{
+      --s-ens:#3987e5;   /* Ensemble Open-Meteo (5 modelli)  */
+      --s-yr:#d95926;    /* YR · MET Norway                  */
+      --s-mch:#199e70;   /* MeteoSwiss ICON-CH               */
+      --s-obs:#b9c1d9;   /* osservato (neutro: è la realtà, non un modello) */
+      --card:#12121e; --card2:#171726; --grid:rgba(255,255,255,.06); --axis:rgba(255,255,255,.16);
+      --ink:#e6eaf5; --ink2:#a3acc8; --ink3:#6f7899;
+    }
+    body.light-theme{
+      --s-ens:#2a78d6; --s-yr:#eb6834; --s-mch:#1baf7a; --s-obs:#4a5480;
+      --card:#ffffff; --card2:#f5f7fc; --grid:rgba(10,20,50,.07); --axis:rgba(10,20,50,.22);
+      --ink:#141a33; --ink2:#4a5480; --ink3:#7d87a6;
+    }
+    /* Il body condiviso è overflow:hidden (mappa a tutto schermo): qui scrolla .pv-wrap */
+    .pv-wrap{max-width:1500px;margin:0 auto;padding:18px 24px 40px;width:100%;
              height:calc(100vh - var(--topbar-h));overflow-y:auto}
-    .pv-note{color:var(--text3,#94a3b8);font-size:13px;line-height:1.5;margin:4px 0 14px}
-    .pv-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 16px}
-    .pv-toolbar select,.pv-toolbar button{background:var(--bg2,#1e293b);color:var(--text,#e2e8f0);
-      border:1px solid var(--border,#334155);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
-    .pv-days{display:flex;gap:4px;flex-wrap:wrap}
-    .pv-day{min-width:52px;text-align:center;padding:6px 8px;border-radius:8px;border:1px solid var(--border,#334155);
-      background:var(--bg2,#1e293b);cursor:pointer;font-size:12px;transition:.15s;user-select:none}
-    .pv-day:hover{border-color:#3eaaff}
-    .pv-day.sel{background:var(--accent,#38bdf8);color:#0f172a;font-weight:700}
-    .pv-day.past{opacity:.92}
-    .pv-day .d-date{font-weight:600}
-    .pv-day .d-val{font-size:11px;color:var(--text3,#94a3b8);margin-top:2px}
-    .pv-day.sel .d-val{color:#0f172a}
-    .pv-card{background:var(--bg,#0f172a);border:1px solid var(--border,#334155);border-radius:14px;padding:18px;margin-bottom:16px}
-    .pv-card h3{margin:0 0 4px;font-size:15px}
-    .pv-legend{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
-    .pv-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 10px;border-radius:8px;
-      border:1px solid var(--border,#334155);cursor:pointer;user-select:none}
-    .pv-chip.off{opacity:.4}
-    .pv-chip .sw{width:20px;height:4px;border-radius:2px}
-    .pv-chip.dash .sw{height:0;border-top:3px dashed currentColor;background:none!important}
-    .pv-daybox{background:var(--bg2,#1e293b);border:1px solid var(--border,#334155);border-radius:10px;padding:12px 16px;margin-bottom:14px}
-    .pv-daybox .big{font-size:26px;font-weight:700}
-    .pv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-    .pv-status{color:var(--text3,#94a3b8);font-size:13px}
+    .pv-head h2{font-size:19px;font-weight:600;color:var(--ink);margin:6px 0 4px}
+    .pv-head p{color:var(--ink2);font-size:13px;line-height:1.55;max-width:980px}
+    .pv-toolbar{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:16px 0 14px}
+    .pv-field{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2)}
+    .pv-field select{background:var(--card);color:var(--ink);border:1px solid var(--border);border-radius:8px;
+      padding:7px 10px;font:inherit;font-size:13px;cursor:pointer}
+    .seg{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:var(--card)}
+    .seg button{background:none;border:0;color:var(--ink2);font:inherit;font-size:12.5px;padding:7px 12px;cursor:pointer;
+      display:inline-flex;align-items:center;gap:7px;border-right:1px solid var(--border)}
+    .seg button:last-child{border-right:0}
+    .seg button:hover{color:var(--ink);background:var(--card2)}
+    .seg button.on{background:var(--card2);color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+    .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+    .pv-status{color:var(--ink3);font-size:12px;margin-left:auto}
+    /* Striscia giorni */
+    .pv-days{display:grid;grid-template-columns:repeat(15,minmax(58px,1fr));gap:5px;overflow-x:auto;padding-bottom:4px}
+    .pv-day{position:relative;text-align:center;padding:7px 4px 6px;border-radius:9px;border:1px solid var(--border);
+      background:var(--card);cursor:pointer;user-select:none;transition:border-color .15s,background .15s}
+    .pv-day:hover{border-color:var(--accent)}
+    .pv-day.sel{border-color:var(--accent);background:var(--card2);box-shadow:0 0 0 1px var(--accent) inset}
+    .pv-day .dd{font-size:11px;color:var(--ink2);text-transform:capitalize}
+    .pv-day.today .dd{color:var(--accent);font-weight:600}
+    .pv-day .dv{font-size:14px;font-weight:600;color:var(--ink);margin:3px 0 4px;font-variant-numeric:tabular-nums}
+    .pv-day .dv small{font-size:10px;font-weight:400;color:var(--ink3)}
+    .pv-day .bar{height:4px;border-radius:2px;background:var(--grid);overflow:hidden}
+    .pv-day .bar i{display:block;height:100%;border-radius:2px}
+    .pv-day .kind{font-size:9.5px;color:var(--ink3);margin-top:3px;letter-spacing:.02em}
+    .pv-sep{grid-column:span 1}
+    /* Tessere del giorno */
+    .pv-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0 16px}
+    .tile{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+    .tile .k{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2)}
+    .tile .v{font-size:26px;font-weight:600;color:var(--ink);margin-top:4px;font-variant-numeric:tabular-nums}
+    .tile .v small{font-size:13px;font-weight:400;color:var(--ink2);margin-left:3px}
+    .tile .s{font-size:11.5px;color:var(--ink3);margin-top:2px}
+    .tile.na .v{font-size:15px;color:var(--ink3);font-weight:400;margin-top:10px}
+    .pv-daytitle{font-size:13px;color:var(--ink2);margin-top:16px}
+    .pv-daytitle b{color:var(--ink);text-transform:capitalize}
+    /* Card grafici */
+    .pv-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px 12px;margin-bottom:16px}
+    .pv-card h3{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+    .pv-card .sub{font-size:12px;color:var(--ink3);margin:3px 0 0}
+    .pv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:16px}
+    .pv-legend{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 6px}
+    .pv-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:3px 9px;border-radius:7px;
+      border:1px solid var(--border);cursor:pointer;user-select:none;color:var(--ink)}
+    .pv-chip.off{opacity:.38}
+    .pv-chip .sw{width:16px;height:3px;border-radius:2px}
+    .pv-chip .sw.dash{height:0;border-top:2px dashed;background:none!important}
+    .pv-chip .sw.band{height:9px;border-radius:2px;opacity:.35}
+    .pv-chip .sw.bar{width:10px;height:10px;border-radius:2px}
+    .pv-chip .sw.mk{width:9px;height:9px;transform:rotate(45deg);border-radius:1px}
+    .pv-chip .sw.tri{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid;background:none!important}
+    .cv{position:relative}
+    details.pv-table{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 18px;margin-bottom:16px}
+    details.pv-table summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--ink)}
+    .tbl-wrap{overflow-x:auto;margin-top:10px}
+    table.pt{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+    table.pt th,table.pt td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap;color:var(--ink)}
+    table.pt th{color:var(--ink2);font-weight:500;position:sticky;top:0;background:var(--card)}
+    table.pt td:first-child,table.pt th:first-child{text-align:left}
+    table.pt tr.today td{background:var(--card2)}
+    table.pt .na{color:var(--ink3)}
+    .pv-notes{font-size:12px;color:var(--ink3);line-height:1.6;max-width:1100px}
+    .pv-notes b{color:var(--ink2)}
+    @media (max-width:640px){
+      .pv-wrap{padding:12px 14px 30px}
+      .pv-grid{grid-template-columns:1fr}
+      .pv-status{margin-left:0;width:100%}
+      .tile .v{font-size:22px}
+    }
   </style>
 </head>
 <body>
@@ -63,168 +121,118 @@
 </nav>
 
 <div class="pv-wrap">
-  <h2 style="font-size:17px;margin:8px 0 4px">Previsioni precipitazione — 7 giorni passati e futuri</h2>
-  <p class="pv-note">Cumulata di pioggia per bacino: nei <b>giorni passati</b> il <b>previsto</b>
-  (ensemble Open-Meteo: ICON, ECMWF-IFS, GFS, ARPEGE, AROME) è sovrapposto al <b>misurato radar</b>
-  (cumulata giornaliera CUM3 DPC, ARPA e pluviometro a terra). Nei <b>giorni futuri</b> l'ensemble
-  con media e <b>worst-case</b> (modello più intenso). MET Norway resta fuori dall'ensemble come
-  cross-check. Nessun dato inventato: le stime modello sono etichettate, il misurato viene dai dati reali.</p>
+  <div class="pv-head">
+    <h2>Previsioni di pioggia — 7 giorni passati e 7 futuri</h2>
+    <p>Tre fonti indipendenti: <b>Ensemble</b> Open-Meteo (5 modelli: ICON, ECMWF-IFS, GFS, ARPEGE, AROME),
+    <b>YR</b> (MET Norway) e <b>MeteoSwiss</b> (ICON-CH, 1–2 km, fino a +5 giorni). Nei giorni passati il previsto
+    è confrontato con l'osservato a terra. YR resta fuori dalla media dell'ensemble (validazione indipendente).</p>
+  </div>
 
   <div class="pv-toolbar">
-    <label>Bacino
+    <label class="pv-field">Bacino
       <select id="pv-area">
         <option value="ruspino">Ruspino (Bergamo)</option>
         <option value="panna">Panna (Mugello)</option>
         <option value="cepina">Cepina (Valtellina)</option>
       </select>
     </label>
+    <div class="pv-field">Modelli
+      <div class="seg" id="pv-src" role="radiogroup" aria-label="Fonti di previsione">
+        <button data-src="all" class="on" role="radio">Tutti</button>
+        <button data-src="ens" role="radio"><span class="dot" style="background:var(--s-ens)"></span>Ensemble</button>
+        <button data-src="yr" role="radio"><span class="dot" style="background:var(--s-yr)"></span>YR</button>
+        <button data-src="mch" role="radio"><span class="dot" style="background:var(--s-mch)"></span>MeteoSwiss</button>
+      </div>
+    </div>
+    <label class="pv-field">Osservato
+      <select id="pv-obs" title="Riferimento per i giorni passati">
+        <option value="ground">Pluviometro</option>
+        <option value="cum3">CUM3 DPC (pluviometri interpolati)</option>
+        <option value="arpa">Radar ARPA</option>
+      </select>
+    </label>
     <span class="pv-status" id="pv-status">Caricamento…</span>
   </div>
 
-  <!-- Toolbar giorni selezionabili -->
   <div class="pv-days" id="pv-days"></div>
+  <div class="pv-daytitle" id="pv-daytitle"></div>
+  <div class="pv-tiles" id="pv-tiles"></div>
 
-  <!-- Dettaglio giorno selezionato -->
-  <div class="pv-daybox" id="pv-daybox" style="display:none"></div>
-
-  <!-- Grafico cumulata -7/+7 -->
   <div class="pv-card">
-    <h3>Cumulata progressiva — 7 giorni passati e futuri</h3>
-    <div class="pv-legend" id="pv-legend-cum"></div>
-    <div style="position:relative;height:360px"><canvas id="pv-chart-cum"></canvas></div>
+    <h3>Cumulata: quanto è caduto, quanto è previsto</h3>
+    <p class="sub">A sinistra l'osservato degli ultimi 7 giorni; da <b>adesso</b> in avanti il previsto, che riparte da zero.
+      La fascia è l'intervallo tra il modello meno e il più piovoso dell'ensemble.</p>
+    <div class="pv-legend" id="lg-cum"></div>
+    <div class="cv" style="height:380px"><canvas id="ch-cum"></canvas></div>
   </div>
 
-  <!-- Istogrammi recap -->
+  <div class="pv-card">
+    <h3>Prossime 48 ore — intensità oraria</h3>
+    <p class="sub">mm caduti in ogni ora. Utile per i temporali: un picco breve può non pesare sulla cumulata giornaliera.</p>
+    <div class="pv-legend" id="lg-hr"></div>
+    <div class="cv" style="height:280px"><canvas id="ch-hr"></canvas></div>
+  </div>
+
   <div class="pv-grid">
     <div class="pv-card">
-      <h3>Recap giornaliero — passato (previsto vs misurato)</h3>
-      <div class="pv-legend" id="pv-legend-past"></div>
-      <div style="position:relative;height:300px"><canvas id="pv-hist-past"></canvas></div>
+      <h3>Giorni passati — previsto contro osservato</h3>
+      <p class="sub">Barra = osservato · simboli = cosa prevedevano i modelli per quel giorno (baffo = intervallo ensemble).</p>
+      <div class="pv-legend" id="lg-past"></div>
+      <div class="cv" style="height:300px"><canvas id="ch-past"></canvas></div>
     </div>
     <div class="pv-card">
-      <h3>Recap giornaliero — previsione prossimi 7 giorni</h3>
-      <div class="pv-legend" id="pv-legend-fut"></div>
-      <div style="position:relative;height:300px"><canvas id="pv-hist-fut"></canvas></div>
+      <h3>Prossimi giorni — pioggia prevista al giorno</h3>
+      <p class="sub">Oggi = solo le ore che restano. Baffo sopra l'ensemble = modello più piovoso (worst-case).</p>
+      <div class="pv-legend" id="lg-fut"></div>
+      <div class="cv" style="height:300px"><canvas id="ch-fut"></canvas></div>
     </div>
+  </div>
+
+  <details class="pv-table" id="pv-table">
+    <summary>Tabella dati giornalieri</summary>
+    <div class="tbl-wrap" id="pv-tbl"></div>
+  </details>
+
+  <div class="pv-notes">
+    <b>Come leggere.</b> Giorni in UTC (00–24 UTC = 01/02–01/02 ora italiana). <b>Worst-case</b> = il singolo modello
+    dell'ensemble con più pioggia, come nelle allerte (non la somma ora per ora dei massimi); nella cumulata AROME,
+    che si ferma a ~2 giorni, resta nel massimo col valore raggiunto.
+    Un modello che non copre un giorno (MeteoSwiss oltre +5 giorni, AROME oltre ~2 giorni) viene escluso da quel giorno, non contato come zero.
+    <b>CUM3 DPC</b> = pluviometri a terra interpolati (non radar), media sull'area. <b>Radar ARPA</b> = intensità massima sull'area integrata nel tempo (solo Lombardia).
+    Pluviometri: Cornalita (Ruspino), Oga S.Colombano (Cepina), Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente).
+    YR oltre ~2,5 giorni arriva a blocchi di 6 ore.
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const RAW = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/archive/data/';
+const OM_URL = 'https://api.open-meteo.com/v1/forecast';
+const YR_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
+const SOCRATA = 'https://www.dati.lombardia.it/resource/647i-nhxk.json';
 const AREAS = {
   ruspino: {lat:45.846446, lon:9.635256, label:'Ruspino', arpa:true, ground:{type:'arpa', id:2278, name:'Cornalita'}},
   panna:   {lat:44.0765,   lon:11.306398,label:'Panna',   arpa:false,ground:{type:'sir', name:'Monte di Fò',
               url:'https://raw.githubusercontent.com/EbbeneTriglav/dati_idro/main/dati/MonteDiFo_precip_1992-2026.csv'}},
   cepina:  {lat:46.442772, lon:10.32425, label:'Cepina',  arpa:true, ground:{type:'arpa', id:8010, name:'Oga S.Colombano'}},
 };
-const OM_MODELS = ['icon_seamless','ecmwf_ifs025','gfs_seamless','meteofrance_arpege_europe','meteofrance_arome_france'];
-const SOCRATA = 'https://www.dati.lombardia.it/resource/647i-nhxk.json';
-const DAY_MS = 86400_000;
+// Stessi modelli degli script di allerta (forecast_matrix / forecast_ensemble_alert)
+const OM_MODELS = [['icon_seamless','ICON'],['ecmwf_ifs025','ECMWF'],['gfs_seamless','GFS'],
+                   ['meteofrance_arpege_europe','ARPEGE'],['meteofrance_arome_france_hd','AROME']];
+const MCH_MODEL = 'meteoswiss_icon_seamless';   // ICON-CH1 (33 h) poi ICON-CH2 (fino a 120 h)
+const H = 3600_000, DAY = 86400_000;
+const SRC = {ens:'Ensemble', yr:'YR', mch:'MeteoSwiss'};
 
-let charts = {cum:null, past:null, fut:null};
-let selectedDay = 0;      // offset giorni da oggi (0 = oggi, -1 = ieri, +1 = domani)
-let dataCache = {};       // per area
+const state = {area:'ruspino', src:'all', obs:'ground', sel:0};
+const cache = {};
+const charts = {};
 
-function dayKey(ms){ return new Date(ms).toISOString().slice(0,10); }
-function fmtDay(ms){ return new Date(ms).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit'}); }
-
-// ── FETCH forecast ensemble Open-Meteo (past_days=7 + forecast_days=7) ──
-async function fetchForecast(area){
-  const a = AREAS[area];
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${a.lat}&longitude=${a.lon}`
-    + `&hourly=precipitation&models=${OM_MODELS.join(',')}`
-    + `&past_days=7&forecast_days=7&timezone=UTC`;
-  const r = await fetch(url);
-  if(!r.ok) throw new Error('Open-Meteo HTTP '+r.status);
-  const j = await r.json();
-  const h = j.hourly || {};
-  const times = (h.time||[]).map(t=>new Date(t+'Z').getTime());
-  // Per ogni ora: raccogli i valori dei modelli → mean e max (worst-case)
-  const perHour = times.map((t,i)=>{
-    const vals = [];
-    for(const m of OM_MODELS){
-      const arr = h['precipitation_'+m];
-      if(arr && isFinite(arr[i])) vals.push(arr[i]);
-    }
-    // fallback: alcune combinazioni ritornano 'precipitation' singolo
-    if(!vals.length && h.precipitation && isFinite(h.precipitation[i])) vals.push(h.precipitation[i]);
-    const mean = vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : 0;
-    const max  = vals.length ? Math.max(...vals) : 0;
-    return {t, mean, max, nModels:vals.length};
-  });
-  return perHour;
-}
-
-// ── Cumulata giornaliera MISURATA dal radar (CUM3 DPC) ──
-async function fetchCum3Daily(area){
-  try{
-    const txt = await (await fetch(RAW+`${area}_cum3.csv?_=`+Date.now())).text();
-    const rows = parseCSV(txt).filter(r=>r.product==='CUM3' && r.location_type==='area');
-    // blocchi 3h adiacenti → somma per giorno (max = pixel peggiore)
-    const byDay = {};
-    for(const r of rows){
-      const ms = new Date(r.timestamp_utc).getTime();
-      const mx = +r.max||0;
-      if(mx<=0) continue;
-      // il blocco @HH copre le 3h precedenti: attribuisco al giorno dell'inizio blocco
-      const startMs = ms - 3*3600_000 + 1;
-      const k = dayKey(startMs);
-      byDay[k] = (byDay[k]||0) + mx;
-    }
-    return byDay;
-  }catch(e){ return {}; }
-}
-
-// ── Cumulata giornaliera MISURATA dal radar ARPA (integrale intensità) ──
-async function fetchArpaDaily(area){
-  if(!AREAS[area].arpa) return {};
-  try{
-    const txt = await (await fetch(RAW+`${area}_arpa.csv?_=`+Date.now())).text();
-    const rows = parseCSV(txt).filter(r=>r.location_type==='area')
-      .map(r=>({t:new Date(r.timestamp_utc).getTime(), mx:+r.max_mmh||0}))
-      .filter(p=>isFinite(p.t)).sort((a,b)=>a.t-b.t);
-    const byDay = {};
-    for(let i=0;i<rows.length;i++){
-      const dtH = i>0 ? Math.min((rows[i].t-rows[i-1].t)/3600_000, 0.5) : 5/60;
-      const k = dayKey(rows[i].t);
-      byDay[k] = (byDay[k]||0) + rows[i].mx*dtH;
-    }
-    return byDay;
-  }catch(e){ return {}; }
-}
-
-// ── Cumulata giornaliera MISURATA dal pluviometro a terra ──
-async function fetchGroundDaily(area){
-  const g = AREAS[area].ground;
-  const byDay = {};
-  try{
-    if(g.type==='arpa'){
-      const now = Date.now();
-      // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1) senza fuso
-      const start = new Date(now - 8*DAY_MS + 3600_000).toISOString().slice(0,19);
-      const end = new Date(now + DAY_MS + 3600_000).toISOString().slice(0,19);
-      const where = `data >= '${start}' AND data <= '${end}'`;
-      const url = `${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`;
-      const rows = await (await fetch(url)).json();
-      for(const row of rows){
-        const t = new Date(String(row.data).slice(0,19)+'+01:00').getTime(); const v = +row.valore;
-        if(isFinite(t)&&isFinite(v)&&v>=0){ const k=dayKey(t); byDay[k]=(byDay[k]||0)+v; }
-      }
-    } else if(g.type==='sir'){
-      const txt = await (await fetch(g.url+'?_='+Date.now())).text();
-      for(const line of txt.trim().split(/\r?\n/).slice(1)){
-        const [d,v] = line.split(';');
-        const mm = +v;
-        // Giorno idrologico SIR: il valore datato D copre 09:00 di D-1 → 09:00 di D,
-        // cioè quasi tutto il giorno D-1: lo attribuisco a D-1 (approssimazione dichiarata).
-        if(d && isFinite(mm)){ const k=new Date(Date.parse(d+'T00:00:00Z')-DAY_MS).toISOString().slice(0,10); byDay[k] = mm; }
-      }
-    }
-  }catch(e){ /* pluviometro opzionale */ }
-  return byDay;
-}
-
+// ── utilità ──────────────────────────────────────────────────────────────
+const dayKey = ms => new Date(ms).toISOString().slice(0,10);
+const fmtDay = ms => new Date(ms).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'UTC'});
+const fmtMM = v => v==null ? '—' : v===0 ? '0' : (v<10 ? v.toFixed(1) : v.toFixed(0));
+const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+const show = s => state.src==='all' || state.src===s;
 function parseCSV(text){
   const lines = text.trim().split(/\r?\n/);
   const split = l => { const o=[]; let c='',q=false;
@@ -232,221 +240,495 @@ function parseCSV(text){
   const head = split(lines[0]);
   return lines.slice(1).map(l=>{ const c=split(l); const o={}; head.forEach((k,i)=>o[k]=c[i]??''); return o; });
 }
+async function getText(url){ const r = await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }
 
-// ── Costruzione serie giornaliere e cumulata progressiva ──
-function buildDaily(perHour, cum3Daily, arpaDaily, groundDaily){
-  const today = new Date(); today.setUTCHours(0,0,0,0);
-  const days = [];
-  for(let off=-7; off<=7; off++){
-    const ms = today.getTime() + off*DAY_MS;
-    const k = dayKey(ms);
-    days.push({off, ms, key:k, isPast:off<0, isToday:off===0});
+// ── FETCH previsioni ─────────────────────────────────────────────────────
+// Open-Meteo: il valore orario all'istante T è la pioggia dell'ora PRECEDENTE → intervallo [T-1h, T].
+async function fetchEnsemble(a){
+  const url = `${OM_URL}?latitude=${a.lat}&longitude=${a.lon}&hourly=precipitation`
+    + `&models=${OM_MODELS.map(m=>m[0]).join(',')}&past_days=7&forecast_days=8&timezone=UTC`;
+  const j = JSON.parse(await getText(url)); const h = j.hourly||{};
+  const ends = (h.time||[]).map(t=>Date.parse(t+'Z'));
+  const models = {};
+  for(const [k,lab] of OM_MODELS){
+    const arr = h['precipitation_'+k];
+    if(!arr) continue;
+    const m = new Map();
+    arr.forEach((v,i)=>{ if(v!=null && isFinite(v)) m.set(ends[i]-H, v); });   // null = modello non copre quell'ora
+    if(m.size) models[k] = {label:lab, h:m};
   }
-  // Somma previsto per giorno (mean e worst)
-  const fMean={}, fMax={};
-  for(const ph of perHour){
-    const k = dayKey(ph.t);
-    fMean[k]=(fMean[k]||0)+ph.mean; fMax[k]=(fMax[k]||0)+ph.max;
-  }
-  for(const d of days){
-    d.fMean = +(fMean[d.key]||0).toFixed(1);
-    d.fMax  = +(fMax[d.key]||0).toFixed(1);
-    d.cum3  = +(cum3Daily[d.key]||0).toFixed(1);
-    d.arpa  = arpaDaily[d.key]!=null ? +arpaDaily[d.key].toFixed(1) : null;
-    d.ground= groundDaily[d.key]!=null ? +groundDaily[d.key].toFixed(1) : null;
-  }
-  return days;
+  return models;
+}
+async function fetchMeteoSwiss(a){
+  try{
+    const url = `${OM_URL}?latitude=${a.lat}&longitude=${a.lon}&hourly=precipitation&models=${MCH_MODEL}`
+      + `&past_days=7&forecast_days=8&timezone=UTC`;
+    const h = (JSON.parse(await getText(url))).hourly||{};
+    const arr = h.precipitation || h['precipitation_'+MCH_MODEL] || [];
+    const m = new Map();
+    (h.time||[]).forEach((t,i)=>{ const v=arr[i]; if(v!=null && isFinite(v)) m.set(Date.parse(t+'Z')-H, v); });
+    return m.size ? m : null;
+  }catch(e){ return null; }
+}
+// YR: next_1_hours finché c'è (~2,5 g), poi blocchi next_6_hours. Intervallo [t, t+1h|6h].
+async function fetchYR(a){
+  try{
+    const j = JSON.parse(await getText(`${YR_URL}?lat=${a.lat.toFixed(4)}&lon=${a.lon.toFixed(4)}`));
+    const out = []; let lastEnd = -Infinity;
+    for(const e of (j.properties?.timeseries||[])){
+      const t = Date.parse(e.time); if(t < lastEnd) continue;
+      const n1 = e.data?.next_1_hours?.details?.precipitation_amount;
+      const n6 = e.data?.next_6_hours?.details?.precipitation_amount;
+      if(n1!=null){ out.push({t0:t, t1:t+H, mm:n1}); lastEnd=t+H; }
+      else if(n6!=null){ out.push({t0:t, t1:t+6*H, mm:n6}); lastEnd=t+6*H; }
+    }
+    return out.length ? out : null;
+  }catch(e){ return null; }
 }
 
-// ── RENDER ──
+// ── FETCH osservato ──────────────────────────────────────────────────────
+async function fetchCum3Daily(area){
+  try{
+    const rows = parseCSV(await getText(RAW+`${area}_cum3.csv?_=`+Date.now()))
+      .filter(r=>r.product==='CUM3' && r.location_type==='area');
+    const byDay = {};
+    for(const r of rows){            // blocco @HH = 3h precedenti → giorno dell'inizio blocco
+      const ms = Date.parse(r.timestamp_utc); const v = +r.mean;
+      if(!isFinite(ms) || !isFinite(v)) continue;
+      const k = dayKey(ms - 3*H + 1); byDay[k] = (byDay[k]||0) + Math.max(0,v);
+    }
+    return byDay;
+  }catch(e){ return {}; }
+}
+async function fetchArpaDaily(area){
+  if(!AREAS[area].arpa) return {};
+  try{
+    const rows = parseCSV(await getText(RAW+`${area}_arpa.csv?_=`+Date.now())).filter(r=>r.location_type==='area')
+      .map(r=>({t:Date.parse(r.timestamp_utc), mx:+r.max_mmh||0})).filter(p=>isFinite(p.t)).sort((a,b)=>a.t-b.t);
+    const byDay = {};
+    for(let i=0;i<rows.length;i++){
+      const dtH = i>0 ? Math.min((rows[i].t-rows[i-1].t)/H, 0.5) : 5/60;
+      const k = dayKey(rows[i].t); byDay[k] = (byDay[k]||0) + rows[i].mx*dtH;
+    }
+    return byDay;
+  }catch(e){ return {}; }
+}
+async function fetchGroundDaily(area){
+  const g = AREAS[area].ground, byDay = {};
+  try{
+    if(g.type==='arpa'){
+      const now = Date.now();   // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1) senza fuso
+      const start = new Date(now - 8*DAY + H).toISOString().slice(0,19);
+      const end = new Date(now + DAY + H).toISOString().slice(0,19);
+      const where = `data >= '${start}' AND data <= '${end}'`;
+      const rows = JSON.parse(await getText(`${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`));
+      for(const row of rows){
+        const t = Date.parse(String(row.data).slice(0,19)+'+01:00'); const v = +row.valore;
+        if(isFinite(t)&&isFinite(v)&&v>=0){ const k=dayKey(t); byDay[k]=(byDay[k]||0)+v; }
+      }
+    } else if(g.type==='sir'){
+      for(const line of (await getText(g.url+'?_='+Date.now())).trim().split(/\r?\n/).slice(1)){
+        const [d,v] = line.split(';'); const mm = +v;
+        // Giorno idrologico 09→09: il valore datato D copre quasi tutto D-1 → attribuito a D-1
+        if(d && isFinite(mm)){ byDay[new Date(Date.parse(d+'T00:00:00Z')-DAY).toISOString().slice(0,10)] = mm; }
+      }
+    }
+  }catch(e){ /* pluviometro opzionale */ }
+  return byDay;
+}
+
+// ── AGGREGAZIONE ─────────────────────────────────────────────────────────
+// Somma oraria su [from, to): null se la fonte non copre TUTTE le ore (mai buchi contati come zero).
+function sumHourly(map, from, to){
+  let s = 0;
+  for(let t=from; t<to; t+=H){ const v = map.get(t); if(v==null) return null; s += v; }
+  return s;
+}
+function sumYR(blocks, from, to){
+  if(!blocks) return null;
+  let s = 0, cov = 0;
+  for(const b of blocks){ if(b.t0>=from && b.t1<=to){ s+=b.mm; cov+=b.t1-b.t0; } }
+  return cov >= (to-from) ? s : null;
+}
+function build(area, models, mch, yr, cum3, arpa, ground){
+  const now = Date.now(), nowH = Math.floor(now/H)*H;
+  const today = Math.floor(now/DAY)*DAY;
+  const days = [];
+  for(let off=-7; off<=7; off++){
+    const d0 = today + off*DAY, d1 = d0 + DAY;
+    const from = off===0 ? nowH : d0;                 // oggi: solo le ore che restano
+    const k = dayKey(d0);
+    const per = {};
+    for(const [mk,m] of Object.entries(models)){ const s = sumHourly(m.h, off===0?d0:from, d1); if(s!=null) per[mk]=s; }
+    // oggi: l'ensemble per il confronto col passato usa tutto il giorno; per il futuro le ore restanti
+    const perRest = {};
+    if(off===0) for(const [mk,m] of Object.entries(models)){ const s = sumHourly(m.h, from, d1); if(s!=null) perRest[mk]=s; }
+    const P = off===0 ? perRest : per;
+    const vals = Object.values(P);
+    const worstK = vals.length ? Object.keys(P).reduce((a,b)=>P[a]>=P[b]?a:b) : null;
+    days.push({off, ms:d0, key:k, isPast:off<0, isToday:off===0,
+      ens: vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null,
+      ensMax: vals.length ? Math.max(...vals) : null, ensMin: vals.length ? Math.min(...vals) : null,
+      ensWorst: worstK && P[worstK] > 0 ? models[worstK].label : null, ensN: vals.length,
+      mch: mch ? sumHourly(mch, from, d1) : null,
+      yr: off<0 ? null : sumYR(yr, from, d1),
+      cum3: off<0 ? (cum3[k] ?? null) : null,
+      arpa: off<0 && AREAS[area].arpa ? (arpa[k] ?? null) : null,
+      ground: off<0 ? (ground[k] ?? null) : null,
+    });
+  }
+  // Serie orarie future (da adesso) per cumulata e intensità
+  const end = today + 8*DAY;
+  const hours = [];
+  for(let t=nowH; t<end; t+=H){
+    const v = Object.values(models).map(m=>m.h.get(t)).filter(x=>x!=null);
+    hours.push({t, ens: v.length ? v.reduce((a,b)=>a+b,0)/v.length : null,
+      mx: v.length?Math.max(...v):null, mn: v.length?Math.min(...v):null, mch: mch ? (mch.get(t) ?? null) : null});
+  }
+  // Cumulate per modello (per la fascia min–max e il worst-case coerente con le allerte)
+  const cumModels = {};
+  for(const [mk,m] of Object.entries(models)){
+    let c=0; const pts=[];
+    for(let t=nowH; t<end; t+=H){ const v=m.h.get(t); if(v==null) break; c+=v; pts.push([t+H,c]); }
+    cumModels[mk] = pts;
+  }
+  return {days, hours, cumModels, models, yr, mch, nowH};
+}
+
+// ── CARICAMENTO ──────────────────────────────────────────────────────────
 async function loadArea(area){
   setStatus('Caricamento previsioni e misure…');
   try{
-    let cache = dataCache[area];
-    if(!cache){
-      const [perHour, cum3D, arpaD, groundD] = await Promise.all([
-        fetchForecast(area), fetchCum3Daily(area), fetchArpaDaily(area), fetchGroundDaily(area),
-      ]);
-      cache = {days: buildDaily(perHour, cum3D, arpaD, groundD), perHour};
-      dataCache[area] = cache;
+    if(!cache[area]){
+      const a = AREAS[area];
+      const [models, mch, yr, c3, ar, gr] = await Promise.all([
+        fetchEnsemble(a), fetchMeteoSwiss(a), fetchYR(a), fetchCum3Daily(area), fetchArpaDaily(area), fetchGroundDaily(area)]);
+      cache[area] = build(area, models, mch, yr, c3, ar, gr);
     }
-    renderDays(cache.days);
-    renderCumChart(cache.perHour, cache.days, area);
-    renderHistPast(cache.days, area);
-    renderHistFut(cache.days);
-    renderDayBox(cache.days, area);
-    const nM = cache.perHour.length ? cache.perHour[Math.floor(cache.perHour.length/2)].nModels : 0;
-    setStatus(`Ensemble: ${nM} modelli · misurato: CUM3 DPC${AREAS[area].arpa?' + ARPA':''} + ${AREAS[area].ground.name}`);
-  }catch(e){
-    setStatus('Errore: '+e.message);
-  }
+    const c = cache[area];
+    const nM = Object.keys(c.models).length;
+    const mchEnd = c.mch ? Math.max(...c.mch.keys())+H : null;
+    setStatus(`Ensemble ${nM}/${OM_MODELS.length} modelli · YR ${c.yr?'ok':'non disponibile'} · MeteoSwiss ${mchEnd?'fino al '+new Date(mchEnd).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}):'non disponibile'}`);
+    // Osservato: opzioni disponibili per l'area
+    const obsSel = document.getElementById('pv-obs');
+    obsSel.querySelector('option[value="arpa"]').disabled = !AREAS[area].arpa;
+    obsSel.querySelector('option[value="ground"]').textContent = 'Pluviometro ' + AREAS[area].ground.name;
+    if(state.obs==='arpa' && !AREAS[area].arpa){ state.obs='ground'; obsSel.value='ground'; }
+    renderAll();
+  }catch(e){ setStatus('Errore: '+e.message); }
 }
-
 function setStatus(t){ document.getElementById('pv-status').textContent = t; }
+function renderAll(){
+  const c = cache[state.area]; if(!c) return;
+  renderDays(c); renderTiles(c); renderCum(c); renderHourly(c); renderPast(c); renderFut(c); renderTable(c);
+}
+const obsVal = d => d[state.obs];
+const obsLabel = () => state.obs==='ground' ? 'Pluviometro '+AREAS[state.area].ground.name
+                     : state.obs==='cum3' ? 'CUM3 DPC (pluviometri)' : 'Radar ARPA';
+function primaryFut(d){ return state.src==='yr' ? d.yr : state.src==='mch' ? d.mch : d.ens; }
+function primaryColor(){ return cssv(state.src==='yr'?'--s-yr':state.src==='mch'?'--s-mch':'--s-ens'); }
 
-function renderDays(days){
+// ── STRISCIA GIORNI ──────────────────────────────────────────────────────
+function renderDays(c){
+  const vals = c.days.map(d=>d.isPast ? obsVal(d) : primaryFut(d));
+  const mx = Math.max(5, ...vals.filter(v=>v!=null));
   const box = document.getElementById('pv-days');
-  box.innerHTML = days.map(d=>{
-    const val = d.isPast ? (d.cum3>0?`${d.cum3.toFixed(0)}mm rad`:'—') : (d.fMean>0?`${d.fMean.toFixed(0)}mm`:'—');
-    return `<div class="pv-day ${d.isPast?'past':''} ${d.off===selectedDay?'sel':''}" data-off="${d.off}">
-      <div class="d-date">${d.isToday?'oggi':fmtDay(d.ms)}</div>
-      <div class="d-val">${val}</div>
-    </div>`;
+  box.innerHTML = c.days.map((d,i)=>{
+    const v = vals[i], w = v==null?0:Math.max(v>0?4:0, v/mx*100);
+    const col = d.isPast ? cssv('--s-obs') : primaryColor();
+    return `<div class="pv-day ${d.isToday?'today':''} ${d.off===state.sel?'sel':''}" data-off="${d.off}" title="${d.isPast?obsLabel():SRC[state.src]||'Ensemble'}">
+      <div class="dd">${d.isToday?'oggi':fmtDay(d.ms)}</div>
+      <div class="dv">${v==null?'<small>n.d.</small>':fmtMM(v)+'<small> mm</small>'}</div>
+      <div class="bar"><i style="width:${w}%;background:${col}"></i></div>
+      <div class="kind">${d.isPast?'osservato':d.isToday?'resto del giorno':'previsto'}</div></div>`;
   }).join('');
-  [...box.querySelectorAll('.pv-day')].forEach(el=>{
-    el.addEventListener('click',()=>{
-      selectedDay = +el.dataset.off;
-      [...box.querySelectorAll('.pv-day')].forEach(x=>x.classList.toggle('sel', +x.dataset.off===selectedDay));
-      const area = document.getElementById('pv-area').value;
-      renderDayBox(dataCache[area].days, area);
-    });
-  });
+  box.querySelectorAll('.pv-day').forEach(el=>el.addEventListener('click',()=>{
+    state.sel = +el.dataset.off; renderDays(c); renderTiles(c);
+  }));
 }
 
-function renderDayBox(days, area){
-  const d = days.find(x=>x.off===selectedDay);
-  const box = document.getElementById('pv-daybox');
-  if(!d){ box.style.display='none'; return; }
-  box.style.display='block';
-  const dateStr = new Date(d.ms).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long'});
+// ── TESSERE DEL GIORNO ───────────────────────────────────────────────────
+function tile(color, label, v, sub, shape){
+  const sw = color ? `<span class="dot" style="background:${color};${shape==='sq'?'border-radius:2px':''}"></span>` : '';
+  if(v==null) return `<div class="tile na"><div class="k">${sw}${label}</div><div class="v">${sub||'non disponibile'}</div></div>`;
+  return `<div class="tile"><div class="k">${sw}${label}</div><div class="v">${fmtMM(v)}<small>mm</small></div><div class="s">${sub||''}</div></div>`;
+}
+function renderTiles(c){
+  const d = c.days.find(x=>x.off===state.sel); if(!d) return;
+  const ds = new Date(d.ms).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+  document.getElementById('pv-daytitle').innerHTML = `<b>${d.isToday?'Oggi':ds}</b> · ${d.isPast?'osservato e previsto':d.isToday?'previsto per le ore che restano':'previsto'}`;
+  const t = [];
   if(d.isPast){
-    const rows = [];
-    rows.push(`<span style="color:#f87171">CUM3 DPC: <b>${d.cum3.toFixed(0)} mm</b></span>`);
-    if(d.arpa!=null) rows.push(`<span style="color:#2dd4bf">ARPA: <b>${d.arpa.toFixed(0)} mm</b></span>`);
-    if(d.ground!=null) rows.push(`<span style="color:#ec4899">${AREAS[area].ground.name}: <b>${d.ground.toFixed(0)} mm</b></span>`);
-    rows.push(`<span style="color:#f59e0b">previsto era: ${d.fMean.toFixed(0)} mm (mean)</span>`);
-    box.innerHTML = `<div style="text-transform:capitalize;color:var(--text3)">${dateStr} · misurato</div>
-      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;align-items:baseline">${rows.join('')}</div>`;
+    t.push(tile(cssv('--s-obs'),'Pluviometro '+AREAS[state.area].ground.name, d.ground, 'misura a terra','sq'));
+    t.push(tile(cssv('--s-obs'),'CUM3 DPC', d.cum3, 'pluviometri interpolati, media area','sq'));
+    if(AREAS[state.area].arpa) t.push(tile(cssv('--s-obs'),'Radar ARPA', d.arpa, 'max sull\'area','sq'));
+    if(show('ens')) t.push(tile(cssv('--s-ens'),'Previsto · Ensemble', d.ens, d.ens!=null?`intervallo ${fmtMM(d.ensMin)}–${fmtMM(d.ensMax)} mm`:''));
+    if(show('mch')) t.push(tile(cssv('--s-mch'),'Previsto · MeteoSwiss', d.mch));
+    if(show('yr')) t.push(tile(cssv('--s-yr'),'Previsto · YR', null, 'nessuno storico (YR dà solo il futuro)'));
   } else {
-    box.innerHTML = `<div style="text-transform:capitalize;color:var(--text3)">${dateStr} · previsto</div>
-      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:6px;align-items:baseline">
-        <span>media ensemble <span class="big" style="color:#f59e0b">${d.fMean.toFixed(0)}</span> mm</span>
-        <span>worst-case <span class="big" style="color:#ef4444">${d.fMax.toFixed(0)}</span> mm</span>
-      </div>`;
+    if(show('ens')){
+      t.push(tile(cssv('--s-ens'),'Ensemble · media', d.ens, d.ens!=null?`${d.ensN} modelli`:''));
+      t.push(tile(cssv('--s-ens'),'Ensemble · worst-case', d.ensMax, d.ensWorst?`modello più piovoso: ${d.ensWorst}`:''));
+    }
+    if(show('yr')) t.push(tile(cssv('--s-yr'),'YR · MET Norway', d.yr, d.yr==null?'oltre l\'orizzonte YR':''));
+    if(show('mch')) t.push(tile(cssv('--s-mch'),'MeteoSwiss · ICON-CH', d.mch, d.mch==null?'oltre l\'orizzonte (+5 giorni)':''));
   }
+  document.getElementById('pv-tiles').innerHTML = t.join('');
 }
 
-function buildLegend(elId, items, chart){
-  const box = document.getElementById(elId);
-  box.innerHTML = items.map((it,i)=>`<span class="pv-chip ${it.dash?'dash':''}" data-i="${it.di}" style="color:${it.color}">
-    <span class="sw" style="background:${it.color}"></span><span style="color:var(--text,#e2e8f0)">${it.label}</span></span>`).join('');
-  [...box.querySelectorAll('.pv-chip')].forEach(chip=>{
-    chip.addEventListener('click',()=>{
-      const di=+chip.dataset.i; const meta=chart.getDatasetMeta(di);
-      meta.hidden = meta.hidden===null ? !chart.data.datasets[di].hidden : !meta.hidden;
-      chip.classList.toggle('off', meta.hidden); chart.update();
+// ── Chart.js: stile comune, plugin ───────────────────────────────────────
+function baseOpts(){
+  const ink2 = cssv('--ink2'), grid = cssv('--grid');
+  return {
+    parsing:false, animation:false, maintainAspectRatio:false, normalized:true,
+    interaction:{mode:'index', intersect:false},
+    layout:{padding:{right:8}},
+    plugins:{legend:{display:false},
+      tooltip:{backgroundColor:cssv('--card'), titleColor:cssv('--ink'), bodyColor:cssv('--ink'),
+        borderColor:cssv('--border')||'#333', borderWidth:1, padding:10, boxPadding:4, usePointStyle:true,
+        filter:it=>!it.dataset._noTip,
+        callbacks:{label:it=>` ${it.dataset.label}: ${it.raw?._txt ?? fmtMM(it.parsed.y)+' mm'}`}}},
+    scales:{
+      x:{grid:{color:grid, drawTicks:false}, border:{color:cssv('--axis')}, ticks:{color:ink2, font:{size:11}, padding:6}},
+      y:{beginAtZero:true, grid:{color:grid, drawTicks:false}, border:{display:false},
+         ticks:{color:ink2, font:{size:11}, padding:6}, title:{display:true, color:ink2, font:{size:11}}},
+    },
+  };
+}
+// Linea verticale "adesso" + fondo leggermente diverso sul futuro
+const nowPlugin = {id:'nowLine', beforeDatasetsDraw(ch, a, o){
+  if(!o || o.at==null) return; const x = ch.scales.x.getPixelForValue(o.at); const {top,bottom,right} = ch.chartArea;
+  if(x<ch.chartArea.left || x>right) return;
+  const g = ch.ctx; g.save();
+  g.fillStyle = cssv('--grid'); g.fillRect(x, top, right-x, bottom-top);
+  g.strokeStyle = cssv('--ink3'); g.lineWidth = 1; g.beginPath(); g.moveTo(x+.5, top); g.lineTo(x+.5, bottom); g.stroke();
+  g.fillStyle = cssv('--ink2'); g.font = '11px '+(cssv('--sans')||'sans-serif'); g.textAlign='left';
+  g.fillText('adesso →', x+5, top+12); g.textAlign='right'; g.fillText('← osservato', x-5, top+12); g.restore();
+}};
+// Etichetta a fine linea (solo serie marcate _end)
+const endPlugin = {id:'endLabels', afterDatasetsDraw(ch){
+  const g = ch.ctx, items = [];
+  ch.data.datasets.forEach((ds,i)=>{
+    const m = ch.getDatasetMeta(i); if(!ds._end || !ch.isDatasetVisible(i) || !m.data.length) return;
+    const p = m.data[m.data.length-1]; const v = ds.data[ds.data.length-1]?.y; if(v==null) return;
+    items.push({x:p.x, y:p.y, txt:`${fmtMM(v)} mm`, col:ds._end});
+  });
+  items.sort((a,b)=>a.y-b.y);
+  for(let i=1;i<items.length;i++) if(items[i].y-items[i-1].y<14) items[i].y = items[i-1].y+14;
+  g.save(); g.font = '600 11px '+(cssv('--sans')||'sans-serif'); g.textAlign='left'; g.textBaseline='middle';
+  for(const it of items){ g.fillStyle = it.col; g.fillRect(it.x+4, it.y-1, 6, 2); g.fillStyle = cssv('--ink'); g.fillText(it.txt, it.x+13, it.y); }
+  g.restore();
+}};
+// Baffi (intervallo) sopra/attorno a barre o simboli: ds._wlo / ds._whi array allineati alle etichette
+const whiskerPlugin = {id:'whiskers', afterDatasetsDraw(ch){
+  const g = ch.ctx;
+  ch.data.datasets.forEach((ds,i)=>{
+    const m = ch.getDatasetMeta(i); if(!ds._whi || !ch.isDatasetVisible(i)) return;
+    g.save(); g.strokeStyle = cssv('--ink2'); g.lineWidth = 1.5;
+    m.data.forEach((el,j)=>{
+      const hi = ds._whi[j], lo = ds._wlo ? ds._wlo[j] : ds.data[j]?.y; if(hi==null || lo==null) return;
+      const y1 = ch.scales.y.getPixelForValue(lo), y2 = ch.scales.y.getPixelForValue(hi); if(Math.abs(y1-y2)<2) return;
+      g.beginPath(); g.moveTo(el.x, y1); g.lineTo(el.x, y2); g.moveTo(el.x-4, y2); g.lineTo(el.x+4, y2);
+      if(ds._wlo){ g.moveTo(el.x-4, y1); g.lineTo(el.x+4, y1); } g.stroke();
     });
+    g.restore();
+  });
+}};
+// Linea verticale al passaggio del mouse (crosshair)
+const crossPlugin = {id:'cross', afterDraw(ch){
+  const a = ch.tooltip?.getActiveElements?.(); if(!a || !a.length || ch.config.type!=='line') return;
+  const x = a[0].element.x, {top,bottom} = ch.chartArea, g = ch.ctx;
+  g.save(); g.strokeStyle = cssv('--axis'); g.lineWidth = 1; g.beginPath(); g.moveTo(x,top); g.lineTo(x,bottom); g.stroke(); g.restore();
+}};
+if(window.Chart) Chart.register(nowPlugin, endPlugin, whiskerPlugin, crossPlugin);
+
+function legend(id, ch, items){
+  const box = document.getElementById(id);
+  box.innerHTML = items.map(it=>`<span class="pv-chip" data-i="${it.i.join(',')}" role="button" tabindex="0">
+    <span class="sw ${it.sw||''}" style="background:${it.c};border-color:${it.c};color:${it.c}"></span>${it.label}</span>`).join('');
+  box.querySelectorAll('.pv-chip').forEach(chip=>{
+    const toggle = ()=>{ const idx = chip.dataset.i.split(',').map(Number);
+      const hide = !chip.classList.contains('off'); idx.forEach(i=>ch.setDatasetVisibility(i, !hide));
+      chip.classList.toggle('off', hide); ch.update(); };
+    chip.addEventListener('click', toggle);
+    chip.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
   });
 }
+function mkChart(key, canvasId, cfg){
+  if(charts[key]) charts[key].destroy();
+  charts[key] = new Chart(document.getElementById(canvasId), cfg);
+  return charts[key];
+}
+const tickDate = v => new Date(v).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
 
-function renderCumChart(perHour, days, area){
-  // Cumulata SDOPPIATA: due curve separate che ripartono da zero.
-  //  • PASSATO (giorni <0, fino a ieri): cumulata del MISURATO radar (CUM3).
-  //  • FUTURO (da OGGI in poi): cumulata del PREVISTO ensemble (mean + worst).
-  // Oggi è incluso nel blocco FUTURO. Le due cumulate non si sommano tra loro:
-  // il passato racconta "quanto è caduto", il futuro "quanto è previsto".
-  const today = new Date(); today.setUTCHours(0,0,0,0);
-  const todayMs = today.getTime();
-
-  // ── FUTURO: previsto ensemble cumulato dalle 00:00 di oggi in avanti ──
-  let cM=0, cX=0;
-  const fMean=[], fMax=[];
-  for(const ph of perHour){
-    if(ph.t < todayMs) continue;         // solo da oggi in poi
-    cM+=ph.mean; cX+=ph.max;
-    fMean.push({x:ph.t, y:+cM.toFixed(1)});
-    fMax.push({x:ph.t, y:+cX.toFixed(1)});
+// ── CUMULATA ─────────────────────────────────────────────────────────────
+function renderCum(c){
+  const E = cssv('--s-ens'), Y = cssv('--s-yr'), M = cssv('--s-mch'), O = cssv('--s-obs');
+  const now = c.nowH;
+  // Passato: osservato cumulato a fine giornata (riferimento scelto)
+  let co = 0; const obs = [];
+  const past = c.days.filter(d=>d.isPast);
+  if(past.length) obs.push({x:past[0].ms, y:0});
+  for(const d of past){ const v = obsVal(d); if(v==null) continue; co += v; obs.push({x:d.ms+DAY, y:+co.toFixed(1)}); }
+  // Futuro: media ensemble cumulata, fascia min–max tra le cumulate dei singoli modelli
+  let ce = 0; const ens = [{x:now,y:0}], hi = [{x:now,y:0}], lo = [{x:now,y:0}];
+  for(const h of c.hours){
+    if(h.ens==null) break; ce += h.ens; const t = h.t+H;
+    ens.push({x:t, y:+ce.toFixed(2)});
+    // Modello finito prima (es. AROME ~2 g): entra nel MASSIMO col valore raggiunto (limite inferiore
+    // della sua cumulata vera), ma non nel minimo — altrimenti la fascia crollerebbe a fine orizzonte.
+    const act = [], frozen = [];
+    for(const p of Object.values(c.cumModels)){
+      if(!p.length) continue;
+      const q = p.find(z=>z[0]===t);
+      if(q) act.push(q[1]); else if(p[p.length-1][0] < t) frozen.push(p[p.length-1][1]);
+    }
+    if(act.length){ hi.push({x:t,y:+Math.max(...act, ...frozen).toFixed(2)}); lo.push({x:t,y:+Math.min(...act).toFixed(2)}); }
   }
-
-  // ── PASSATO: misurato radar (CUM3) cumulato, solo giorni PRIMA di oggi ──
-  let cCum3=0; const meas=[];
-  for(const d of days){
-    if(d.off>=0) break;                  // si ferma a ieri (oggi va nel futuro)
-    cCum3+=d.cum3;
-    meas.push({x:d.ms+DAY_MS-1, y:+cCum3.toFixed(1)});
-  }
-
-  const ds=[
-    {label:'Misurato radar — passato (CUM3, cumulato)', data:meas, yAxisID:'y', _di:0,
-      borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:3, borderWidth:3, tension:.15, stepped:true},
-    {label:'Previsto — futuro (media ensemble)', data:fMean, yAxisID:'y', _di:1,
-      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.10)', pointRadius:0, borderWidth:2.5, tension:.2, fill:true},
-    {label:'Previsto — futuro (worst-case)', data:fMax, yAxisID:'y', _di:2,
-      borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:0, borderWidth:2, tension:.2, borderDash:[5,4]},
+  let cm = 0; const mch = [];
+  if(c.mch){ mch.push({x:now,y:0}); for(const h of c.hours){ if(h.mch==null) break; cm += h.mch; mch.push({x:h.t+H, y:+cm.toFixed(2)}); } }
+  let cy = 0; const yr = [];
+  if(c.yr){ yr.push({x:now,y:0}); for(const b of c.yr){ if(b.t0<now) continue; cy += b.mm; yr.push({x:b.t1, y:+cy.toFixed(2)}); } }
+  const ds = [
+    {label:'Osservato · '+obsLabel(), data:obs, borderColor:O, backgroundColor:O, borderWidth:2, pointRadius:3, pointBackgroundColor:O,
+      pointBorderColor:cssv('--card'), pointBorderWidth:2, stepped:'before', _end:O},
+    {label:'Ensemble · più piovoso', data:hi, borderColor:E, borderWidth:1, borderDash:[4,3], pointRadius:0, fill:'+1',
+      backgroundColor:E+'26', hidden:!show('ens'), _end:E},
+    {label:'Ensemble · meno piovoso', data:lo, borderColor:'transparent', pointRadius:0, hidden:!show('ens'), _noTip:false},
+    {label:'Ensemble · media', data:ens, borderColor:E, backgroundColor:E, borderWidth:2.5, pointRadius:0, hidden:!show('ens'), _end:E},
+    {label:'YR', data:yr, borderColor:Y, backgroundColor:Y, borderWidth:2, pointRadius:0, hidden:!show('yr'), _end:Y},
+    {label:'MeteoSwiss', data:mch, borderColor:M, backgroundColor:M, borderWidth:2, pointRadius:0, hidden:!show('mch'), _end:M},
   ];
-  if(charts.cum) charts.cum.destroy();
-  const ctx = document.getElementById('pv-chart-cum');
-  charts.cum = new Chart(ctx,{type:'line',data:{datasets:ds},options:{
-    parsing:false, animation:false, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-    scales:{
-      x:{type:'linear',ticks:{callback:v=>new Date(v).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}),
-        color:'#cbd5e1',maxTicksLimit:14,font:{size:12}},grid:{color:'rgba(148,163,184,.08)'}},
-      y:{beginAtZero:true,title:{display:true,text:'mm cumulati (passato e futuro separati)',color:'#94a3b8',font:{size:12}},
-        ticks:{color:'#cbd5e1',font:{size:12}},grid:{color:'rgba(148,163,184,.08)'}},
-    },
-    plugins:{legend:{display:false},
-      tooltip:{backgroundColor:'rgba(15,23,42,.96)',borderColor:'#334155',borderWidth:1,padding:10,
-        callbacks:{title:it=>new Date(it[0].parsed.x).toLocaleString('it-IT',{timeZone:'Europe/Rome'})}},
-      annotation:false},
-  }});
-  buildLegend('pv-legend-cum',[
-    {di:0,label:'Misurato radar (passato)',color:'#2dd4bf'},
-    {di:1,label:'Previsto media (futuro)',color:'#f59e0b'},
-    {di:2,label:'Previsto worst-case (futuro)',color:'#ef4444',dash:true},
-  ], charts.cum);
+  const o = baseOpts();
+  o.layout.padding.right = 70;
+  o.scales.x = {...o.scales.x, type:'linear', min:c.days[0].ms, max:c.days[c.days.length-1].ms+DAY,
+    ticks:{...o.scales.x.ticks, stepSize:DAY, callback:tickDate, maxRotation:0, autoSkip:true, maxTicksLimit:15}};
+  o.scales.y.title.text = 'mm cumulati';
+  o.plugins.nowLine = {at:Date.now()};
+  o.plugins.tooltip.callbacks.title = it => new Date(it[0].parsed.x).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'});
+  o.interaction = {mode:'nearest', axis:'x', intersect:false};
+  const ch = mkChart('cum','ch-cum',{type:'line', data:{datasets:ds}, options:o});
+  const items = [{i:[0], c:O, label:'Osservato ('+obsLabel()+')'}];
+  if(show('ens')) items.push({i:[3], c:E, label:'Ensemble media'}, {i:[1,2], c:E, sw:'band', label:'Ensemble min–max'});
+  if(show('yr')) items.push({i:[4], c:Y, label:'YR'});
+  if(show('mch')) items.push({i:[5], c:M, label:'MeteoSwiss'});
+  legend('lg-cum', ch, items);
 }
 
-function renderHistPast(days, area){
-  const past = days.filter(d=>d.off<0 || d.off===0);
-  const labels = past.map(d=>d.isToday?'oggi':fmtDay(d.ms));
-  const ds=[
-    {label:'Previsto (mean)', data:past.map(d=>d.fMean), backgroundColor:'#f59e0b', _di:0},
-    {label:'CUM3 DPC', data:past.map(d=>d.cum3), backgroundColor:'#f87171', _di:1},
+// ── INTENSITÀ ORARIA 48 h ────────────────────────────────────────────────
+function renderHourly(c){
+  const E = cssv('--s-ens'), Y = cssv('--s-yr'), M = cssv('--s-mch');
+  const end = c.nowH + 48*H;
+  const hs = c.hours.filter(h=>h.t<end);
+  const ens = hs.filter(h=>h.ens!=null).map(h=>({x:h.t, y:+h.ens.toFixed(2)}));
+  const hi = hs.filter(h=>h.mx!=null).map(h=>({x:h.t, y:h.mx})), lo = hs.filter(h=>h.mn!=null).map(h=>({x:h.t, y:h.mn}));
+  const mch = hs.filter(h=>h.mch!=null).map(h=>({x:h.t, y:h.mch}));
+  const yr = (c.yr||[]).filter(b=>b.t0>=c.nowH && b.t0<end && b.t1-b.t0===H).map(b=>({x:b.t0, y:b.mm}));
+  const step = {stepped:'after', pointRadius:0, pointHoverRadius:4};
+  const ds = [
+    {label:'Ensemble · max modelli', data:hi, borderColor:'transparent', fill:'+1', backgroundColor:E+'22', ...step, hidden:!show('ens')},
+    {label:'Ensemble · min modelli', data:lo, borderColor:'transparent', ...step, hidden:!show('ens'), _noTip:true},
+    {label:'Ensemble · media', data:ens, borderColor:E, backgroundColor:E, borderWidth:2, ...step, hidden:!show('ens')},
+    {label:'YR', data:yr, borderColor:Y, backgroundColor:Y, borderWidth:2, ...step, hidden:!show('yr')},
+    {label:'MeteoSwiss', data:mch, borderColor:M, backgroundColor:M, borderWidth:2, ...step, hidden:!show('mch')},
   ];
-  let di=2;
-  if(AREAS[area].arpa){ ds.push({label:'ARPA', data:past.map(d=>d.arpa??0), backgroundColor:'#2dd4bf', _di:di++}); }
-  ds.push({label:AREAS[area].ground.name, data:past.map(d=>d.ground??0), backgroundColor:'#ec4899', _di:di++});
-  if(charts.past) charts.past.destroy();
-  charts.past = new Chart(document.getElementById('pv-hist-past'),{type:'bar',data:{labels,datasets:ds},options:{
-    animation:false, maintainAspectRatio:false,
-    scales:{x:{ticks:{color:'#cbd5e1',font:{size:11}},grid:{display:false}},
-      y:{beginAtZero:true,title:{display:true,text:'mm/giorno',color:'#94a3b8',font:{size:11}},ticks:{color:'#cbd5e1'},grid:{color:'rgba(148,163,184,.08)'}}},
-    plugins:{legend:{display:false}},
-  }});
-  const leg=[{di:0,label:'Previsto (mean)',color:'#f59e0b'},{di:1,label:'CUM3 DPC',color:'#f87171'}];
-  let d2=2;
-  if(AREAS[area].arpa){ leg.push({di:d2++,label:'ARPA',color:'#2dd4bf'}); }
-  leg.push({di:d2++,label:AREAS[area].ground.name,color:'#ec4899'});
-  buildLegend('pv-legend-past', leg, charts.past);
+  const o = baseOpts();
+  o.scales.x = {...o.scales.x, type:'linear', min:c.nowH, max:end,
+    ticks:{...o.scales.x.ticks, stepSize:6*H, maxRotation:0,
+      callback:v=>{ const d=new Date(v); const hh=d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'});
+        return hh==='00:00'||hh==='01:00'||hh==='02:00' ? [hh, d.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',timeZone:'Europe/Rome'})] : hh; }}};
+  o.scales.y.title.text = 'mm/ora';
+  o.interaction = {mode:'nearest', axis:'x', intersect:false};
+  o.plugins.tooltip.callbacks.title = it => { const t=it[0].parsed.x; const f=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'});
+    return new Date(t).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:'Europe/Rome'})+' · '+f(t)+'–'+f(t+H); };
+  const ch = mkChart('hr','ch-hr',{type:'line', data:{datasets:ds}, options:o});
+  const items = [];
+  if(show('ens')) items.push({i:[2], c:E, label:'Ensemble media'}, {i:[0,1], c:E, sw:'band', label:'Ensemble min–max'});
+  if(show('yr')) items.push({i:[3], c:Y, label:'YR (orario fino a ~2,5 g)'});
+  if(show('mch')) items.push({i:[4], c:M, label:'MeteoSwiss'});
+  legend('lg-hr', ch, items);
 }
 
-function renderHistFut(days){
-  const fut = days.filter(d=>d.off>=0);
-  const labels = fut.map(d=>d.isToday?'oggi':fmtDay(d.ms));
-  const ds=[
-    {label:'Media ensemble', data:fut.map(d=>d.fMean), backgroundColor:'#f59e0b', _di:0},
-    {label:'Worst-case', data:fut.map(d=>d.fMax), backgroundColor:'#ef4444', _di:1},
+// ── GIORNI PASSATI: osservato (barre) vs previsto (simboli) ──────────────
+function renderPast(c){
+  const E = cssv('--s-ens'), M = cssv('--s-mch'), O = cssv('--s-obs');
+  const past = c.days.filter(d=>d.isPast);
+  const labels = past.map(d=>fmtDay(d.ms));
+  const ds = [
+    {type:'bar', label:obsLabel(), data:past.map((d,i)=>({x:i, y:obsVal(d)})), backgroundColor:O+'99', borderColor:O,
+      borderWidth:0, borderRadius:4, borderSkipped:'bottom', barPercentage:.62, categoryPercentage:.9, order:3},
+    {type:'line', label:'Previsto · Ensemble', data:past.map((d,i)=>({x:i, y:d.ens, _txt:d.ens==null?'n.d.':`${fmtMM(d.ens)} mm (${fmtMM(d.ensMin)}–${fmtMM(d.ensMax)})`})),
+      showLine:false, pointStyle:'rectRot', pointRadius:7, pointHoverRadius:9, backgroundColor:E, borderColor:cssv('--card'), borderWidth:2,
+      _wlo:past.map(d=>d.ensMin), _whi:past.map(d=>d.ensMax), hidden:!show('ens'), order:1},
+    {type:'line', label:'Previsto · MeteoSwiss', data:past.map((d,i)=>({x:i, y:d.mch})),
+      showLine:false, pointStyle:'triangle', pointRadius:7, pointHoverRadius:9, backgroundColor:M, borderColor:cssv('--card'), borderWidth:2,
+      hidden:!show('mch'), order:2},
   ];
-  if(charts.fut) charts.fut.destroy();
-  charts.fut = new Chart(document.getElementById('pv-hist-fut'),{type:'bar',data:{labels,datasets:ds},options:{
-    animation:false, maintainAspectRatio:false,
-    scales:{x:{ticks:{color:'#cbd5e1',font:{size:11}},grid:{display:false}},
-      y:{beginAtZero:true,title:{display:true,text:'mm/giorno',color:'#94a3b8',font:{size:11}},ticks:{color:'#cbd5e1'},grid:{color:'rgba(148,163,184,.08)'}}},
-    plugins:{legend:{display:false}},
-  }});
-  buildLegend('pv-legend-fut',[
-    {di:0,label:'Media ensemble',color:'#f59e0b'},
-    {di:1,label:'Worst-case',color:'#ef4444'},
-  ], charts.fut);
+  const o = baseOpts();
+  o.parsing = false;
+  o.scales.x = {...o.scales.x, type:'category', labels, grid:{display:false}, offset:true};
+  o.scales.y.title.text = 'mm/giorno';
+  const ch = mkChart('past','ch-past',{type:'bar', data:{labels, datasets:ds}, options:o});
+  const items = [{i:[0], c:O, sw:'bar', label:'Osservato · '+obsLabel()}];
+  if(show('ens')) items.push({i:[1], c:E, sw:'mk', label:'Previsto Ensemble (baffo = min–max)'});
+  if(show('mch')) items.push({i:[2], c:M, sw:'tri', label:'Previsto MeteoSwiss'});
+  legend('lg-past', ch, items);
 }
 
-// ── Tema (riusa lo stesso toggle del sito) ──
-document.getElementById('btn-theme')?.addEventListener('click',()=>{
-  document.documentElement.classList.toggle('light');
-});
+// ── PROSSIMI GIORNI: barre per fonte, baffo = worst-case ensemble ────────
+function renderFut(c){
+  const E = cssv('--s-ens'), Y = cssv('--s-yr'), M = cssv('--s-mch');
+  const fut = c.days.filter(d=>!d.isPast);
+  const labels = fut.map(d=>d.isToday?'oggi (resto)':fmtDay(d.ms));
+  const bar = {borderRadius:4, borderSkipped:'bottom', barPercentage:.82, categoryPercentage:.72, borderWidth:0};
+  const ds = [
+    {label:'Ensemble · media', data:fut.map((d,i)=>({x:i, y:d.ens, _txt:d.ens==null?'n.d.':`${fmtMM(d.ens)} mm · worst-case ${fmtMM(d.ensMax)} mm (${d.ensWorst})`})),
+      backgroundColor:E, _whi:fut.map(d=>d.ensMax), hidden:!show('ens'), ...bar},
+    {label:'YR', data:fut.map((d,i)=>({x:i, y:d.yr, _txt:d.yr==null?'oltre orizzonte':undefined})), backgroundColor:Y, hidden:!show('yr'), ...bar},
+    {label:'MeteoSwiss', data:fut.map((d,i)=>({x:i, y:d.mch, _txt:d.mch==null?'oltre orizzonte (+5 g)':undefined})), backgroundColor:M, hidden:!show('mch'), ...bar},
+  ];
+  const o = baseOpts();
+  o.scales.x = {...o.scales.x, type:'category', labels, grid:{display:false}, offset:true};
+  o.scales.y.title.text = 'mm/giorno';
+  const ch = mkChart('fut','ch-fut',{type:'bar', data:{labels, datasets:ds}, options:o});
+  const items = [];
+  if(show('ens')) items.push({i:[0], c:E, sw:'bar', label:'Ensemble media (baffo = worst-case)'});
+  if(show('yr')) items.push({i:[1], c:Y, sw:'bar', label:'YR'});
+  if(show('mch')) items.push({i:[2], c:M, sw:'bar', label:'MeteoSwiss'});
+  legend('lg-fut', ch, items);
+}
 
-document.getElementById('pv-area').addEventListener('change', e=> loadArea(e.target.value));
-loadArea('ruspino');
+// ── TABELLA ──────────────────────────────────────────────────────────────
+function renderTable(c){
+  const a = AREAS[state.area];
+  const cols = [['Giorno',d=>d.isToday?'oggi (resto)':fmtDay(d.ms)],
+    ['Pluviometro',d=>d.ground],['CUM3 DPC',d=>d.cum3]];
+  if(a.arpa) cols.push(['Radar ARPA',d=>d.arpa]);
+  cols.push(['Ensemble media',d=>d.ens],['Ens. min',d=>d.ensMin],['Ens. worst-case',d=>d.ensMax],['Più piovoso',d=>d.ensWorst],
+            ['YR',d=>d.yr],['MeteoSwiss',d=>d.mch]);
+  const cell = v => v==null ? '<td class="na">—</td>' : typeof v==='string' ? `<td>${v}</td>` : `<td>${fmtMM(v)}</td>`;
+  document.getElementById('pv-tbl').innerHTML = `<table class="pt"><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`
+    + c.days.map(d=>`<tr class="${d.isToday?'today':''}">${cols.map((col,i)=>i===0?`<td>${col[1](d)}</td>`:cell(col[1](d))).join('')}</tr>`).join('')
+    + `</tbody></table><p class="pv-notes" style="margin-top:8px">mm/giorno (UTC). “—” = dato non disponibile o fuori dall'orizzonte del modello, non zero.</p>`;
+}
+
+// ── CONTROLLI ────────────────────────────────────────────────────────────
+document.getElementById('pv-area').addEventListener('change', e=>{ state.area = e.target.value; loadArea(state.area); });
+document.getElementById('pv-obs').addEventListener('change', e=>{ state.obs = e.target.value; renderAll(); });
+document.querySelectorAll('#pv-src button').forEach(b=>b.addEventListener('click',()=>{
+  state.src = b.dataset.src;
+  document.querySelectorAll('#pv-src button').forEach(x=>{ x.classList.toggle('on', x===b); x.setAttribute('aria-checked', x===b); });
+  renderAll();
+}));
+// Tema (stessa logica delle altre pagine) — i grafici si ridisegnano con i colori del tema
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+applyTheme(localStorage.getItem('radar-theme')||'dark');
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  localStorage.setItem('radar-theme',t); applyTheme(t); renderAll(); });
+
+loadArea(state.area);
 </script>
 </body>
 </html>

@@ -1,5 +1,20 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — Pagina Previsioni rifatta
+
+- 🆕 `previsioni.html` — tre fonti: **Ensemble** Open-Meteo (5 modelli), **YR** (MET Norway, dal browser
+  come in verifica) e **MeteoSwiss** (`meteoswiss_icon_seamless`: ICON-CH1 poi CH2, fino a +5 g, anche i 7 giorni
+  passati). Selettore Modelli (Tutti / Ensemble / YR / MeteoSwiss) e selettore Osservato (pluviometro / CUM3 / ARPA).
+- 📊 Grafici: cumulata osservato→previsto con linea "adesso" e fascia min–max dei modelli; nuovo grafico
+  **intensità oraria 48 h**; passato = barre osservato + simboli previsto; futuro = barre per fonte con baffo
+  worst-case; striscia 15 giorni con mini-barre; tessere del giorno; tabella dati. Colori fissi per fonte,
+  validati per daltonismo (dark e light); tema chiaro ora funzionante (prima il pulsante non agiva).
+- 🐞 Worst-case: era la somma ora per ora del massimo tra i modelli (gonfiato, es. 80 mm); ora è il
+  **singolo modello più piovoso**, come nelle allerte. Modelli che non coprono un'ora/giorno (AROME oltre
+  ~2 g) erano contati come 0 (`isFinite(null)`): ora esclusi. AROME allineato a `arome_france_hd` (come gli script).
+- ✏️ CUM3 etichettata "pluviometri interpolati" (non "radar") e sommata come **media** d'area (era il pixel max).
+  Oggi = solo le ore che restano (prima: giorno intero, non confrontabile con YR).
+
 ## Sessione 2026-10-06 — Pre-allerta anello: primo test
 
 - 🔎 Backtest anello 10 km Ruspino (3.134 frame SRI, finestre [inizio−3h, picco] di 43 episodi, 16
