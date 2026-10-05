@@ -1,5 +1,32 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-05 (notte) — Cepina radar DPC, anticipo Ruspino, SP3
+
+### Allerte Cepina — radar DPC primario, ARPA di riserva
+- ✏️ `nowcast.py` — nuovo `ARPA_ROLE = {'ruspino': 'or', 'cepina': 'backup'}`. A Cepina il radar ARPA
+  è quasi cieco (r 0.1–0.3 col pluviometro Oga): "cella sull'area" decide l'**SRI DPC**; ARPA entra solo
+  se l'SRI manca o è più vecchio di `SRI_MAX_AGE_MIN` (20'), con messaggio "ARPA di riserva".
+  Se il DPC non risponde affatto, `_arpa_only_cell_check` valuta comunque ARPA (prima il run usciva).
+  Ruspino invariato (DPC **oppure** ARPA).
+- ✏️ `monitor.py` — la riga di conferma ARPA nei messaggi solo per Ruspino.
+- ✏️ `nowcast.py` — testo allerta: "Pioggia caduta finora (CUM3 pluviometri, 3h)" (prima diceva "radar").
+
+### Anticipo Ruspino
+- 🔎 Backtest 16 episodi significativi (≥ 20 mm): prima allerta mediana 3' **dopo** il picco; il dato
+  radar a 5' supera già 10 mm/h ~20' prima del picco → la perdita è soprattutto **latenza**
+  (attesa del run ogni 20' + ritardo cron GitHub). Soglie più basse sul solo poligono rendono poco
+  a parità di latenza (le celle passano da 3 a 10 mm/h in 5–10').
+- ✏️ `nowcast.yml` — ogni 10' (era 20'); `worker-scheduler.js` `every: 10`, `worker.js` maxAge 25'
+  (da ri-deployare a mano su Cloudflare).
+- 🆕 `sri_collect.py` — anello 10 km attorno a ogni area (area esclusa): `<area>_sri_ring.csv`
+  (continuo) e `--backfill-ring` → `<area>_sri_ring_backfill.csv` (finestre [inizio−3h, inizio+3h] degli
+  episodi Ruspino). Dati di STUDIO per la pre-allerta "cella in arrivo": nessuna allerta li legge.
+  `sri-backfill.yml` ha la nuova modalità `backfill-ring`.
+
+### Privacy
+- 🔒 `report.html` — tolto il confronto con la matrice SP3 (repo pubblico). Restano da gestire
+  `forecast_matrix.py` e la sezione 24/48/72h di `verifica.html` (vedi migrazione).
+
 ## Sessione 2026-10-05 — Episodi di pioggia + mappa
 
 ### Mappa

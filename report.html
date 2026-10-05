@@ -140,7 +140,6 @@ const AREA_LABEL = {ruspino:'Ruspino', cepina:'Cepina', panna:'Panna'};
 const AREA_COLOR = {ruspino:'#2a78d6', cepina:'#eb6834', panna:'#1baf7a'};   // categoriche fisse per area
 const SIGNIF_MM = 20;          // episodio "significativo" (pioggia osservata)
 const CLASSES = [[50,'molto intensa'],[20,'intensa'],[5,'moderata'],[0,'debole']];
-const SP3 = {att:60, crit:80}; // Ruspino, soglie 24h matrice SP3 (Att/Crit): confronto INDICATIVO con la cumulata d'episodio
 
 const D = { episodes:[], links:{}, events:[], verify:[] };
 let VIEW='sint', CHARTS=[], LAST=null;
@@ -275,11 +274,6 @@ function summaryText(S,R){
     L.push(s);
   }
   if(R.orphan) L.push(`${pl(R.orphan,'allerta nowcast/soglia non corrisponde','allerte nowcast/soglia non corrispondono')} a un episodio di pioggia (possibili falsi allarmi, da verificare caso per caso).`);
-  if((!S.area||S.area==='ruspino')){
-    const rus=S.eps.filter(e=>e.area_name==='ruspino');
-    const nc=rus.filter(e=>(observed(e).mm??0)>=SP3.crit).length, na=rus.filter(e=>{const v=observed(e).mm??0; return v>=SP3.att&&v<SP3.crit;}).length;
-    if(rus.length) L.push(`Ruspino: ${pl(nc,'episodio','episodi')} con cumulata ≥ ${SP3.crit} mm e ${na} tra ${SP3.att} e ${SP3.crit} mm (confronto indicativo con le soglie 24h della matrice SP3: la cumulata d'episodio non è una finestra mobile di 24h).`);
-  }
   return L;
 }
 

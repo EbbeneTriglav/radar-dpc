@@ -80,7 +80,7 @@ da `episodes.csv`, `episodes_alerts.csv`, `events.csv`, `forecast_verification.c
 
 **Backend** (GitHub Actions, cron): script Python in `archive/scripts/`.
 - `monitor.py` — soglie DPC (SRT1/CUM3/VMI), allerte, scrive `events.csv`.
-- `nowcast.py` — "cella su area" (SRI DPC + ARPA in OR), cumulata live, ~20'.
+- `nowcast.py` — "cella su area" (SRI DPC + ARPA secondo `ARPA_ROLE`), cumulata live, ogni 10'.
 - `arpa_collect.py` — frame ARPA Lombardia (Desio+Flero), PNG live (ultimi 12) +
   archivio eventi in `radar_arpa/events/` per il replay.
 - `collect.py` — cumulate CUM3/CUM24 storiche (processa da IERI + `--include-today`).
@@ -88,6 +88,7 @@ da `episodes.csv`, `episodes_alerts.csv`, `events.csv`, `forecast_verification.c
 - `forecast_verify.py` / `forecast_history.py` — verifica accuratezza.
 - `sri_collect.py` — archivio radar DPC SRI (5', tutte le aree) in `<area>_sri.csv`;
   `--probe` = profondità storica API, `--backfill-episodes` = recupero finestre episodio.
+  Scrive anche l'anello 10 km (`<area>_sri_ring*.csv`, dati di studio pre-allerta, `--backfill-ring`).
 - `episodes.py` — episodi di pioggia (chiusura dopo 3h asciutte, MIT calibrato col
   pluviometro): `episodes.csv` è DERIVATO e riscritto, `events.csv` resta il libro mastro.
 - `reconstruct_events.py` — ricostruisce in `events.csv` gli eventi persi quando
@@ -145,6 +146,12 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   sovrastima); l'osservato è la CUM3 (3h) → l'orizzonte 1h non è affidabile.
 - **Fetch pluviometro Socrata**: usare filtro temporale `$where` sulla data, non
   `$limit` generico (con dati sub-orari copre solo ~14 giorni → eventi vecchi a 0).
+- **Ruolo ARPA per area** (`ARPA_ROLE` in nowcast.py): Ruspino `'or'` (ARPA affidabile, r≈0.7);
+  Cepina `'backup'` (ARPA quasi cieco, r 0.1–0.3: decide l'SRI DPC, ARPA solo se SRI assente o più
+  vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Panna: niente ARPA.
+- **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
+  latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
+- **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
 - **Ground sensors**: Cornalita (Ruspino) idsensore ARPA `2278`, Oga
   S.Colombano (Cepina) `8010`, endpoint `dati.lombardia.it/resource/647i-nhxk.json`.
   Dal datacenter il fetch dà 403 (funziona da browser).
