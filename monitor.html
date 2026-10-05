@@ -290,7 +290,7 @@ function render(){
 
 function renderAreaCard(area){
   const products = effectiveProducts(area);
-  const isEditing = !!_editing[area.name];
+  const isEditing = false; // modifica da pagina disabilitata (privacy destinatari)
   const isOverridden = !!loadOverrides(area.name);
 
   // Eventi recenti (ultime 2h)
@@ -335,9 +335,6 @@ function renderAreaCard(area){
         <span class="mon-area-status status-${level}">${level === 'ok' ? 'OK' : level.toUpperCase()}</span>
         ${isOverridden ? '<span class="mon-override-badge">soglie locali</span>' : ''}
         <span style="flex:1"></span>
-        <button class="mon-edit-btn" onclick="toggleEdit('${area.name}')">
-          <i class="fa fa-${isEditing ? 'check' : 'pen'}"></i> ${isEditing ? 'Fatto' : 'Modifica soglie'}
-        </button>
       </div>
 
       <div class="mon-prod-row">${productCards}</div>
@@ -364,12 +361,12 @@ function renderAreaCard(area){
                 <i class="fa fa-save"></i> Salva localmente
               </button>`;
           }
-          const emTxt = em.length ? em.join(', ') : '<i>default globale (SMTP_TO)</i>';
+          const emTxt = em.length ? `${em.length} indirizz${em.length === 1 ? 'o' : 'i'}` : '<i>default globale (SMTP_TO)</i>';
           const tgTxt = tg.length ? `${tg.length} chat ID` : '<i>default globale (TELEGRAM_CHAT_ID)</i>';
           return `<span class="mon-recipients-item">✉️ ${emTxt}</span>
                   <span class="mon-recipients-item">💬 ${tgTxt}</span>`;
         })()}
-        <span class="mon-recipients-hint" title="Le modifiche qui sono solo locali (browser). Per renderle effettive modifica archive/areas.json nel repo.">
+        <span class="mon-recipients-hint" title="Soglie e destinatari si gestiscono in archive/areas.json nel repo.">
           <i class="fa fa-info-circle"></i>
         </span>
       </div>
