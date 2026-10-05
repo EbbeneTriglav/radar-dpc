@@ -53,6 +53,7 @@ jobs:
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add archive/data/*_arpa.csv archive/data/*_sri.csv archive/data/radar_arpa/ 2>/dev/null || true
+          git add archive/data/*_sri_ring.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No ARPA data changes."
           else

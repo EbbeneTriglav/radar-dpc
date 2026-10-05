@@ -19,13 +19,23 @@ OUTPUT
   archive/data/<area>_sri.csv           raccolta continua (ogni 10')
   archive/data/<area>_sri_backfill.csv  frame storici recuperati (--backfill-episodes)
     timestamp_utc,area_name,max_mmh,mean_mmh,pixel_count,status,fetched_at_utc
+  archive/data/<area>_sri_ring.csv      ANELLO 0-RING_KM attorno al poligono (area esclusa),
+  archive/data/<area>_sri_ring_backfill.csv   stessi frame (continuo) / --backfill-ring
+    timestamp_utc,area_name,ring_km,max_mmh,mean_mmh,wet5_pct,max_dist_km,max_bearing_deg,
+    pixel_count,status,fetched_at_utc
+    Serve a valutare una PRE-ALLERTA sulle celle in arrivo (dati di studio: nessuna
+    allerta li legge). max_dist_km = distanza del pixel massimo dal bordo dell'area,
+    max_bearing_deg = direzione (da dove, 0=N, 90=E) rispetto al centroide.
 
 USO
   python archive/scripts/sri_collect.py                    # raccolta incrementale
   python archive/scripts/sri_collect.py --probe            # quanto indietro tiene l'API DPC?
   python archive/scripts/sri_collect.py --backfill-episodes  # frame delle finestre episodio
                                                            # (solo se l'API li ha ancora)
-Env: SRI_MAX_FRAMES (default 36 = 3h per run), SRI_LOOKBACK_H (default 6).
+  python archive/scripts/sri_collect.py --backfill-ring    # anello: finestre [inizio-3h, inizio+3h]
+                                                           # degli episodi di SRI_RING_AREAS
+Env: SRI_MAX_FRAMES (default 36 = 3h per run), SRI_LOOKBACK_H (default 6),
+     SRI_RING_KM (default 10), SRI_RING_AREAS (default 'ruspino', solo --backfill-ring).
 """
 import argparse
 import csv
@@ -51,6 +61,9 @@ LOOKBACK_H = float(os.environ.get('SRI_LOOKBACK_H', '6'))
 MISSING_AFTER = timedelta(minutes=60)
 TM_PROJ = '+proj=tmerc +lat_0=42 +lon_0=12.5 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
 FIELDS = ['timestamp_utc', 'area_name', 'max_mmh', 'mean_mmh', 'pixel_count', 'status', 'fetched_at_utc']
+RING_KM = float(os.environ.get('SRI_RING_KM', '10'))
+RING_FIELDS = ['timestamp_utc', 'area_name', 'ring_km', 'max_mmh', 'mean_mmh', 'wet5_pct',
+               'max_dist_km', 'max_bearing_deg', 'pixel_count', 'status', 'fetched_at_utc']
 UTC = timezone.utc
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
@@ -137,6 +150,67 @@ def area_stats(tiff, polygon_latlon):
     return {'max': float(v.max()), 'mean': float(v.mean()), 'n': int(v.size)}
 
 
+_RING_GEOM = {}
+
+
+def _ring_geom(polygon_latlon, km):
+    """Anello (buffer km dal bordo meno il poligono) e poligono, in TM metrico. Cache."""
+    key = (tuple(map(tuple, polygon_latlon)), km)
+    if key not in _RING_GEOM:
+        from pyproj import Transformer
+        from shapely.geometry import Polygon
+        tr = Transformer.from_crs('EPSG:4326', TM_PROJ, always_xy=True)
+        poly = Polygon([tr.transform(lon, lat) for lat, lon in polygon_latlon])
+        _RING_GEOM[key] = (poly.buffer(km * 1000).difference(poly), poly)
+    return _RING_GEOM[key]
+
+
+def ring_stats(tiff, polygon_latlon, km=None):
+    """Statistiche SRI nell'anello attorno all'area (area esclusa) + posizione del massimo."""
+    import math
+    import numpy as np
+    import rasterio
+    import rasterio.mask
+    from pyproj import Transformer
+    from rasterio.warp import transform_geom
+    from shapely.geometry import Point, mapping
+    km = RING_KM if km is None else km
+    ring, poly = _ring_geom(polygon_latlon, km)
+    with rasterio.open(io.BytesIO(tiff)) as src:
+        dst_crs = src.crs if src.crs else TM_PROJ
+        g = transform_geom(TM_PROJ, dst_crs, mapping(ring))
+        nodata = src.nodata if src.nodata is not None else -9999
+        try:
+            arr, tr = rasterio.mask.mask(src, [g], crop=True, all_touched=True, nodata=nodata)
+        except ValueError:
+            return None
+    a = arr[0].astype('float64')
+    ok = (a != nodata) & np.isfinite(a) & (a > -900) & (a < 1000)
+    if not ok.any():
+        return None
+    a = np.where(ok, np.clip(a, 0, None), -1.0)
+    v = a[ok]
+    out = {'max': float(v.max()), 'mean': float(v.mean()), 'n': int(v.size),
+           'wet5': float((v >= 5).mean() * 100), 'dist': None, 'bearing': None}
+    if out['max'] > 0:
+        r, c = np.unravel_index(int(np.argmax(a)), a.shape)
+        x, y = rasterio.transform.xy(tr, r, c)
+        x, y = Transformer.from_crs(dst_crs, TM_PROJ, always_xy=True).transform(x, y)
+        cx, cy = poly.centroid.x, poly.centroid.y
+        out['dist'] = poly.exterior.distance(Point(x, y)) / 1000
+        out['bearing'] = (math.degrees(math.atan2(x - cx, y - cy)) + 360) % 360
+    return out
+
+
+def ring_row(ts, name, s, fetched):
+    f = lambda v, fmt: (fmt % v) if v is not None else ''
+    return {'timestamp_utc': iso(ts), 'area_name': name, 'ring_km': f'{RING_KM:g}',
+            'max_mmh': f(s and s['max'], '%.2f'), 'mean_mmh': f(s and s['mean'], '%.3f'),
+            'wet5_pct': f(s and s['wet5'], '%.1f'), 'max_dist_km': f(s and s['dist'], '%.1f'),
+            'max_bearing_deg': f(s and s['bearing'], '%.0f'), 'pixel_count': s['n'] if s else 0,
+            'status': 'ok' if s else 'no_pixels', 'fetched_at_utc': fetched}
+
+
 # ── CSV ──────────────────────────────────────────────────────────────────────
 # Il backfill scrive in un file separato: gira in parallelo alla raccolta
 # ogni 10' senza conflitti di push sullo stesso CSV. episodes.py legge entrambi.
@@ -157,11 +231,25 @@ def existing(area):
     return out
 
 
-def append(area, rows):
-    p = csv_path(area)
+def ring_path(area, backfill=None):
+    bf = BACKFILL if backfill is None else backfill
+    return DATA / (f'{area}_sri_ring_backfill.csv' if bf else f'{area}_sri_ring.csv')
+
+
+def ring_existing(area):
+    out = set()
+    for p in (ring_path(area, False), ring_path(area, True)):
+        if p.exists():
+            with open(p, newline='', encoding='utf-8') as f:
+                out |= {r['timestamp_utc'] for r in csv.DictReader(f)}
+    return out
+
+
+def append(area, rows, ring=False):
+    p = ring_path(area) if ring else csv_path(area)
     new = not p.exists() or p.stat().st_size == 0
     with open(p, 'a', newline='', encoding='utf-8') as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=RING_FIELDS if ring else FIELDS)
         if new:
             w.writeheader()
         w.writerows(rows)
@@ -174,6 +262,7 @@ def load_areas():
 # ── Raccolta ─────────────────────────────────────────────────────────────────
 def collect(timestamps, areas, now, write_missing=True, newest_first=False):
     have = {a['name']: existing(a['name']) for a in areas}
+    ring_have = {a['name']: ring_existing(a['name']) for a in areas} if RING_KM > 0 else {}
     todo = sorted((t for t in set(timestamps) if any(iso(t) not in have[a['name']] for a in areas)),
                   reverse=newest_first)
     if len(todo) > MAX_FRAMES:
@@ -211,7 +300,41 @@ def collect(timestamps, areas, now, write_missing=True, newest_first=False):
             if iso(ts) not in have[a['name']]:
                 append(a['name'], [out[a['name']]])
                 have[a['name']].add(iso(ts))
+            if tiff is not None and RING_KM > 0 and iso(ts) not in ring_have[a['name']]:
+                _append_ring(ts, a, tiff, fetched)
+                ring_have[a['name']].add(iso(ts))
     log.info(f'SRI: {n_ok} frame archiviati, {n_miss} mancanti')
+    return n_ok
+
+
+def _append_ring(ts, a, tiff, fetched):
+    """Riga anello (dato di studio): un errore qui non deve mai fermare la raccolta."""
+    try:
+        s = ring_stats(tiff, a['polygon'])
+    except Exception as e:
+        log.warning(f'  {iso(ts)} {a["name"]}: anello fallito {e}')
+        s = None
+    append(a['name'], [ring_row(ts, a['name'], s, fetched)], ring=True)
+
+
+def collect_ring(timestamps, areas, now):
+    """Backfill solo-anello: scarica i frame che mancano nei file anello delle aree date."""
+    have = {a['name']: ring_existing(a['name']) for a in areas}
+    todo = sorted((t for t in set(timestamps) if any(iso(t) not in have[a['name']] for a in areas)),
+                  reverse=True)
+    log.info(f'anello: {len(todo)} frame da scaricare, limite {MAX_FRAMES} per run')
+    n_ok = 0
+    for ts in todo[:MAX_FRAMES]:
+        tiff, st = download(ts)
+        if tiff is None:
+            log.info(f'  {iso(ts)}: non disponibile ({st})')
+            continue
+        n_ok += 1
+        for a in areas:
+            if iso(ts) not in have[a['name']]:
+                _append_ring(ts, a, tiff, iso(now))
+                have[a['name']].add(iso(ts))
+    log.info(f'anello: {n_ok} frame archiviati, restano {max(0, len(todo) - MAX_FRAMES)}')
     return n_ok
 
 
@@ -261,6 +384,28 @@ def run_backfill_episodes():
     collect(ts, areas, now, write_missing=False, newest_first=True)
 
 
+def run_backfill_ring():
+    """Anello per le finestre [inizio-3h, inizio+3h] degli episodi delle aree SRI_RING_AREAS:
+    le ore in cui una cella in arrivo sarebbe dovuta comparire nell'anello."""
+    want = {x.strip() for x in os.environ.get('SRI_RING_AREAS', 'ruspino').split(',') if x.strip()}
+    areas = [a for a in load_areas() if a['name'] in want]
+    now = datetime.now(tz=UTC)
+    ts = set()
+    with open(DATA / 'episodes.csv', newline='', encoding='utf-8') as f:
+        for e in csv.DictReader(f):
+            if e['area_name'] not in want:
+                continue
+            t0 = floor5(parse_iso(e['start_utc']))
+            s, en = t0 - timedelta(hours=3), t0 + timedelta(hours=3)
+            while s <= en:
+                ts.add(s)
+                s += STEP
+    log.info(f'backfill anello {sorted(want)}: {len(ts)} frame nelle finestre')
+    global BACKFILL
+    BACKFILL = True
+    collect_ring(ts, areas, now)
+
+
 def run_probe():
     """Verifica fino a quando l'API DPC restituisce frame SRI storici."""
     last = latest_ts()
@@ -290,12 +435,15 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--probe', action='store_true', help='verifica la profondità storica dell\'API DPC')
     ap.add_argument('--backfill-episodes', action='store_true', help='scarica i frame delle finestre episodio')
+    ap.add_argument('--backfill-ring', action='store_true', help='anello attorno alle aree, finestre episodio')
     a = ap.parse_args()
     try:
         if a.probe:
             run_probe()
         elif a.backfill_episodes:
             run_backfill_episodes()
+        elif a.backfill_ring:
+            run_backfill_ring()
         else:
             run_incremental()
     except Exception as e:
