@@ -7,6 +7,14 @@
   CARTO ora richiede API key (watermark): sostituito con Esri Gray Canvas (scuro/chiaro, no key).
   Il radar ha un pane dedicato (z 350) sopra qualunque basemap; etichette Esri sopra il radar.
 
+### Report (05/10 sera)
+- 🆕 `report.html` (menu "📑 Report" su tutte le pagine) — report generato nel browser dai dati del repo,
+  per area e periodo: **Sintesi stakeholder** (KPI, testo automatico, stato per area, episodi principali,
+  "Copia sintesi" per email) e **Tecnico** (stime radar/CUM3 vs pluviometro, allerte sugli episodi
+  significativi, previsioni 3h, elenco episodi con descrizione automatica). Stampa/PDF e CSV.
+  Numeri calcolati dal codice, frasi standard; analisi ragionata su richiesta.
+- ✏️ `verifica.html` — etichetta bias corretta: `bias_mm` = osservato − previsto (negativo = sovrastima).
+
 ### Verifica dati (05/10 sera)
 - 🐞 Pluviometro SIR Monte di Fò (Panna) letto come giorno civile: è **giorno idrologico 09→09**
   (valore datato D = 09:00 di D-1 → 09:00 di D). Corretti `episodes.py`, `verifica.html`, `previsioni.html`.

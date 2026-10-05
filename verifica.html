@@ -68,6 +68,7 @@
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link active">✅ Verifica</a>
+    <a href="report.html" class="nav-link">📑 Report</a>
   </div>
   <div class="spacer"></div>
   <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
@@ -299,10 +300,11 @@ function renderAccuracy(){
     </div>`;
   }).join('');
   document.getElementById('acc-legend').innerHTML =
-    'MAE = errore assoluto medio · Bias = errore medio con segno (negativo = sottostima). '+
+    'MAE = errore assoluto medio · Bias = osservato − previsto (negativo = il modello <b>sovrastima</b>, positivo = sottostima). '+
     '<b>Hit/Miss/FA</b> riferiti al superamento soglia warning: Miss = evento accaduto ma non previsto '+
     '(critico per i convettivi), FA = falso allarme. I dati vengono da forecast_verification.csv, '+
-    'popolato dal workflow forecast-verify confrontando ogni previsione con l\'osservato reale.';
+    'popolato dal workflow forecast-verify confrontando ogni previsione con la CUM3 DPC (pluviometri interpolati, blocchi 3h): '+
+    'per questo l\'orizzonte 1h è poco affidabile (osservato a risoluzione 3h).';
 }
 
 // ── EVENTI: costruisci righe con previsto/nowcast/osservato ──

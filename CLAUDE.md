@@ -74,7 +74,9 @@ prima del commit.
 **Frontend** (GitHub Pages): pagine HTML single-file che leggono i dati da
 `raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/archive/data/` via un
 helper `fetchData()`. Chart.js + Leaflet.js. Pagine:
-`index, storico, archivio, monitor, eventi, arpa, previsioni, verifica`.
+`index, storico, archivio, monitor, eventi, arpa, previsioni, verifica, report`.
+`report.html` genera nel browser report deterministici (sintesi stakeholder + tecnico)
+da `episodes.csv`, `episodes_alerts.csv`, `events.csv`, `forecast_verification.csv`.
 
 **Backend** (GitHub Actions, cron): script Python in `archive/scripts/`.
 - `monitor.py` — soglie DPC (SRT1/CUM3/VMI), allerte, scrive `events.csv`.
@@ -122,9 +124,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 
 ## Fatti tecnici da ricordare (per non re-imparare a ogni sessione)
 
-- **Cumulata evento radar** = somma dei blocchi CUM3 che intersecano la finestra
-  evento (non una CUM3 singola: sarebbe finestra fissa 3h, sbagliata per eventi
-  brevi o lunghi). Per ARPA = integrale `mm/h × Δt`. Confronto col pluviometro
+- **Cumulata evento**: radar (SRI DPC, ARPA) = integrale `mm/h × Δt` sulla finestra
+  episodio; CUM3 (pluviometri) = somma dei blocchi 3h che intersecano la finestra
+  (non una CUM3 singola: finestra fissa 3h, sbagliata per eventi brevi o lunghi). Confronto col pluviometro
   è mm↔mm. Il `max` d'area sovrastima (pixel peggiore), il `mean` può diluire:
   il pluviometro puntuale sta tra i due → si mostrano entrambi.
 - **CUM3/CUM6/CUM12/CUM24 DPC NON sono radar**: sono pluviometri a terra interpolati
@@ -139,6 +141,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **CUM3 gap serale/notturno**: `collect.py` deve processare da IERI, non oggi,
   altrimenti i blocchi 21:00/24:00 non esistono ancora → cumulata mancante per
   eventi serali. Già corretto; non regredire.
+- **forecast_verification.csv**: `bias_mm` = osservato − previsto (negativo = il modello
+  sovrastima); l'osservato è la CUM3 (3h) → l'orizzonte 1h non è affidabile.
 - **Fetch pluviometro Socrata**: usare filtro temporale `$where` sulla data, non
   `$limit` generico (con dati sub-orari copre solo ~14 giorni → eventi vecchi a 0).
 - **Ground sensors**: Cornalita (Ruspino) idsensore ARPA `2278`, Oga

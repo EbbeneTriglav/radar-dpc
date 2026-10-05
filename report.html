@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Report eventi — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📑</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css?v=20260518j">
+  <style>
+    .rp-wrap{max-width:1280px;margin:0 auto;padding:18px 28px 40px}
+    .rp-ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;padding:10px 12px;border:1px solid var(--border,#334155);border-radius:12px;background:var(--bg2,#1e293b)}
+    .rp-ctrl select,.rp-ctrl input{background:var(--bg,#0f172a);color:var(--text,#e2e8f0);border:1px solid var(--border,#334155);border-radius:8px;padding:6px 9px;font-size:13px}
+    .rp-btn{font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);cursor:pointer}
+    .rp-btn.primary{background:var(--accent2,#0097b2);border-color:var(--accent2,#0097b2);color:#fff}
+    .rp-tabs{display:flex;gap:4px;margin-left:auto}
+    .rp-tab{font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:transparent;color:var(--text2,#94a3b8);cursor:pointer}
+    .rp-tab.on{background:var(--accent2,#0097b2);color:#fff;border-color:var(--accent2,#0097b2)}
+    .rp-head h1{margin:6px 0 2px;font-size:22px}
+    .rp-sub{font-size:12px;color:var(--text3,#94a3b8);margin:0 0 14px}
+    .rp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 16px}
+    .rp-kpi{border:1px solid var(--border,#334155);border-radius:12px;padding:12px 14px;background:var(--bg2,#1e293b)}
+    .rp-kpi .k{font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.05em}
+    .rp-kpi .v{font-size:26px;font-weight:700;margin:4px 0 2px}
+    .rp-kpi .s{font-size:12px;color:var(--text2,#94a3b8)}
+    .rp-sec{border:1px solid var(--border,#334155);border-radius:12px;padding:14px 16px;margin:0 0 14px;background:var(--bg2,#1e293b)}
+    .rp-sec h2{font-size:15px;margin:0 0 8px}
+    .rp-sec p{font-size:13.5px;line-height:1.6;margin:6px 0}
+    .rp-note{font-size:11.5px;color:var(--text3,#94a3b8);line-height:1.5}
+    .rp-areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+    .rp-area{border:1px solid var(--border,#334155);border-radius:10px;padding:10px 12px}
+    .rp-area .st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px}
+    .st-ok{background:#14532d;color:#bbf7d0}.st-att{background:#713f12;color:#fde68a}.st-crit{background:#7f1d1d;color:#fecaca}
+    table.rp{width:100%;border-collapse:collapse;font-size:12.5px}
+    table.rp th{padding:6px 8px;text-align:left;font-size:10.5px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border,#334155)}
+    table.rp td{padding:6px 8px;border-bottom:1px solid var(--border,#334155);vertical-align:top}
+    table.rp td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .dim{color:var(--text3,#94a3b8)}
+    .warn{color:#fbbf24}.bad{color:#f87171}.good{color:#4ade80}
+    .chart-box{position:relative;height:300px}
+    .rp-caveat{border-left:3px solid #fbbf24;padding:6px 10px;font-size:12px;color:var(--text2,#94a3b8);background:rgba(251,191,36,.06);margin:8px 0}
+    .hidden{display:none}
+    @media print{
+      #topbar,.rp-ctrl,.no-print{display:none!important}
+      body,#app{background:#fff!important;color:#000!important;height:auto!important;overflow:visible!important}
+      .rp-sec,.rp-kpi,.rp-area{background:#fff!important;border-color:#bbb!important;break-inside:avoid}
+      .dim,.rp-note,.rp-sub{color:#555!important}
+      .rp-wrap{padding:0}
+    }
+  </style>
+</head>
+<body>
+
+<nav id="topbar">
+  <div class="logo"><i class="fa fa-broadcast-tower"></i> RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC</div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link">📊 Storico</a>
+    <a href="archivio.html" class="nav-link">🗄 Archivio</a>
+    <a href="monitor.html" class="nav-link">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
+    <a href="verifica.html" class="nav-link">✅ Verifica</a>
+    <a href="report.html" class="nav-link active">📑 Report</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
+</nav>
+
+<div id="app" style="height:calc(100vh - 48px);overflow:auto">
+<div class="rp-wrap">
+
+  <div class="rp-ctrl">
+    <select id="r-area">
+      <option value="">Tutte le aree</option>
+      <option value="ruspino">Ruspino</option>
+      <option value="cepina">Cepina</option>
+      <option value="panna">Panna</option>
+    </select>
+    <label class="dim" style="font-size:12px">dal <input type="date" id="r-from"></label>
+    <label class="dim" style="font-size:12px">al <input type="date" id="r-to"></label>
+    <button class="rp-btn" data-days="30">30 g</button>
+    <button class="rp-btn" data-days="90">90 g</button>
+    <button class="rp-btn" data-days="0">Tutto</button>
+    <button class="rp-btn primary" id="r-gen"><i class="fa fa-file-lines"></i> Genera report</button>
+    <div class="rp-tabs">
+      <button class="rp-tab on" data-view="sint">Sintesi stakeholder</button>
+      <button class="rp-tab" data-view="tec">Tecnico</button>
+    </div>
+    <button class="rp-btn" id="r-copy" title="Copia il testo della sintesi (per email)"><i class="fa fa-copy"></i> Copia sintesi</button>
+    <button class="rp-btn" id="r-print"><i class="fa fa-print"></i> Stampa / PDF</button>
+    <button class="rp-btn" id="r-csv"><i class="fa fa-download"></i> Episodi CSV</button>
+  </div>
+
+  <div id="r-out"><p class="dim">Caricamento dati…</p></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// REPORT — generato nel browser dai dati archiviati nel repo.
+// Tutti i NUMERI sono calcolati dal codice (nessun numero inventato); il
+// TESTO è automatico (frasi standard). Un'analisi ragionata si può chiedere
+// a parte. Regole di metodo (CLAUDE.md):
+//  • "radar" = DPC SRI e ARPA; la CUM3 DPC è pioggia OSSERVATA (pluviometri
+//    interpolati), non radar: non serve a giudicare il radar.
+//  • Pluviometro Panna (SIR) = giorno idrologico 09→09; se condiviso tra più
+//    episodi non è confrontabile col singolo episodio → si usa la CUM3.
+// ════════════════════════════════════════════════════════════════════════
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path){
+  if (location.hostname.endsWith('github.io')) {
+    try { const r = await fetch(RAW_BASE + path + '?_=' + Date.now(), { cache: 'no-cache' }); if (r.ok) return r; } catch {}
+  }
+  return fetch(path + '?_=' + Date.now(), { cache: 'no-cache' });
+}
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+let _theme='dark'; try{ _theme=localStorage.getItem('radar-theme')||'dark'; }catch{}
+applyTheme(_theme);
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  try{ localStorage.setItem('radar-theme',t); }catch{} applyTheme(t); render(); });
+
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const split = l => { const out=[]; let cur='',q=false;
+    for (const ch of l){ if(ch==='"'){q=!q;} else if(ch===','&&!q){out.push(cur);cur='';} else cur+=ch; }
+    out.push(cur); return out; };
+  const h = split(lines[0]);
+  return lines.slice(1).map(l=>{ const c=split(l); const o={}; h.forEach((k,i)=>o[k]=c[i]??''); return o; });
+}
+
+// ── Costanti di lettura (dichiarate) ──
+const AREA_LABEL = {ruspino:'Ruspino', cepina:'Cepina', panna:'Panna'};
+const AREA_COLOR = {ruspino:'#2a78d6', cepina:'#eb6834', panna:'#1baf7a'};   // categoriche fisse per area
+const SIGNIF_MM = 20;          // episodio "significativo" (pioggia osservata)
+const CLASSES = [[50,'molto intensa'],[20,'intensa'],[5,'moderata'],[0,'debole']];
+const SP3 = {att:60, crit:80}; // Ruspino, soglie 24h matrice SP3 (Att/Crit): confronto INDICATIVO con la cumulata d'episodio
+
+const D = { episodes:[], links:{}, events:[], verify:[] };
+let VIEW='sint', CHARTS=[], LAST=null;
+
+const num = v => (v===''||v==null||!isFinite(+v)) ? null : +v;
+const f0 = v => v==null ? '—' : (+v).toFixed(0);
+const f1 = v => v==null ? '—' : (+v).toFixed(1);
+const fmt = (iso,o) => new Date(iso).toLocaleString('it-IT',{timeZone:'Europe/Rome',...o});
+const fDay = iso => fmt(iso,{day:'2-digit',month:'2-digit',year:'numeric'});
+const fDT  = iso => fmt(iso,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const fHM  = iso => fmt(iso,{hour:'2-digit',minute:'2-digit'});
+const esc = s => String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// Pioggia OSSERVATA dell'episodio: pluviometro (se confrontabile) altrimenti CUM3 pluviometri DPC.
+function observed(e){
+  const g=num(e.gauge_mm), shared=/condiviso/.test(e.gauge_type||'');
+  if (g!=null && !shared) return {mm:g, src:`pluviometro ${e.gauge_name}`, gauge:true};
+  const c=num(e.cum3_mean_mm);
+  if (c!=null) return {mm:c, src:'CUM3 pluviometri DPC (media area)', gauge:false};
+  return {mm:null, src:'n/d', gauge:false};
+}
+// Miglior stima RADAR: SRI media area (verificata la più affidabile, ott-2026), poi ARPA pixel max.
+function radar(e){
+  const s=num(e.sri_mean_mm), sc=num(e.sri_cov_pct);
+  if (s!=null && (sc??0)>=80) return {mm:s, src:'radar DPC SRI'};
+  const a=num(e.arpa_max_mm), ac=num(e.arpa_cov_pct);
+  if (a!=null && (ac??0)>=80) return {mm:a, src:'radar ARPA (pixel max)'};
+  return {mm:null, src:''};
+}
+const klass = mm => mm==null ? 'n/d' : CLASSES.find(([t])=>mm>=t)[1];
+function alertInfo(e){
+  const n=(+e.n_storm||0)+(+e.n_nowcast||0)+(+e.n_monitor||0);
+  const lead=num(e.alert_lead_min);
+  if (!n) return {kind:'none', txt:'nessuna allerta', n};
+  if (lead==null) return {kind:'ok', txt:`${n} allerte`, n};
+  return lead>=0 ? {kind:'ok', txt:`prima allerta ${lead} min prima del picco`, n, lead}
+                 : {kind:'late', txt:`prima allerta ${-lead} min dopo il picco`, n, lead};
+}
+function describe(e){
+  const o=observed(e), r=radar(e), a=alertInfo(e), dur=num(e.duration_h);
+  let t=`${AREA_LABEL[e.area_name]||e.area_name}, ${fDT(e.start_utc)}: pioggia ${klass(o.mm)} per ${f1(dur)} h, ${f0(o.mm)} mm osservati (${o.src})`;
+  if (r.mm!=null && o.mm!=null && o.mm>=1){
+    const d=r.mm-o.mm, p=d/o.mm*100;
+    t+=`; ${r.src} ${f0(r.mm)} mm (${d>=0?'+':''}${p.toFixed(0)}%)`;
+  }
+  if (num(e.peak_mmh)!=null && e.peak_utc) t+=`; picco ${f1(e.peak_mmh)} mm/h alle ${fHM(e.peak_utc)}`;
+  t+=`. ${a.txt.charAt(0).toUpperCase()+a.txt.slice(1)}`;
+  if (+e.n_forecast) t+=`; allerta previsionale emessa${num(e.forecast_lead_h)!=null?` (${Math.abs(+e.forecast_lead_h)} h ${+e.forecast_lead_h>=0?'prima':'dopo'} il picco)`:''}`;
+  return t+'.';
+}
+
+// ── Statistiche stima vs pluviometro (solo episodi con pluviometro confrontabile) ──
+function corr(a,b){ const n=a.length; if(n<3) return null;
+  const ma=a.reduce((s,x)=>s+x,0)/n, mb=b.reduce((s,x)=>s+x,0)/n;
+  let sab=0,sa=0,sb=0; for(let i=0;i<n;i++){ sab+=(a[i]-ma)*(b[i]-mb); sa+=(a[i]-ma)**2; sb+=(b[i]-mb)**2; }
+  return sa&&sb ? sab/Math.sqrt(sa*sb) : null; }
+function estStats(eps, key, covKey){
+  const p=[];
+  for(const e of eps){ const o=observed(e); if(!o.gauge) continue;
+    const v=num(e[key]); if(v==null) continue;
+    if(covKey && (num(e[covKey])??0)<80) continue;
+    p.push([v,o.mm]); }
+  const n=p.length; if(!n) return {n:0};
+  const err=p.map(([v,g])=>v-g), sv=p.reduce((s,x)=>s+x[0],0), sg=p.reduce((s,x)=>s+x[1],0);
+  return { n, r:corr(p.map(x=>x[0]),p.map(x=>x[1])), bias:err.reduce((s,x)=>s+x,0)/n,
+           mae:err.reduce((s,x)=>s+Math.abs(x),0)/n, ratio: sg>0? sv/sg : null,
+           within:p.filter(([v,g])=>Math.abs(v-g)<=Math.max(.3*g,2)).length/n*100, pts:p };
+}
+const ESTIMATORS = [
+  {key:'sri_mean_mm', cov:'sri_cov_pct',  label:'Radar DPC SRI · media area', radar:true},
+  {key:'sri_max_mm',  cov:'sri_cov_pct',  label:'Radar DPC SRI · pixel max',  radar:true},
+  {key:'arpa_mean_mm',cov:'arpa_cov_pct', label:'Radar ARPA · media area',    radar:true},
+  {key:'arpa_max_mm', cov:'arpa_cov_pct', label:'Radar ARPA · pixel max',     radar:true},
+  {key:'cum3_mean_mm',cov:null,           label:'CUM3 pluviometri DPC · media (NON radar)', radar:false},
+];
+
+// ── Selezione periodo/area ──
+function selection(){
+  const area=document.getElementById('r-area').value;
+  const from=document.getElementById('r-from').value, to=document.getElementById('r-to').value;
+  const t0=from? new Date(from+'T00:00:00').getTime() : -Infinity;
+  const t1=to? new Date(to+'T23:59:59').getTime() : Infinity;
+  const eps=D.episodes.filter(e=>(!area||e.area_name===area) && e.status!=='in corso' &&
+    new Date(e.start_utc).getTime()<=t1 && new Date(e.end_utc).getTime()>=t0)
+    .sort((a,b)=>new Date(a.start_utc)-new Date(b.start_utc));
+  const linked=new Set(Object.values(D.links).flat().map(l=>`${l.area_name}|${l.event_timestamp_utc}|${l.level}`));
+  const orphan=D.events.filter(ev=>{
+    const t=new Date(ev.event_timestamp_utc).getTime();
+    return (!area||ev.area_name===area) && t>=t0 && t<=t1 && ev.level!=='storm_cleared' && !/^forecast/.test(ev.level)
+      && !linked.has(`${ev.area_name}|${ev.event_timestamp_utc}|${ev.level}`);
+  });
+  const ver=D.verify.filter(v=>{ const t=new Date(v.forecast_made_at_utc).getTime();
+    return (!area||v.area_name===area) && t>=t0 && t<=t1; });
+  return {area, from, to, eps, orphan, ver};
+}
+
+function summarize(S){
+  const eps=S.eps;
+  const obs=eps.map(observed);
+  const sig=eps.filter((e,i)=>(obs[i].mm??0)>=SIGNIF_MM);
+  const top=eps.slice().sort((a,b)=>(observed(b).mm??0)-(observed(a).mm??0));
+  const al=sig.map(alertInfo);
+  const res={
+    n:eps.length, nSig:sig.length,
+    totGauge: obs.filter(o=>o.gauge).reduce((s,o)=>s+o.mm,0), nGauge: obs.filter(o=>o.gauge).length,
+    totObs: obs.reduce((s,o)=>s+(o.mm??0),0),
+    top, sig,
+    sigOk: al.filter(a=>a.kind==='ok').length, sigLate: al.filter(a=>a.kind==='late').length, sigNone: al.filter(a=>a.kind==='none').length,
+    leads: al.filter(a=>a.lead!=null).map(a=>a.lead),
+    orphan: S.orphan.length,
+    orphanByClass: S.orphan.reduce((m,ev)=>{ const c=/^nowcast/.test(ev.level)?'nowcast':/^storm/.test(ev.level)?'temporale':'soglia'; m[c]=(m[c]||0)+1; return m; },{}),
+    areas: [...new Set(eps.map(e=>e.area_name))],
+  };
+  return res;
+}
+
+function median(a){ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+
+function summaryText(S,R){
+  const per = `${S.from?'dal '+new Date(S.from).toLocaleDateString('it-IT'):"dall'inizio dell'archivio"} al ${S.to?new Date(S.to).toLocaleDateString('it-IT'):'oggi'}`;
+  const pl=(n,s,p)=>`${n} ${n===1?s:p}`;
+  const zone = S.area ? AREA_LABEL[S.area] : (R.areas.map(a=>AREA_LABEL[a]).join(', ')||'le aree monitorate');
+  const L=[];
+  if(!R.n){ return [`Nel periodo ${per} non risultano episodi di pioggia su ${zone}.`]; }
+  L.push(`Nel periodo ${per} ${R.n===1?'è stato registrato':'sono stati registrati'} ${pl(R.n,'episodio','episodi')} di pioggia su ${zone}, di cui ${R.nSig} ${R.nSig===1?'significativo':'significativi'} (pioggia osservata ≥ ${SIGNIF_MM} mm).`);
+  const t=R.top[0], to=observed(t);
+  if(to.mm!=null) L.push(`L'episodio più intenso è stato quello del ${fDay(t.start_utc)} su ${AREA_LABEL[t.area_name]}: ${f0(to.mm)} mm in ${f1(num(t.duration_h))} ore`+
+     (num(t.peak_mmh)!=null?`, con un picco di ${f1(t.peak_mmh)} mm/h`:'')+'.');
+  if(R.nSig){
+    let s=`Allerte sugli episodi significativi: ${R.sigOk} con allerta prima del picco, ${R.sigLate} con allerta arrivata dopo il picco, ${R.sigNone} senza allerta.`;
+    const m=median(R.leads); if(m!=null) s+=` Anticipo mediano della prima allerta rispetto al picco: ${m>=0?m.toFixed(0)+' minuti':'nessuno ('+(-m).toFixed(0)+' minuti di ritardo)'}.`;
+    L.push(s);
+  }
+  if(R.orphan) L.push(`${pl(R.orphan,'allerta nowcast/soglia non corrisponde','allerte nowcast/soglia non corrispondono')} a un episodio di pioggia (possibili falsi allarmi, da verificare caso per caso).`);
+  if((!S.area||S.area==='ruspino')){
+    const rus=S.eps.filter(e=>e.area_name==='ruspino');
+    const nc=rus.filter(e=>(observed(e).mm??0)>=SP3.crit).length, na=rus.filter(e=>{const v=observed(e).mm??0; return v>=SP3.att&&v<SP3.crit;}).length;
+    if(rus.length) L.push(`Ruspino: ${pl(nc,'episodio','episodi')} con cumulata ≥ ${SP3.crit} mm e ${na} tra ${SP3.att} e ${SP3.crit} mm (confronto indicativo con le soglie 24h della matrice SP3: la cumulata d'episodio non è una finestra mobile di 24h).`);
+  }
+  return L;
+}
+
+// ── Render ──
+function destroyCharts(){ CHARTS.forEach(c=>{try{c.destroy();}catch{}}); CHARTS=[]; }
+function css(v){ return getComputedStyle(document.body).getPropertyValue(v).trim()||'#94a3b8'; }
+
+function render(){
+  destroyCharts();
+  const S=selection(), R=summarize(S); LAST={S,R};
+  const out=document.getElementById('r-out');
+  const head=`<div class="rp-head"><h1>Report pioggia e allerte — ${S.area?AREA_LABEL[S.area]:'tutte le aree'}</h1>
+    <p class="rp-sub">Periodo ${S.from||'inizio archivio'} → ${S.to||'oggi'} · generato il ${new Date().toLocaleString('it-IT',{timeZone:'Europe/Rome'})} ·
+    fonti: episodi di pioggia (radar ARPA e DPC SRI, CUM3 pluviometri DPC), pluviometri Cornalita, Oga S.Colombano, Monte di Fò, registro allerte.
+    Numeri calcolati automaticamente dai dati; testo standard.</p></div>`;
+  out.innerHTML = head + (VIEW==='sint' ? renderSint(S,R) : renderTec(S,R));
+  if (VIEW==='sint') drawSintCharts(S,R); else drawTecCharts(S,R);
+}
+
+function kpi(k,v,s){ return `<div class="rp-kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`; }
+
+function areaStatus(eps){
+  const mx=Math.max(0,...eps.map(e=>observed(e).mm??0));
+  if (mx>=50) return {cls:'st-crit', ic:'⛔', lab:'episodi molto intensi', mx};
+  if (mx>=SIGNIF_MM) return {cls:'st-att', ic:'⚠️', lab:'episodi intensi', mx};
+  return {cls:'st-ok', ic:'✔', lab:'nessun episodio intenso', mx};
+}
+
+function renderSint(S,R){
+  const txt=summaryText(S,R);
+  const t=R.top[0]; const to=t?observed(t):{mm:null};
+  const leadMed=median(R.leads);
+  let h=`<div class="rp-kpis">
+    ${kpi('Episodi di pioggia', R.n, `${R.nSig} significativi (≥ ${SIGNIF_MM} mm)`)}
+    ${kpi('Pioggia osservata', R.nGauge?`${f0(R.totGauge)} mm`:'—', R.nGauge?`somma su ${R.nGauge} episodi con pluviometro`:'pluviometro non disponibile')}
+    ${kpi('Episodio più intenso', to.mm!=null?`${f0(to.mm)} mm`:'—', t?`${AREA_LABEL[t.area_name]} · ${fDay(t.start_utc)}`:'')}
+    ${kpi('Allerte in anticipo', R.nSig?`${R.sigOk}/${R.nSig}`:'—', R.nSig?(leadMed!=null?`anticipo mediano ${leadMed.toFixed(0)} min`:'episodi significativi'):'nessun episodio significativo')}
+  </div>`;
+  h+=`<div class="rp-sec"><h2>In sintesi</h2>${txt.map(s=>`<p>${esc(s)}</p>`).join('')}</div>`;
+  if(!S.area){
+    h+=`<div class="rp-sec"><h2>Stato per area</h2><div class="rp-areas">`+
+      ['ruspino','cepina','panna'].map(a=>{ const ea=S.eps.filter(e=>e.area_name===a); const st=areaStatus(ea);
+        return `<div class="rp-area"><b>${AREA_LABEL[a]}</b> <span class="st ${st.cls}">${st.ic} ${st.lab}</span>
+          <div class="rp-note" style="margin-top:6px">${ea.length} episodi · massimo ${f0(st.mx)} mm · ${ea.filter(e=>(observed(e).mm??0)>=SIGNIF_MM).length} significativi</div></div>`;}).join('')+
+      `</div></div>`;
+  }
+  h+=`<div class="rp-sec"><h2>Pioggia per episodio</h2><div class="chart-box"><canvas id="c-time"></canvas></div>
+      <p class="rp-note">Pioggia osservata per episodio (pluviometro se disponibile, altrimenti CUM3 pluviometri DPC). Colore = area.</p></div>`;
+  const top=R.top.filter(e=>observed(e).mm!=null).slice(0,5);
+  h+=`<div class="rp-sec"><h2>Episodi principali</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Pioggia</th><th class="n">Picco</th><th>Allerta</th><th>Descrizione</th></tr></thead><tbody>`+
+    top.map(e=>{ const o=observed(e), a=alertInfo(e);
+      return `<tr><td>${fDT(e.start_utc)}</td><td>${AREA_LABEL[e.area_name]}</td><td class="n">${f1(num(e.duration_h))} h</td>
+        <td class="n"><b>${f0(o.mm)} mm</b></td><td class="n">${num(e.peak_mmh)!=null?f1(e.peak_mmh)+' mm/h':'—'}</td>
+        <td class="${a.kind==='ok'?'good':a.kind==='late'?'warn':'dim'}">${a.kind==='ok'?'✔ in anticipo':a.kind==='late'?'⏱ in ritardo':'— nessuna'}</td>
+        <td style="font-size:12px">${esc(describe(e))}</td></tr>`; }).join('')+`</tbody></table></div>`;
+  h+=`<p class="rp-note">Testo generato automaticamente con frasi standard a partire dai numeri. "Significativo" = pioggia osservata ≥ ${SIGNIF_MM} mm nell'episodio.
+     Un episodio si chiude dopo 3 h senza pioggia. Per un commento ragionato sui dati chiedere un'analisi dedicata.</p>`;
+  return h;
+}
+
+function renderTec(S,R){
+  let h=`<div class="rp-kpis">
+    ${kpi('Episodi', R.n, `${R.nSig} significativi · ${S.eps.filter(e=>observed(e).gauge).length} con pluviometro confrontabile`)}
+    ${kpi('Allerte senza pioggia', R.orphan, Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(' · ')||'nessuna')}
+    ${kpi('Significativi senza allerta', R.sigNone, R.nSig?`su ${R.nSig} significativi`:'—')}
+    ${kpi('Allerte in ritardo', R.sigLate, R.nSig?'prima allerta dopo il picco':'—')}
+  </div>`;
+  // 1. Affidabilità stime
+  h+=`<div class="rp-sec"><h2>1 · Stime di pioggia contro il pluviometro (per episodio)</h2>
+    <table class="rp"><thead><tr><th>Stima</th><th class="n">Episodi</th><th class="n">r</th><th class="n">Bias (stima − pluvio)</th><th class="n">Errore medio</th><th class="n">Totale stima/pluvio</th><th class="n">Entro ±30%</th></tr></thead><tbody>`+
+    ESTIMATORS.map(es=>{ const s=estStats(S.eps,es.key,es.cov);
+      if(!s.n) return `<tr><td>${es.label}</td><td class="n dim" colspan="6">nessun episodio con dati e pluviometro</td></tr>`;
+      return `<tr${es.radar?'':' class="dim"'}><td>${es.label}</td><td class="n">${s.n}</td><td class="n">${s.r!=null?s.r.toFixed(2):'—'}</td>
+        <td class="n">${s.bias>=0?'+':''}${s.bias.toFixed(1)} mm</td><td class="n">${s.mae.toFixed(1)} mm</td>
+        <td class="n">${s.ratio!=null?s.ratio.toFixed(2)+'×':'—'}</td><td class="n">${s.within.toFixed(0)}%</td></tr>`; }).join('')+
+    `</tbody></table>
+    <div class="rp-caveat">La CUM3 DPC è ottenuta dai pluviometri a terra interpolati: il suo accordo col pluviometro è in parte circolare e <b>non</b> verifica il radar.
+      Il radar si giudica con DPC SRI e ARPA. Panna: il pluviometro SIR è giornaliero (09→09); gli episodi che condividono lo stesso giorno sono esclusi.</div>
+    <div class="no-print" style="margin:6px 0"><label class="dim" style="font-size:12px">Grafico: <select id="r-est">${ESTIMATORS.map((e,i)=>`<option value="${i}">${e.label}</option>`).join('')}</select></label></div>
+    <div class="chart-box"><canvas id="c-scatter"></canvas></div>
+    <p class="rp-note">Ogni punto è un episodio; linea tratteggiata = accordo perfetto (1:1). Episodi con copertura dati radar &lt; 80% esclusi.</p></div>`;
+  // 2. Allerte
+  const sig=R.sig.slice().sort((a,b)=>new Date(b.start_utc)-new Date(a.start_utc));
+  h+=`<div class="rp-sec"><h2>2 · Allerte sugli episodi significativi (≥ ${SIGNIF_MM} mm)</h2>`+
+    (sig.length?`<table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Pioggia</th><th class="n">Picco</th><th>Prima allerta</th><th class="n">Allerte</th><th>Forecast</th></tr></thead><tbody>`+
+    sig.map(e=>{ const o=observed(e), a=alertInfo(e);
+      return `<tr><td>${fDT(e.start_utc)}</td><td>${AREA_LABEL[e.area_name]}</td><td class="n">${f0(o.mm)} mm</td>
+      <td class="n">${e.peak_utc?fHM(e.peak_utc):'—'}</td>
+      <td class="${a.kind==='ok'?'good':a.kind==='late'?'warn':'bad'}">${a.txt}</td>
+      <td class="n">${a.n}</td><td>${+e.n_forecast?`sì (${num(e.forecast_lead_h)!=null?Math.abs(+e.forecast_lead_h)+' h '+(+e.forecast_lead_h>=0?'prima':'dopo')+' il picco':''})`:'<span class="dim">no</span>'}</td></tr>`; }).join('')+`</tbody></table>`
+    :'<p class="dim">Nessun episodio significativo nel periodo.</p>')+
+    `<p class="rp-note">Allerte senza un episodio di pioggia nel periodo: ${R.orphan} (${Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(', ')||'—'}).
+     Un'allerta conta come "in anticipo" se la prima allerta nowcast/temporale/soglia precede il picco d'intensità radar.</p></div>`;
+  // 3. Forecast
+  const vv=S.ver.filter(v=>v.horizon==='3h');
+  const bySrc={}; vv.forEach(v=>(bySrc[v.source]??=[]).push(v));
+  h+=`<div class="rp-sec"><h2>3 · Previsioni a 3 ore (OpenMeteo, MET Norway)</h2>`+
+    (Object.keys(bySrc).length?`<table class="rp"><thead><tr><th>Modello</th><th class="n">Confronti</th><th class="n">Errore medio</th><th class="n">Bias (previsto − osservato)</th><th class="n">Hit</th><th class="n">Miss</th><th class="n">Falsi allarmi</th></tr></thead><tbody>`+
+    Object.entries(bySrc).map(([src,g])=>{ const n=g.length;
+      const mae=g.reduce((s,r)=>s+Math.abs(+r.abs_error_mm||0),0)/n;
+      const bias=-g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;   // bias_mm nel CSV = osservato − previsto
+      const hit=g.reduce((s,r)=>s+(+r.hit_warning||0),0), miss=g.reduce((s,r)=>s+(+r.missed_warning||0),0), fa=g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
+      return `<tr><td>${src==='openmeteo'?'OpenMeteo':'MET Norway'}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
+        <td class="n">${bias>=0?'+':''}${bias.toFixed(2)} mm</td><td class="n">${hit}</td><td class="n ${miss?'bad':''}">${miss}</td><td class="n">${fa}</td></tr>`; }).join('')+`</tbody></table>`
+    :'<p class="dim">Nessuna verifica previsionale nel periodo.</p>')+
+    `<div class="rp-caveat">L'osservato di confronto è la CUM3 DPC (pluviometri interpolati, blocchi di 3 h): per questo si mostra solo l'orizzonte 3 h.
+      Bias positivo = il modello prevede più pioggia di quella osservata.</div></div>`;
+  // 4. Elenco completo
+  h+=`<div class="rp-sec"><h2>4 · Tutti gli episodi del periodo (${S.eps.length})</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Osservata</th><th class="n">Radar</th><th>Descrizione automatica</th></tr></thead><tbody>`+
+    S.eps.slice().reverse().map(e=>{ const o=observed(e), r=radar(e);
+      return `<tr><td>${fDT(e.start_utc)}</td><td>${AREA_LABEL[e.area_name]}</td><td class="n">${f1(num(e.duration_h))} h</td>
+        <td class="n">${f0(o.mm)} mm</td><td class="n">${r.mm!=null?f0(r.mm)+' mm':'—'}</td><td style="font-size:12px">${esc(describe(e))}</td></tr>`; }).join('')+
+    `</tbody></table></div>`;
+  return h;
+}
+
+function axisOpts(title){ return {title:{display:!!title,text:title,color:css('--text2')},ticks:{color:css('--text3')},grid:{color:'rgba(128,128,128,.15)'}}; }
+
+function drawSintCharts(S,R){
+  const el=document.getElementById('c-time'); if(!el) return;
+  const areas=['ruspino','cepina','panna'].filter(a=>S.eps.some(e=>e.area_name===a));
+  CHARTS.push(new Chart(el,{type:'bar',
+    data:{datasets:areas.map(a=>({label:AREA_LABEL[a],backgroundColor:AREA_COLOR[a],borderRadius:4,maxBarThickness:14,
+      data:S.eps.filter(e=>e.area_name===a&&observed(e).mm!=null).map(e=>({x:new Date(e.start_utc).getTime(),y:+observed(e).mm.toFixed(1),_e:e}))}))},
+    options:{responsive:true,maintainAspectRatio:false,parsing:{xAxisKey:'x',yAxisKey:'y'},
+      scales:{x:{type:'linear',...axisOpts(''),ticks:{color:css('--text3'),callback:v=>new Date(v).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})}},y:{...axisOpts('mm per episodio'),beginAtZero:true}},
+      plugins:{legend:{labels:{color:css('--text2')}},tooltip:{callbacks:{title:it=>fDT(it[0].raw._e.start_utc)+' · '+AREA_LABEL[it[0].raw._e.area_name],label:it=>`${it.raw.y} mm · ${observed(it.raw._e).src}`}}}}}));
+}
+
+function drawTecCharts(S,R){
+  const sel=document.getElementById('r-est'); if(!sel) return;
+  const draw=()=>{
+    CHARTS.forEach(c=>{try{c.destroy();}catch{}}); CHARTS=[];
+    const es=ESTIMATORS[+sel.value];
+    const areas=['ruspino','cepina','panna'];
+    const sets=areas.map(a=>{ const s=estStats(S.eps.filter(e=>e.area_name===a),es.key,es.cov);
+      return {label:AREA_LABEL[a],backgroundColor:AREA_COLOR[a],borderColor:'#fff',borderWidth:1,pointRadius:5,
+        data:(s.pts||[]).map(([v,g])=>({x:+g.toFixed(1),y:+v.toFixed(1)}))}; }).filter(d=>d.data.length);
+    const mx=Math.max(10,...sets.flatMap(d=>d.data.flatMap(p=>[p.x,p.y])))*1.05;
+    sets.push({type:'line',label:'1:1',data:[{x:0,y:0},{x:mx,y:mx}],borderColor:css('--text3'),borderDash:[5,4],borderWidth:1,pointRadius:0});
+    CHARTS.push(new Chart(document.getElementById('c-scatter'),{type:'scatter',data:{datasets:sets},
+      options:{responsive:true,maintainAspectRatio:false,scales:{x:{...axisOpts('Pluviometro (mm)'),min:0,max:mx},y:{...axisOpts(es.label+' (mm)'),min:0,max:mx}},
+        plugins:{legend:{labels:{color:css('--text2')}},tooltip:{callbacks:{label:it=>`${it.dataset.label}: pluvio ${it.raw.x} mm · stima ${it.raw.y} mm`}}}}}));
+  };
+  sel.addEventListener('change',draw); draw();
+}
+
+// ── Azioni ──
+function setDays(days){
+  const to=new Date(), from=new Date(Date.now()-days*86400_000);
+  const iso=d=>d.toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
+  document.getElementById('r-to').value = iso(to);
+  document.getElementById('r-from').value = days ? iso(from) : '';
+  render();
+}
+document.querySelectorAll('.rp-btn[data-days]').forEach(b=>b.addEventListener('click',()=>setDays(+b.dataset.days)));
+document.querySelectorAll('.rp-tab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.rp-tab').forEach(x=>x.classList.toggle('on',x===b)); VIEW=b.dataset.view; render(); }));
+['r-area','r-from','r-to'].forEach(id=>document.getElementById(id).addEventListener('change',render));
+document.getElementById('r-gen').addEventListener('click',render);
+document.getElementById('r-print').addEventListener('click',()=>window.print());
+document.getElementById('r-copy').addEventListener('click',async()=>{
+  if(!LAST) return; const txt=summaryText(LAST.S,LAST.R).join('\n\n');
+  const head=`Report pioggia e allerte — ${LAST.S.area?AREA_LABEL[LAST.S.area]:'tutte le aree'}\n\n`;
+  try{ await navigator.clipboard.writeText(head+txt); const b=document.getElementById('r-copy'); b.innerHTML='<i class="fa fa-check"></i> Copiato'; setTimeout(()=>b.innerHTML='<i class="fa fa-copy"></i> Copia sintesi',1500); }catch{}
+});
+document.getElementById('r-csv').addEventListener('click',()=>{
+  if(!LAST) return;
+  const cols=['episode_id','area_name','start_utc','end_utc','duration_h','osservata_mm','fonte_osservata','radar_mm','fonte_radar','peak_mmh','peak_utc','allerta','descrizione'];
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const rows=LAST.S.eps.map(e=>{ const o=observed(e), r=radar(e), a=alertInfo(e);
+    return [e.episode_id,e.area_name,e.start_utc,e.end_utc,e.duration_h,o.mm??'',o.src,r.mm??'',r.src,e.peak_mmh,e.peak_utc,a.txt,describe(e)].map(q).join(';'); });
+  const blob=new Blob(['﻿'+cols.join(';')+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`report_episodi_${LAST.S.area||'tutte'}_${LAST.S.from||'inizio'}_${LAST.S.to||'oggi'}.csv`; a.click();
+});
+
+(async()=>{
+  const get=async p=>{ try{ const r=await fetchData(p); return r.ok? parseCSV(await r.text()) : []; }catch{ return []; } };
+  const [eps, links, events, verify] = await Promise.all([
+    get('archive/data/episodes.csv'), get('archive/data/episodes_alerts.csv'),
+    get('archive/data/events.csv'), get('archive/data/forecast_verification.csv')]);
+  D.episodes=eps; D.events=events; D.verify=verify;
+  for(const l of links) (D.links[l.episode_id] ||= []).push(l);
+  if(!eps.length){ document.getElementById('r-out').innerHTML='<p class="dim">Episodi non ancora disponibili (episodes.csv): lanciare il workflow Forecast Verify.</p>'; return; }
+  setDays(90);
+})();
+</script>
+</body>
+</html>
