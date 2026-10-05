@@ -452,13 +452,13 @@
       "thresholds": [
        {
         "level": "warning",
-        "value_mm": 5,
+        "value_mm": 7,
         "icon": "⚠️",
         "priority": 1
        },
        {
         "level": "alarm",
-        "value_mm": 15,
+        "value_mm": 10,
         "icon": "🚨",
         "priority": 2
        },
@@ -497,7 +497,8 @@
      "email": [
       "riccardo.giusti@waters.nestle.com",
       "paolo.bracchi@waters.nestle.com",
-      "stefano.fioletti@waters.nestle.com"
+      "stefano.fioletti@waters.nestle.com",
+      "diletta.scapin1@waters.nestle.com"
      ],
      "telegram_chat_ids": []
     }
