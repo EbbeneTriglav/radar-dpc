@@ -121,27 +121,11 @@
     </label>
     <span id="overrides-badge" class="mon-override-badge" style="display:none">⚠️ Hai modifiche locali alle soglie</span>
     <span style="flex:1"></span>
-    <button class="btn-sm" id="btn-export"><i class="fa fa-download"></i> Esporta config soglie</button>
     <button class="btn-sm" id="btn-reset-overrides" style="display:none"><i class="fa fa-undo"></i> Default</button>
   </div>
   <div class="mon-grid" id="mon-grid">
     <div style="text-align:center;padding:40px;color:var(--text3)">
       <i class="fa fa-spinner fa-spin"></i> Caricamento…
-    </div>
-  </div>
-</div>
-
-<div class="mon-modal-bg" id="export-modal">
-  <div class="mon-modal">
-    <h3><i class="fa fa-download"></i> Esporta configurazione (soglie + destinatari)</h3>
-    <p style="font-size:12px;color:var(--text2)">
-      Scarica il file aggiornato (oppure copia il JSON) e sostituiscilo in <code>archive/areas.json</code>. Commit + push per attivare le modifiche sui workflow.
-    </p>
-    <pre id="export-json"></pre>
-    <div class="mon-modal-actions">
-      <button class="btn-sm" id="btn-download"><i class="fa fa-file-download"></i> Scarica areas.json</button>
-      <button class="btn-sm" id="btn-copy"><i class="fa fa-copy"></i> Copia</button>
-      <button class="btn-sm" id="btn-modal-close">Chiudi</button>
     </div>
   </div>
 </div>
@@ -231,23 +215,6 @@ async function init(){
     await Promise.all([loadEvents(), loadLastObs()]);
     await loadArchiveForAll();
     render();
-  };
-  document.getElementById('btn-export').onclick = openExportModal;
-  document.getElementById('btn-modal-close').onclick = () => document.getElementById('export-modal').classList.remove('open');
-  document.getElementById('btn-copy').onclick = () => {
-    navigator.clipboard.writeText(document.getElementById('export-json').textContent);
-    const b = document.getElementById('btn-copy');
-    b.innerHTML = '<i class="fa fa-check"></i> Copiato';
-    setTimeout(() => b.innerHTML = '<i class="fa fa-copy"></i> Copia', 1500);
-  };
-  document.getElementById('btn-download').onclick = () => {
-    const txt = document.getElementById('export-json').textContent;
-    const blob = new Blob([txt], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'areas.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
   };
   document.getElementById('btn-reset-overrides').onclick = () => {
     if (confirm('Cancella le modifiche locali e ripristina default?')) { clearAllOverrides(); render(); }
@@ -402,7 +369,7 @@ function renderAreaCard(area){
           return `<span class="mon-recipients-item">✉️ ${emTxt}</span>
                   <span class="mon-recipients-item">💬 ${tgTxt}</span>`;
         })()}
-        <span class="mon-recipients-hint" title="Modifica con 'Modifica soglie', poi usa 'Esporta config' per generare areas.json">
+        <span class="mon-recipients-hint" title="Le modifiche qui sono solo locali (browser). Per renderle effettive modifica archive/areas.json nel repo.">
           <i class="fa fa-info-circle"></i>
         </span>
       </div>
@@ -610,7 +577,7 @@ function buildDpcSeries(area, timing){
   return series.sort((a,b) => a.ts - b.ts);
 }
 
-// ── Editor & export ────────────────────────────────────────────────────────
+// ── Editor ───────────────────────────────────────────────────────────────
 function toggleEdit(name){ _editing[name] = !_editing[name]; render(); }
 function updateThreshold(input){
   const a = input.dataset.area, p = input.dataset.prod, i = parseInt(input.dataset.idx, 10);
@@ -622,19 +589,6 @@ function updateThreshold(input){
 }
 window.toggleEdit = toggleEdit;
 window.updateThreshold = updateThreshold;
-
-async function openExportModal(){
-  const r = await fetchData(AREAS_URL);
-  const cfg = await r.json();
-  for (const a of cfg.areas) {
-    const ov = loadOverrides(a.name);
-    if (ov && a.monitoring) a.monitoring.products = ov;
-    const rcpt = loadRecipients(a.name);
-    if (rcpt && a.monitoring) a.monitoring.recipients = rcpt;
-  }
-  document.getElementById('export-json').textContent = JSON.stringify(cfg, null, 2);
-  document.getElementById('export-modal').classList.add('open');
-}
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
