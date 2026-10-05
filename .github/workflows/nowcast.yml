@@ -1,13 +1,15 @@
 name: Radar Nowcast
 
-# Nowcasting radar DPC ogni 60 minuti: rileva celle precipitanti nei buffer
+# Nowcasting radar DPC ogni 10 minuti: rileva celle precipitanti nei buffer
 # 5km e 10km attorno alle aree, ne stima moto e probabilità di arrivo.
 
 on:
   schedule:
-    # Ogni 20 min (era ogni ora): le celle convettive estive durano spesso
-    # <30' e sparivano tra due run. Il catch-up 6 frame SRI copre i gap residui.
-    - cron: '9,29,49 * * * *'
+    # Ogni 10 min (era 20, prima ancora 60). Backtest Ruspino ott-2026: tra il
+    # frame radar che supera la soglia e l'allerta passavano ~20 min (mediana),
+    # in gran parte attesa del run + ritardo del cron GitHub (~10 min). 6 minuti
+    # dopo arpa-collect (3,13,...) così il dato ARPA appena archiviato è già letto.
+    - cron: '9,19,29,39,49,59 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:

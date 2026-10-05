@@ -11,7 +11,7 @@ const BRANCH = "main";
 const JOBS = [
   { file: "arpa-collect.yml",    every: 10,   critical: 180 },
   { file: "monitor.yml",         every: 15,   critical: 180 },
-  { file: "nowcast.yml",         every: 20,   critical: 240 },
+  { file: "nowcast.yml",         every: 10,   critical: 240 },   // 10' (latenza allerte, ott-2026)
   { file: "forecast-alert.yml",  every: 120,  critical: 480 },
   { file: "archive-daily.yml",   every: 360,  critical: 900 },
   { file: "forecast-verify.yml", every: 1440, critical: 2160 },

@@ -44,7 +44,7 @@ const CORS_HEADERS = {
 const GH_REPO = 'EbbeneTriglav/radar-dpc';
 const WATCHED_WORKFLOWS = [
   { wf: 'monitor.yml',        maxAgeMin: 35 },   // cron ogni 15'
-  { wf: 'nowcast.yml',        maxAgeMin: 45 },   // ogni 20'
+  { wf: 'nowcast.yml',        maxAgeMin: 25 },   // ogni 10'
   { wf: 'arpa-collect.yml',   maxAgeMin: 30 },   // ogni 10'
   { wf: 'forecast-alert.yml', maxAgeMin: 165 },  // ogni 2h
 ];
