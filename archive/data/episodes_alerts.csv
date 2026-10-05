@@ -1,5 +1,5 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
-cepina_20261005T0620,2026-10-05T06:46:03Z,cepina,storm,storm_on_area,SRI,8.65,cella su area
+cepina_20261005T0530,2026-10-05T06:46:03Z,cepina,storm,storm_on_area,SRI,8.65,cella su area
 cepina_20260918T1105,2026-09-18T13:02:14Z,cepina,storm,storm_on_area,SRI,10.00,cella su area dwell~166min
 panna_20260917T0750,2026-09-17T10:51:31Z,panna,storm,storm_on_area,SRI,5.61,cella su area
 panna_20260917T0750,2026-09-17T10:28:38Z,panna,storm,storm_on_area,SRI,6.57,catch-up: cella rilevata a posteriori +18min
@@ -51,16 +51,16 @@ cepina_20260909T1130,2026-09-09T12:41:10Z,cepina,storm,storm_on_area,SRI,5.26,ce
 ruspino_20260909T0955,2026-09-09T12:25:59Z,ruspino,monitor,warning,CUM3,43.800,
 panna_20260909T0635,2026-09-09T10:25:56Z,panna,storm,storm_on_area,SRI,9.82,cella su area
 ruspino_20260909T0955,2026-09-09T10:25:56Z,ruspino,storm,storm_on_area,SRI,91.89,cella su area
-cepina_20260908T2100,2026-09-09T05:26:30Z,cepina,monitor,warning,CUM3,14.641,
+cepina_20260908T2115,2026-09-09T05:26:30Z,cepina,monitor,warning,CUM3,14.641,
 ruspino_20260909T0120,2026-09-09T04:26:23Z,ruspino,monitor,warning,CUM3,19.400,
 ruspino_20260909T0120,2026-09-09T03:11:02Z,ruspino,storm,storm_on_area,SRI,19.00,cella su area dwell~94min
-cepina_20260908T2100,2026-09-09T03:11:02Z,cepina,storm,storm_on_area,SRI,5.34,cella su area
-cepina_20260908T2100,2026-09-08T23:31:18Z,cepina,storm,storm_on_area,SRI,5.01,catch-up: cella rilevata a posteriori +16min
-cepina_20260908T2100,2026-09-08T23:31:18Z,cepina,storm,storm_on_area,SRI,5.01,catch-up: cella rilevata a posteriori +26min
-cepina_20260908T2100,2026-09-08T21:48:58Z,cepina,storm,storm_on_area,SRI,7.30,cella su area
+cepina_20260908T2115,2026-09-09T03:11:02Z,cepina,storm,storm_on_area,SRI,5.34,cella su area
+cepina_20260908T2115,2026-09-08T23:31:18Z,cepina,storm,storm_on_area,SRI,5.01,catch-up: cella rilevata a posteriori +16min
+cepina_20260908T2115,2026-09-08T23:31:18Z,cepina,storm,storm_on_area,SRI,5.01,catch-up: cella rilevata a posteriori +26min
+cepina_20260908T2115,2026-09-08T21:48:58Z,cepina,storm,storm_on_area,SRI,7.30,cella su area
 panna_20260902T1400,2026-09-02T14:36:02Z,panna,storm,storm_on_area,SRI,10.27,cella su area
-cepina_20260828T2100,2026-08-28T22:30:59Z,cepina,storm,storm_on_area,SRI,22.81,catch-up: cella rilevata a posteriori +31min
-cepina_20260828T2100,2026-08-28T22:10:48Z,cepina,storm,storm_on_area,SRI,22.81,cella su area dwell~26min
+cepina_20260828T2120,2026-08-28T22:30:59Z,cepina,storm,storm_on_area,SRI,22.81,catch-up: cella rilevata a posteriori +31min
+cepina_20260828T2120,2026-08-28T22:10:48Z,cepina,storm,storm_on_area,SRI,22.81,cella su area dwell~26min
 cepina_20260828T1500,2026-08-28T17:00:54Z,cepina,storm,storm_on_area,SRI,5.34,catch-up: cella rilevata a posteriori +20min
 ruspino_20260828T1525,2026-08-28T16:21:11Z,ruspino,storm,storm_on_area,SRI,130.87,catch-up: cella rilevata a posteriori +26min
 ruspino_20260828T1525,2026-08-28T16:21:11Z,ruspino,storm,storm_on_area,SRI,71.40,catch-up: cella rilevata a posteriori +31min
@@ -137,7 +137,7 @@ ruspino_20260820T0010,2026-08-20T02:11:02Z,ruspino,storm,storm_on_area,SRI,10.27
 ruspino_20260820T0010,2026-08-20T01:20:55Z,ruspino,storm,storm_on_area,SRI,14.43,cella su area
 panna_20260817T1015,2026-08-17T11:06:00Z,panna,storm,storm_on_area,SRI,9.33,cella su area dwell~93min
 ruspino_20260816T1305,2026-08-16T20:55:57Z,ruspino,storm,storm_on_area,SRI,14.15,cella su area
-cepina_20260816T0900,2026-08-16T19:55:55Z,cepina,monitor,warning,CUM3,11.885,
+cepina_20260816T1115,2026-08-16T19:55:55Z,cepina,monitor,warning,CUM3,11.885,
 ruspino_20260816T1305,2026-08-16T14:56:01Z,ruspino,storm,storm_on_area,SRI,33.93,cella su area dwell~87min
 panna_20260816T1400,2026-08-16T14:35:47Z,panna,storm,storm_on_area,SRI,7.25,catch-up: cella rilevata a posteriori +25min
 panna_20260816T1400,2026-08-16T14:21:01Z,panna,storm,storm_on_area,SRI,7.25,cella su area dwell~111min
@@ -146,22 +146,22 @@ cepina_20260815T1235,2026-08-15T18:00:06Z,cepina,storm,storm_on_area,SRI,6.64,ce
 cepina_20260815T1235,2026-08-15T14:56:00Z,cepina,storm,storm_on_area,SRI,12.72,cella su area dwell~119min
 cepina_20260812T1200,2026-08-12T17:06:21Z,cepina,storm,storm_on_area,SRI,9.39,cella su area
 cepina_20260812T1200,2026-08-12T12:31:24Z,cepina,storm,storm_on_area,SRI,43.97,cella su area
-cepina_20260810T1200,2026-08-10T14:25:38Z,cepina,storm,storm_on_area,SRI,6.01,catch-up: cella rilevata a posteriori +25min
-cepina_20260809T1500,2026-08-09T20:20:35Z,cepina,monitor,warning,CUM3,13.395,
-cepina_20260809T1500,2026-08-09T18:05:40Z,cepina,storm,storm_on_area,SRI,11.34,cella su area dwell~94min
-cepina_20260808T1800,2026-08-08T19:08:32Z,cepina,storm,storm_on_area,SRI,6.01,catch-up: cella rilevata a posteriori +13min
+cepina_20260810T1335,2026-08-10T14:25:38Z,cepina,storm,storm_on_area,SRI,6.01,catch-up: cella rilevata a posteriori +25min
+cepina_20260809T1630,2026-08-09T20:20:35Z,cepina,monitor,warning,CUM3,13.395,
+cepina_20260809T1630,2026-08-09T18:05:40Z,cepina,storm,storm_on_area,SRI,11.34,cella su area dwell~94min
+cepina_20260808T1440,2026-08-08T19:08:32Z,cepina,storm,storm_on_area,SRI,6.01,catch-up: cella rilevata a posteriori +13min
 panna_20260808T1150,2026-08-08T14:25:34Z,panna,nowcast,nowcast_emergency,SRT1,20.14,nowcast buffer=5km
 panna_20260808T1150,2026-08-08T13:50:37Z,panna,storm,storm_on_area,SRI,8.60,cella su area
 panna_20260808T1150,2026-08-08T13:30:36Z,panna,storm,storm_on_area,SRI,11.19,catch-up: cella rilevata a posteriori +25min
 ruspino_20260807T0840,2026-08-07T10:30:53Z,ruspino,monitor,warning,CUM3,26.000,
 ruspino_20260807T0840,2026-08-07T09:13:45Z,ruspino,storm,storm_on_area,SRI,32.67,cella su area
-cepina_20260806T1400,2026-08-06T22:01:08Z,cepina,storm,storm_on_area,SRI,6.30,catch-up: cella rilevata a posteriori +21min
-cepina_20260806T1400,2026-08-06T21:49:11Z,cepina,storm,storm_on_area,SRI,6.30,cella su area dwell~53min
+cepina_20260806T1920,2026-08-06T22:01:08Z,cepina,storm,storm_on_area,SRI,6.30,catch-up: cella rilevata a posteriori +21min
+cepina_20260806T1920,2026-08-06T21:49:11Z,cepina,storm,storm_on_area,SRI,6.30,cella su area dwell~53min
 cepina_20260806T1400,2026-08-06T15:37:24Z,cepina,storm,storm_on_area,SRI,9.61,cella su area
 cepina_20260806T1400,2026-08-06T15:16:10Z,cepina,storm,storm_on_area,SRI,7.11,catch-up: cella rilevata a posteriori +16min
 ruspino_20260802T0750,2026-08-02T09:01:09Z,ruspino,storm,storm_on_area,SRI,27.34,cella su area
-cepina_20260801T1500,2026-08-01T18:26:12Z,cepina,monitor,warning,CUM3,12.758,
-cepina_20260801T1500,2026-08-01T16:51:06Z,cepina,storm,storm_on_area,SRI,8.05,cella su area
+cepina_20260801T1520,2026-08-01T18:26:12Z,cepina,monitor,warning,CUM3,12.758,
+cepina_20260801T1520,2026-08-01T16:51:06Z,cepina,storm,storm_on_area,SRI,8.05,cella su area
 cepina_20260731T1250,2026-07-31T14:46:20Z,cepina,storm,storm_on_area,SRI,28.02,cella su area dwell~126min
 cepina_20260731T1250,2026-07-31T14:06:13Z,cepina,storm,storm_on_area,SRI,5.28,catch-up: cella rilevata a posteriori +21min
 cepina_20260729T1600,2026-07-29T18:20:32Z,cepina,nowcast,nowcast_emergency,SRT1,21.14,nowcast buffer=5km
@@ -259,20 +259,21 @@ cepina_20260610T1405,2026-06-10T14:54:54Z,cepina,storm,storm_on_area,SRI,5.63,ce
 ruspino_20260610T1355,2026-06-10T14:26:39Z,ruspino,nowcast,nowcast_warning,SRI,10.26,nowcast buffer=5km
 cepina_20260610T0045,2026-06-10T07:00:46Z,cepina,nowcast,nowcast_alarm,SRT1,16.29,nowcast buffer=5km
 ruspino_20260610T0250,2026-06-10T02:35:01Z,ruspino,nowcast,nowcast_warning,SRI,14.70,nowcast buffer=10km moto=NE/21.1kmh prob=2%
-ruspino_20260605T2300,2026-06-05T22:10:05Z,ruspino,nowcast,nowcast_emergency,SRT1,20.63,nowcast buffer=5km
-ruspino_20260605T2300,2026-06-05T22:10:05Z,ruspino,nowcast,nowcast_emergency,SRT1,22.78,nowcast buffer=10km
+ruspino_20260605T2200,2026-06-05T22:10:05Z,ruspino,nowcast,nowcast_emergency,SRT1,20.63,nowcast buffer=5km
+ruspino_20260605T2200,2026-06-05T22:10:05Z,ruspino,nowcast,nowcast_emergency,SRT1,22.78,nowcast buffer=10km
 cepina_20260604T2320,2026-06-05T02:34:43Z,cepina,nowcast,nowcast_emergency,SRI,39.94,nowcast buffer=10km moto=NW/7.4kmh prob=2%
-panna_20260602T2325,2026-06-03T03:00:00Z,panna,storm,storm_on_area,CUM3,62.22,ricostruito (evento non registrato dal nowcast)
-panna_20260602T2325,2026-06-03T02:52:38Z,panna,nowcast,nowcast_emergency,SRT1,21.72,nowcast buffer=5km
-panna_20260602T2325,2026-06-03T02:52:38Z,panna,nowcast,nowcast_emergency,SRT1,22.56,nowcast buffer=10km
-panna_20260602T2325,2026-06-02T21:29:23Z,panna,forecast,forecast24h_emergency,ensemble_24h,97.73,mean=25.1 worst=97.7 metno=8.47
+panna_20260602T1910,2026-06-03T03:00:00Z,panna,storm,storm_on_area,CUM3,62.22,ricostruito (evento non registrato dal nowcast)
+panna_20260602T1910,2026-06-03T02:52:38Z,panna,nowcast,nowcast_emergency,SRT1,21.72,nowcast buffer=5km
+panna_20260602T1910,2026-06-03T02:52:38Z,panna,nowcast,nowcast_emergency,SRT1,22.56,nowcast buffer=10km
+panna_20260602T1910,2026-06-02T21:29:23Z,panna,forecast,forecast24h_emergency,ensemble_24h,97.73,mean=25.1 worst=97.7 metno=8.47
 ruspino_20260602T1520,2026-06-02T19:52:14Z,ruspino,monitor,warning,CUM3,33.313,
 cepina_20260602T1655,2026-06-02T16:03:22Z,cepina,monitor,warning,CUM3,14.730,
-panna_20260602T2325,2026-06-02T11:03:16Z,panna,forecast,forecast24h_alarm,ensemble_24h,58.33,mean=15.2 worst=58.3 metno=10.11
+panna_20260602T1910,2026-06-02T11:03:16Z,panna,forecast,forecast24h_alarm,ensemble_24h,58.33,mean=15.2 worst=58.3 metno=10.11
 ruspino_20260601T2300,2026-06-02T10:06:33Z,ruspino,nowcast,nowcast_emergency,SRI,25.75,nowcast buffer=5km moto=SE/15.6kmh prob=31%
 ruspino_20260601T2300,2026-06-02T07:17:57Z,ruspino,forecast,forecast_warning,CUM3,,forecast 3h prossime 6h
-panna_20260602T2325,2026-06-02T05:09:18Z,panna,forecast,forecast24h_warning,ensemble_24h,38.99,mean=11.3 worst=39.0 metno=6.04
+panna_20260602T1910,2026-06-02T05:09:18Z,panna,forecast,forecast24h_warning,ensemble_24h,38.99,mean=11.3 worst=39.0 metno=6.04
 panna_20260601T1015,2026-05-31T19:47:57Z,panna,forecast,forecast24h_warning,ensemble_24h,10.50,mean=6.5 worst=10.5 metno=15.57
+ruspino_20260531T1435,2026-05-31T19:22:27Z,ruspino,nowcast,nowcast_alarm,SRI,17.66,nowcast buffer=5km moto=E/3.9kmh prob=28%
 ruspino_20260531T1435,2026-05-31T17:59:53Z,ruspino,nowcast,nowcast_warning,SRI,12.37,nowcast buffer=5km moto=SE/20.1kmh prob=13%
 ruspino_20260531T1435,2026-05-31T17:59:53Z,ruspino,nowcast,nowcast_alarm,SRI,19.59,nowcast buffer=10km moto=E/33.4kmh prob=1%
 ruspino_20260531T1435,2026-05-31T15:13:07Z,ruspino,nowcast,nowcast_warning,SRT1,13.35,nowcast buffer=10km
