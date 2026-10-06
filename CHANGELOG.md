@@ -1,5 +1,13 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — Backfill che si riavvia da solo
+
+- ⚙️ `sri-backfill.yml` — il titolo del run porta i parametri (`mode= round= retry= zero= frames= auto=`).
+  Un giro a 0 frame (DPC che non risponde) viene ritentato fino a 2 volte dopo 5'; prima la catena si fermava.
+- 🆕 `backfill-watchdog.yml` — ogni 30' guarda l'ultimo run del backfill: se è **fallito** (es. 05/10 22:04,
+  "job was not acquired by Runner" = guasto GitHub) lo rilancia con gli stessi parametri, max 5 tentativi di
+  fila. Non tocca i run annullati a mano (Cancel = stop voluto).
+
 ## Sessione 2026-10-06 — Pagina Previsioni rifatta
 
 - 🆕 `previsioni.html` — tre fonti: **Ensemble** Open-Meteo (5 modelli), **YR** (MET Norway, dal browser

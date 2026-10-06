@@ -1,4 +1,6 @@
 name: SRI Backfill / Probe
+# Il titolo del run porta i parametri: lo legge backfill-watchdog.yml per rilanciare dopo un guasto.
+run-name: "SRI mode=${{ inputs.mode }} round=${{ inputs.round }} retry=${{ inputs.retry || '0' }} zero=${{ inputs.zero || '0' }} frames=${{ inputs.max_frames }} auto=${{ inputs.auto }}"
 
 # Manuale. 'probe' = verifica quanto indietro l'API DPC conserva i frame SRI
 # (solo log, non scrive nulla). 'backfill-episodes' = scarica i frame SRI delle
@@ -10,6 +12,9 @@ name: SRI Backfill / Probe
 # bloccano: un run a 0 frame ferma la catena). Massimo 80 giri.
 # 'backfill-ring-days' = anello CONTINUO dal 15/05 per tutte le aree (~40k frame, ~40 giri
 # da 1000): misura le celle passate vicino senza piovere sull'area (falsi allarmi).
+# RESILIENZA: un giro a 0 frame (DPC che non risponde) viene ritentato 2 volte dopo 5';
+# se un run FALLISCE (guasto GitHub, push respinto…) lo rilancia backfill-watchdog.yml
+# (fino a 5 tentativi). Per fermare tutto: "Cancel run" sul run in corso.
 
 on:
   workflow_dispatch:
@@ -29,6 +34,12 @@ on:
       round:
         description: 'Giro (gestito in automatico, lasciare 1)'
         default: '1'
+      retry:
+        description: 'Tentativo dopo un guasto (automatico, lasciare 0)'
+        default: '0'
+      zero:
+        description: 'Giri consecutivi a 0 frame (automatico, lasciare 0)'
+        default: '0'
 
 permissions:
   contents: write
@@ -86,14 +97,19 @@ jobs:
           MODE: ${{ inputs.mode }}
           MAXF: ${{ inputs.max_frames }}
           ROUND: ${{ inputs.round }}
+          ZERO: ${{ inputs.zero || '0' }}
           PROGRESS: ${{ steps.run.outputs.progress }}
           REMAINING: ${{ steps.run.outputs.remaining }}
         run: |
-          echo "giro $ROUND: archiviati ${PROGRESS:-0}, restano ${REMAINING:-0}"
-          if [ "${REMAINING:-0}" -gt 0 ] && [ "${PROGRESS:-0}" -gt 0 ] && [ "$ROUND" -lt 80 ]; then
-            gh workflow run sri-backfill.yml --ref main -f mode="$MODE" -f max_frames="$MAXF" \
-              -f auto=true -f round=$((ROUND + 1))
-            echo "rilanciato: giro $((ROUND + 1))"
+          echo "giro $ROUND: archiviati ${PROGRESS:-0}, restano ${REMAINING:-0}, giri vuoti di fila ${ZERO}"
+          next() { gh workflow run sri-backfill.yml --ref main -f mode="$MODE" -f max_frames="$MAXF" \
+                     -f auto=true -f round=$((ROUND + 1)) -f retry=0 -f zero="$1"; echo "rilanciato: giro $((ROUND + 1))"; }
+          if [ "${REMAINING:-0}" -le 0 ] || [ "$ROUND" -ge 80 ]; then
+            echo "fine catena (finito o limite giri)"
+          elif [ "${PROGRESS:-0}" -gt 0 ]; then
+            next 0
+          elif [ "$ZERO" -lt 2 ]; then
+            echo "0 frame: il DPC forse non risponde, riprovo tra 5 minuti"; sleep 300; next $((ZERO + 1))
           else
-            echo "fine catena (finito, nessun progresso o limite giri)"
+            echo "fine catena: 3 giri di fila senza frame (restano solo frame non più disponibili sul DPC)"
           fi

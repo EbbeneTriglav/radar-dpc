@@ -1,0 +1,48 @@
+name: Backfill watchdog
+
+# Rilancia il backfill SRI (sri-backfill.yml) se l'ultimo run è FALLITO per un guasto
+# (runner GitHub non assegnato, errore interno, push respinto, timeout…), con gli stessi
+# parametri letti dal titolo del run. Massimo 5 tentativi di fila, poi si ferma e lascia
+# il controllo manuale. Non tocca i run annullati a mano (Cancel = stop voluto) né il probe.
+# Costa ~10 s ogni 30': repo pubblico, minuti gratuiti.
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: backfill-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Controlla l'ultimo run del backfill
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          last=$(gh api "repos/$GH_REPO/actions/workflows/sri-backfill.yml/runs?per_page=1" \
+                 --jq '.workflow_runs[0] | "\(.status)|\(.conclusion)|\(.display_title)"')
+          echo "ultimo run: $last"
+          IFS='|' read -r status concl title <<< "$last"
+          if [ "$status" != "completed" ]; then echo "in corso o in coda: niente da fare"; exit 0; fi
+          case "$concl" in
+            failure|timed_out|startup_failure) ;;
+            *) echo "esito '$concl': niente da fare"; exit 0 ;;
+          esac
+          get() { echo "$title" | grep -oE "(^| )$1=[^ ]+" | head -1 | cut -d= -f2; }
+          mode=$(get mode); round=$(get round); retry=$(get retry); zero=$(get zero); frames=$(get frames); auto=$(get auto)
+          if [ -z "$mode" ] || [ "$mode" = "probe" ]; then echo "run senza parametri o probe: niente da fare"; exit 0; fi
+          retry=${retry:-0}
+          if [ "$retry" -ge 5 ]; then echo "5 tentativi falliti di fila: mi fermo, serve un controllo manuale"; exit 0; fi
+          gh workflow run sri-backfill.yml --ref main -f mode="$mode" -f max_frames="${frames:-1000}" \
+            -f auto="${auto:-true}" -f round="${round:-1}" -f retry=$((retry + 1)) -f zero="${zero:-0}"
+          echo "rilanciato $mode giro ${round:-1}, tentativo $((retry + 1))/5"
