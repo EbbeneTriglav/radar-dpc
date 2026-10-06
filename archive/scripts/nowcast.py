@@ -244,14 +244,13 @@ def estimate_motion(tiff_now, tiff_prev, geom_tm, dt_minutes):
             'compass': _compass(bearing)}
 
 
-def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
+def _xcorr_motion(frames, xy_tm, lag_frames, win_px, max_shift_px, min_rain, smooth_px=1):
     """
-    Moto della CELLA per la pre-allerta: cross-correlazione tra il frame più recente e
-    quello di `lag_frames` passi prima (default 3 → 15'), in una finestra ~96 km
-    CENTRATA SULLA CELLA (pixel massimo). Sostituisce, per la pre-allerta, il baricentro
-    nell'anello di estimate_motion(): con una cella che ENTRA nell'anello il baricentro
-    si sposta verso il bordo d'ingresso e la direzione può risultare opposta (test sintetico
-    ott-2026: cella verso NE stimata SW). Ritorna dict come estimate_motion o None.
+    Spostamento del campo di pioggia tra il frame più recente e quello di `lag_frames` passi
+    prima, per cross-correlazione in una finestra di `win_px` pixel centrata su xy_tm (TM).
+    `min_rain` (mm/h) azzera la pioggia più debole; `smooth_px` > 1 media su blocchi
+    (scala d'insieme). Ritorna dict(bearing_deg, speed_kmh, compass, corr, dt_min) o None.
+    `corr` = correlazione normalizzata al picco (0–1): sotto 0.3 il moto non è affidabile.
     """
     if not frames or len(frames) < 2 or not xy_tm:
         return None
@@ -270,22 +269,36 @@ def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
     if a0.shape != a1.shape:
         return None
     for a, nd in ((a0, nd0), (a1, nd1)):
-        a[(a == nd) | ~np.isfinite(a) | (a < 0.5) | (a > 10000)] = 0.0   # pioggia debole = rumore
+        a[(a == nd) | ~np.isfinite(a) | (a < min_rain) | (a > 10000)] = 0.0
     h = win_px // 2
     r0, r1 = max(0, r - h), min(a0.shape[0], r + h)
     c0, c1 = max(0, c - h), min(a0.shape[1], c + h)
     if r1 - r0 < 24 or c1 - c0 < 24:
         return None
     w0, w1 = a0[r0:r1, c0:c1], a1[r0:r1, c0:c1]
+    k = max(1, int(smooth_px))
+    if k > 1:                                   # media a blocchi k×k: conta la forma d'insieme
+        hh, ww = (w0.shape[0] // k) * k, (w0.shape[1] // k) * k
+        w0 = w0[:hh, :ww].reshape(hh // k, k, ww // k, k).mean(axis=(1, 3))
+        w1 = w1[:hh, :ww].reshape(hh // k, k, ww // k, k).mean(axis=(1, 3))
+        max_shift_px = max(2, max_shift_px // k)
     if w0.sum() <= 0 or w1.sum() <= 0:
         return None
     w0 = w0 - w0.mean(); w1 = w1 - w1.mean()
+    norm = float(np.sqrt((w0 ** 2).mean() * (w1 ** 2).mean()))
+    if norm <= 0:
+        return None
     sh = (2 * w0.shape[0], 2 * w0.shape[1])
-    cc = np.fft.irfft2(np.fft.rfft2(w0, sh) * np.conj(np.fft.rfft2(w1, sh)), sh)
-    cc = np.fft.fftshift(cc)
+    cc = np.fft.fftshift(np.fft.irfft2(np.fft.rfft2(w0, sh) * np.conj(np.fft.rfft2(w1, sh)), sh))
+    # media per pixel sovrapposti: senza, la correlazione favorisce gli spostamenti piccoli
+    # (meno sovrapposizione = somma più bassa) e la velocità risulta sottostimata
+    one = np.ones(w0.shape)
+    ov = np.fft.fftshift(np.fft.irfft2(np.fft.rfft2(one, sh) * np.conj(np.fft.rfft2(one, sh)), sh))
+    cc = cc / np.maximum(np.round(ov), 1.0)
     cy, cx = sh[0] // 2, sh[1] // 2
     sub = cc[cy - max_shift_px:cy + max_shift_px + 1, cx - max_shift_px:cx + max_shift_px + 1]
     pr, pc = np.unravel_index(np.argmax(sub), sub.shape)
+    corr = min(1.0, float(sub[pr, pc] / norm))
     if sub[pr, pc] <= 0:
         return None
 
@@ -294,17 +307,50 @@ def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
         return 0.0 if den == 0 else 0.5 * (m1 - p1) / den
     dr = pr - max_shift_px + (_par(sub[pr - 1, pc], sub[pr, pc], sub[pr + 1, pc]) if 0 < pr < sub.shape[0] - 1 else 0)
     dc = pc - max_shift_px + (_par(sub[pr, pc - 1], sub[pr, pc], sub[pr, pc + 1]) if 0 < pc < sub.shape[1] - 1 else 0)
-    dx_m = dc * tr.a                            # colonne → Est
-    dy_m = -dr * abs(tr.e)                      # righe crescono verso Sud
+    dx_m = dc * k * tr.a                        # colonne → Est
+    dy_m = -dr * k * abs(tr.e)                  # righe crescono verso Sud
     dist_m = float(np.hypot(dx_m, dy_m))
-    if dist_m < 500:
-        return {'bearing_deg': None, 'speed_kmh': 0.0, 'compass': 'stazionaria', 'method': 'tracking'}
+    if dist_m < 500 * k:
+        return {'bearing_deg': None, 'speed_kmh': 0.0, 'compass': 'stazionaria',
+                'corr': round(corr, 2), 'dt_min': round(dt_min)}
     speed = dist_m / 1000 / (dt_min / 60)
     if speed > 130:                             # implausibile: meglio nessuna freccia
         return None
     bearing = float(np.degrees(np.arctan2(dx_m, dy_m)) % 360)
     return {'bearing_deg': bearing, 'speed_kmh': round(speed, 1), 'compass': _compass(bearing),
-            'method': 'tracking', 'dt_min': round(dt_min)}
+            'corr': round(corr, 2), 'dt_min': round(dt_min)}
+
+
+def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
+    """
+    Moto della CELLA per la pre-allerta: cross-correlazione tra il frame più recente e
+    quello di `lag_frames` passi prima (default 3 → 15'), in una finestra ~96 km
+    CENTRATA SULLA CELLA (pixel massimo). Sostituisce, per la pre-allerta, il baricentro
+    nell'anello di estimate_motion(): con una cella che ENTRA nell'anello il baricentro
+    si sposta verso il bordo d'ingresso e la direzione può risultare opposta (test sintetico
+    ott-2026: cella verso NE stimata SW). Ritorna dict come estimate_motion o None.
+    """
+    m = _xcorr_motion(frames, xy_tm, lag_frames, win_px, max_shift_px, min_rain=0.5)
+    if m:
+        m['method'] = 'tracking'
+    return m
+
+
+def track_field_motion(frames, area, lag_frames=5, win_px=200, max_shift_px=48):
+    """
+    Moto della PERTURBAZIONE nel suo insieme (scala ~200 km attorno all'area, ultimi 25'):
+    stessa cross-correlazione ma su tutto il campo di pioggia ≥ 0.2 mm/h, mediato a blocchi
+    di 4 km così pesano le strutture grandi e non la singola cella. Usato per la freccia
+    "perturbazione da …" della mappa. Sotto corr 0.3 → None (moto d'insieme non definito).
+    """
+    pts = area['polygon']
+    lat = sum(p[0] for p in pts) / len(pts); lon = sum(p[1] for p in pts) / len(pts)
+    m = _xcorr_motion(frames, _to_tm.transform(lon, lat), lag_frames, win_px, max_shift_px,
+                      min_rain=0.2, smooth_px=4)
+    if not m or m.get('corr', 0) < 0.3:
+        return None
+    m['method'] = 'field'
+    return m
 
 
 def _compass(deg):
@@ -404,14 +450,28 @@ def _send_prealert_map(area, product, hit, signal, motion, frames, buf_km, rcpt_
         mot = motion
         if mot is None and len(frames) >= 2:      # SRT1: il moto non era stato stimato
             mot = track_cell_motion(frames, signal.get('max_xy_tm'))
+        try:
+            field = track_field_motion(frames, area)
+        except Exception as e:
+            log.warning(f'  moto perturbazione non stimato: {e}')
+            field = None
         ts_frame = datetime.fromtimestamp(frames[0][0] / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
         unit = 'mm/h' if product == 'SRI' else 'mm/1h'
         title = f"{area['label']} · cella entro {buf_km} km · {signal['max']:.0f} {unit}"
         jpeg = alert_map.render_alert_map(area, frames[0][1], ts_label=_ts_local(ts_frame),
-                                          signal=signal, motion=mot, buffers_km=BUFFERS_KM, title=title)
-        cap = (f"Mappa radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. "
-               "Cerchio = pixel più intenso nell'anello; freccia = spostamento stimato in 30' "
-               "(tracciamento della cella sugli ultimi 15' di radar, indicativo).")
+                                          signal=signal, motion=mot, buffers_km=BUFFERS_KM, title=title,
+                                          field_motion=field)
+        if field and field.get('bearing_deg') is not None:
+            fl = (f"Perturbazione: arriva da {_compass((field['bearing_deg'] + 180) % 360)}, "
+                  f"si muove verso {field['compass']} a ~{field['speed_kmh']:.0f} km/h "
+                  f"(ultimi {field['dt_min']}', stima). ")
+        elif field:
+            fl = "Perturbazione: quasi ferma negli ultimi minuti (stima). "
+        else:
+            fl = "Perturbazione: moto d'insieme non determinabile. "
+        cap = (f"Mappa radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. " + fl +
+               "Freccia larga = perturbazione; cerchio e freccia sottile = cella più intensa nell'anello, "
+               "spostamento stimato in 30'.")
         res = send_telegram_photo(jpeg, cap, chat_ids=rcpt_tg)
         log.info(f'  mappa pre-allerta: {len(jpeg) / 1024:.0f} KB, telegram={res}')
         return res

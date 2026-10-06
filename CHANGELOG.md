@@ -1,5 +1,12 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-06 (e) — Mappa pre-allerta: freccia della perturbazione
+- Oltre alla cella più intensa, la mappa mostra il **moto d'insieme della perturbazione**: freccia larga blu che entra
+  dal lato di provenienza e punta verso l'area ("Perturbazione da SW · 30 km/h"); la didascalia Telegram lo scrive.
+- `track_field_motion()`: cross-correlazione su ~200 km attorno all'area, ultimi 25', a blocchi di 4 km. Se la
+  correlazione è bassa (< 0.3) la freccia non compare: "moto d'insieme non determinabile".
+- Corretta una distorsione della cross-correlazione (sottostimava la velocità): ora normalizzata per sovrapposizione.
+
 ## 2026-10-06 (d) — Mappa radar nella pre-allerta Telegram
 - Nuovo `alert_map.py`: dopo il messaggio "cella in avvicinamento" arriva su Telegram una mappa (640 px, ~40–80 KB):
   radar DPC SRI, area, anelli 5/10 km, cella più intensa, freccia di spostamento stimato in 30', scala, legenda.

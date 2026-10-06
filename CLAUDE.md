@@ -170,6 +170,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Moto cella nella pre-allerta**: `track_cell_motion()` (cross-correlazione 15', finestra centrata sulla cella).
   Il vecchio `estimate_motion()` (baricentro nell'anello) con una cella che ENTRA nell'anello può dare la direzione
   opposta (test sintetico ott-2026): resta solo come ripiego. Il moto NON decide il trigger, solo testo/mappa/prob.
+  `track_field_motion()` = moto della PERTURBAZIONE d'insieme (finestra ~200 km, blocchi 4 km, ultimi 25',
+  pioggia ≥ 0.2 mm/h; scartato se correlazione < 0.3): freccia larga "Perturbazione da …" nella mappa e riga in
+  didascalia. Entrambi i tracker usano `_xcorr_motion()` (cross-correlazione normalizzata per sovrapposizione).
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
   STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.

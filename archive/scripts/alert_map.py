@@ -34,7 +34,7 @@ BASEMAP_ZOOM = 10
 BASEMAP_DIR = Path(__file__).resolve().parent.parent / 'data' / 'basemaps'
 OSM_TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 OSM_UA = 'radar-dpc-basemap/1.0 (github.com/EbbeneTriglav/radar-dpc; one-off area basemaps)'
-ATTRIB = 'Radar DPC SRI · mappa © OpenStreetMap contributors'
+ATTRIB = 'Radar DPC SRI · moti stimati · mappa © OpenStreetMap contributors'
 # stessa scala del sito (mch_collect.PNG_CLASSES)
 CLASSES = [(0.1, (166, 216, 255)), (0.5, (95, 180, 245)), (1, (42, 120, 214)), (2, (25, 162, 107)),
            (5, (155, 209, 47)), (10, (245, 208, 0)), (20, (240, 140, 0)), (40, (224, 48, 48)),
@@ -163,8 +163,32 @@ def _rain_rgba(grid):
 
 
 # ── Disegno ──────────────────────────────────────────────────────────────────
+COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
+
+def _from_dir(bearing):
+    """Direzione di PROVENIENZA (opposta al moto), es. moto verso NE → 'da SW'."""
+    return COMPASS[round(((bearing + 180) % 360) / 45) % 8]
+
+
+def _big_arrow(d, tail, head, width=16, head_w=44, head_l=38, fill=(25, 45, 110, 205),
+               outline=(255, 255, 255, 235)):
+    """Freccia larga piena (poligono) da tail a head."""
+    (x0, y0), (x1, y1) = tail, head
+    L = math.hypot(x1 - x0, y1 - y0)
+    if L < head_l + 10:
+        return
+    ux, uy = (x1 - x0) / L, (y1 - y0) / L
+    nx, ny = -uy, ux
+    bx, by = x1 - ux * head_l, y1 - uy * head_l
+    w, hw = width / 2, head_w / 2
+    poly = [(x0 + nx * w, y0 + ny * w), (bx + nx * w, by + ny * w), (bx + nx * hw, by + ny * hw), (x1, y1),
+            (bx - nx * hw, by - ny * hw), (bx - nx * w, by - ny * w), (x0 - nx * w, y0 - ny * w)]
+    d.polygon(poly, fill=fill, outline=outline, width=3)
+
+
 def render_alert_map(area, tiff_bytes, ts_label='', signal=None, motion=None,
-                     buffers_km=(5, 10), title='', quality=82):
+                     buffers_km=(5, 10), title='', quality=82, field_motion=None):
     """JPEG della mappa. Solleva eccezioni: il chiamante le intercetta e manda solo testo."""
     from PIL import Image, ImageDraw
     from shapely.geometry import Polygon
@@ -194,6 +218,33 @@ def render_alert_map(area, tiff_bytes, ts_label='', signal=None, motion=None,
         d.text((lx + 3, ly - 14), f'{km} km', fill=(30, 30, 30, 255), font=_font(12))
     d.polygon([px(*c) for c in poly_m.exterior.coords], outline=(0, 0, 0, 255), width=3)
 
+    # perturbazione nel suo insieme: freccia larga che ENTRA dal lato di provenienza e punta
+    # verso l'area, fermandosi fuori dall'anello esterno
+    if field_motion and field_motion.get('bearing_deg') is not None:
+        b = math.radians(field_motion['bearing_deg'])
+        ux, uy = math.sin(b), -math.cos(b)                    # verso del moto in pixel (y verso il basso)
+        acx, acy = px(*poly_m.centroid.coords[0])
+        r_ring = max(math.hypot(px(*c)[0] - acx, px(*c)[1] - acy)
+                     for c in poly_m.buffer(max(buffers_km) * 1000 * k).exterior.coords)
+        head = (acx - ux * (r_ring + 14), acy - uy * (r_ring + 14))
+        tail = (head[0] - ux * 150, head[1] - uy * 150)
+        m = 40                                                # tiene la coda dentro il riquadro
+        tail = (min(max(tail[0], m), W - m), min(max(tail[1], 40 + m), W - 50 - m))
+        _big_arrow(d, tail, head)
+        flab = (f"Perturbazione da {_from_dir(field_motion['bearing_deg'])} · "
+                f"{field_motion['speed_kmh']:.0f} km/h")
+        fb = _font(14, True)
+        tw = d.textlength(flab, font=fb)
+        tx = min(max(tail[0] - tw / 2, 6), W - tw - 8)
+        ty = tail[1] + 14 if tail[1] < W / 2 else tail[1] - 34
+        ty = min(max(ty, 34), W - 72)
+        d.rectangle([tx - 4, ty - 3, tx + tw + 4, ty + 18], fill=(25, 45, 110, 225))
+        d.text((tx, ty), flab, fill=(255, 255, 255, 255), font=fb)
+    elif field_motion and field_motion.get('compass') == 'stazionaria':
+        fb = _font(13, True)
+        d.rectangle([6, 34, 14 + d.textlength('Perturbazione quasi ferma', font=fb), 54], fill=(25, 45, 110, 225))
+        d.text((10, 36), 'Perturbazione quasi ferma', fill=(255, 255, 255, 255), font=fb)
+
     # cella + freccia di moto stimato (30')
     if signal and signal.get('max_lat') is not None:
         cxm, cym = _merc(signal['max_lon'], signal['max_lat'])
@@ -208,7 +259,7 @@ def render_alert_map(area, tiff_bytes, ts_label='', signal=None, motion=None,
                 for t in (150, -150):
                     r = b + math.radians(t)
                     d.line([(ex, ey), (ex + 18 * math.sin(r), ey - 18 * math.cos(r))], fill=col, width=wdt)
-            lab = f"{motion.get('compass', '')} {motion['speed_kmh']:.0f} km/h (stima)"
+            lab = f"cella → {motion.get('compass', '')} {motion['speed_kmh']:.0f} km/h"
             tx, ty = ex + 8, ey - 8
             f12 = _font(13, True)
             tw = d.textlength(lab, font=f12)
@@ -217,7 +268,7 @@ def render_alert_map(area, tiff_bytes, ts_label='', signal=None, motion=None,
             d.rectangle([tx - 3, ty - 2, tx + tw + 3, ty + 16], fill=(255, 255, 255, 215))
             d.text((tx, ty), lab, fill=(0, 0, 0, 255), font=f12)
         elif motion and motion.get('compass') == 'stazionaria':
-            d.text((cx + 12, cy - 8), 'stazionaria', fill=(0, 0, 0, 255), font=_font(13, True))
+            d.text((cx + 12, cy - 8), 'cella ferma', fill=(0, 0, 0, 255), font=_font(13, True))
 
     # barra di scala 10 km
     sb = 10 * 1000 * k * s
