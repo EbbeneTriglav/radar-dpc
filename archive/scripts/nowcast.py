@@ -835,10 +835,32 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
     return obs
 
 
+# "Cella in avvicinamento" (anelli 5/10 km): riarmo e raffica.
+# Prima del 10/2026 un livello, una volta scattato, restava 'active' PER SEMPRE: ogni
+# livello ha avvisato una sola volta nella vita (ultimo invio 08/08/2026). Ora:
+#  - riarmo: il livello torna pronto se il segnale è sotto soglia e sono passate
+#    NOWCAST_REARM_H ore dall'ultimo invio (stessa regola del backtest anello, ott-2026);
+#  - anti-raffica: al massimo UN messaggio per area ogni NOWCAST_REARM_H ore tra
+#    anelli e prodotti (SRI/SRT1), salvo salita a un livello più alto.
+NOWCAST_REARM_H = float(os.environ.get('NOWCAST_REARM_H', '3'))
+_LEVEL_RANK = {'warning': 1, 'alarm': 2, 'emergency': 3}
+
+
 def _eval_product(area, product, thresholds, signal, geom, buf_km,
                   sri_frames, centroid, state, now_iso, channels, writer,
                   rcpt_email=None, rcpt_tg=None):
     """Valuta soglie. Ritorna True se ha triggerato, False altrimenti."""
+    now_ms = _iso_ms(now_iso) or int(datetime.now(timezone.utc).timestamp() * 1000)
+    rearm_ms = NOWCAST_REARM_H * 3600_000
+    # riarmo dei livelli attivi ora sotto soglia
+    for th in thresholds:
+        k = f"{area['name']}:nowcast:{product}:{buf_km}:{th['level']}"
+        s = state.get(k)
+        if s and s.get('active') and signal['max'] < th['value']:
+            last = _iso_ms(s.get('last_trigger_utc'))
+            if last is None or now_ms - last >= rearm_ms:
+                state[k] = {'active': False, 'last_trigger_utc': s.get('last_trigger_utc'), 'rearmed_utc': now_iso}
+
     # determina trigger massimo superato
     hit = None
     for th in sorted(thresholds, key=lambda x: x['value']):
@@ -852,6 +874,16 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
     if st.get('active'):
         return True  # già triggerato in precedenza, anti-spam
     state[key] = {'active': True, 'last_trigger_utc': now_iso}
+
+    # anti-raffica per area (tutti gli anelli e prodotti insieme)
+    akey = f"{area['name']}:nowcast:prealert"
+    ast = state.get(akey, {})
+    last_any = _iso_ms(ast.get('last_utc'))
+    rank = _LEVEL_RANK.get(hit['level'], 1)
+    if last_any is not None and now_ms - last_any < rearm_ms and rank <= ast.get('rank', 0):
+        log.info(f"  nowcast {product}/{hit['level']} buf{buf_km}: già avvisato da {(now_ms - last_any) / 60000:.0f} min, non reinvio")
+        return True
+    state[akey] = {'last_utc': now_iso, 'rank': rank}
 
     # moto + probabilità (solo per SRI che ha 2 frame)
     motion, prob = None, None

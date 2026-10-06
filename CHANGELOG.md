@@ -1,5 +1,16 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — "Cella in avvicinamento" di nuovo attiva
+
+- 🐞 `nowcast.py` `_eval_product` — gli avvisi "cella radar in avvicinamento" (anelli 5/10 km, SRI e SRT1)
+  **non si riarmavano mai**: ogni livello restava 'active' per sempre dopo il primo invio → 33 avvisi a giugno,
+  6 a luglio, 1 ad agosto (08/08), poi silenzio. Ora il livello si riarma se il segnale è sotto soglia e sono
+  passate `NOWCAST_REARM_H` (3) ore dall'ultimo invio; gli stati bloccati da giugno si sbloccano al primo run asciutto.
+- ✏️ Anti-raffica: al massimo un messaggio "cella in avvicinamento" per area ogni 3 h tra anelli e prodotti,
+  salvo salita di livello (warning → alarm → emergency). Soglie e canali invariati.
+- 🔎 Backtest anello continuo 07/07→06/10 (SRI ≥ 10 mm/h entro 10 km, riarmo 3 h): Ruspino ~9 avvisi/mese,
+  5 senza pioggia sull'area in 3 mesi, 10/12 episodi significativi presi; Cepina ~16/mese; Panna ~10/mese.
+
 ## Sessione 2026-10-06 — Radar MeteoSwiss in archivio (studio)
 
 - 🆕 `mch_collect.py` — radar MeteoSwiss PRECIP (RZC, mm/h ogni 5', open data CC BY 4.0 "Fonte: MeteoSwiss")
