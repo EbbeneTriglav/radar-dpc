@@ -45,6 +45,12 @@ jobs:
       - name: Run ground_collect
         run: python archive/scripts/ground_collect.py
 
+      # Totali giornalieri dei pluviometri ARPA per la pagina Previsioni
+      # (il browser non sempre raggiunge Socrata: qui il dato e' nel repo).
+      - name: Pluviometri - totali giornalieri
+        continue-on-error: true
+        run: python archive/scripts/ground_daily.py
+
       - name: Episodi di pioggia (con pluviometro)
         continue-on-error: true
         run: python archive/scripts/episodes.py
@@ -53,7 +59,7 @@ jobs:
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add archive/data/forecast_verification.csv archive/data/ground_rain.csv archive/data/ground_index.csv archive/data/episodes.csv archive/data/episodes_alerts.csv 2>/dev/null || true
+          git add archive/data/forecast_verification.csv archive/data/ground_rain.csv archive/data/ground_index.csv archive/data/ground_daily.csv archive/data/episodes.csv archive/data/episodes_alerts.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No verification changes."
           else

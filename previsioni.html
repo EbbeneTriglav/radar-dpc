@@ -200,7 +200,7 @@
     che si ferma a ~2 giorni, resta nel massimo col valore raggiunto.
     Un modello che non copre un giorno (MeteoSwiss oltre +5 giorni, AROME oltre ~2 giorni) viene escluso da quel giorno, non contato come zero.
     <b>CUM3 DPC</b> = pluviometri a terra interpolati (non radar), media sull'area. <b>Radar ARPA</b> = intensità massima sull'area integrata nel tempo (solo Lombardia).
-    Pluviometri: Cornalita (Ruspino), Oga S.Colombano (Cepina), Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente).
+    Pluviometri: Cornalita (Ruspino) e Oga S.Colombano (Cepina) da ARPA Lombardia, totali archiviati due volte al giorno e integrati dal dato live quando raggiungibile; Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente). “Parziale” = mancano misure nel giorno: il totale è un minimo.
     YR oltre ~2,5 giorni arriva a blocchi di 6 ore.
   </div>
 </div>
@@ -314,27 +314,52 @@ async function fetchArpaDaily(area){
     return byDay;
   }catch(e){ return {}; }
 }
+// Pluviometro ARPA: 1) totali giornalieri archiviati nel repo da ground_daily.py (GitHub Actions
+// raggiunge sempre Socrata); 2) Socrata live dal browser solo per integrare i giorni recenti.
+// Per ogni giorno vince la fonte con più misure. Giorno con misure mancanti → 'parziale', mai zero inventato.
+const GROUND_STEP_PER_DAY = 144;   // passo 10'
 async function fetchGroundDaily(area){
-  const g = AREAS[area].ground, byDay = {};
-  try{
-    if(g.type==='arpa'){
+  const g = AREAS[area].ground, byDay = {}, obs = {}, meta = {src:[], partial:new Set(), err:[]};
+  const put = (k, mm, n, exp) => {
+    if(obs[k]!=null && obs[k] >= n) return;
+    byDay[k] = mm; obs[k] = n;
+    if(exp && n < 0.9*exp) meta.partial.add(k); else meta.partial.delete(k);
+  };
+  if(g.type==='arpa'){
+    try{
+      const rows = parseCSV(await getText(RAW+'ground_daily.csv?_='+Date.now())).filter(r=>r.area_name===area);
+      for(const r of rows){ const n=+r.n_obs; if(n>0 && r.mm!=='') put(r.date_utc, +r.mm, n, +r.expected_obs); }
+      if(rows.length) meta.src.push('archivio');
+    }catch(e){ meta.err.push('archivio: '+e.message); }
+    try{
       const now = Date.now();   // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1) senza fuso
       const start = new Date(now - 8*DAY + H).toISOString().slice(0,19);
       const end = new Date(now + DAY + H).toISOString().slice(0,19);
       const where = `data >= '${start}' AND data <= '${end}'`;
-      const rows = JSON.parse(await getText(`${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`));
-      for(const row of rows){
+      const ctl = new AbortController(); const tmo = setTimeout(()=>ctl.abort(), 12000);
+      const r = await fetch(`${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`, {signal:ctl.signal});
+      clearTimeout(tmo);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const live = {}, cnt = {};
+      for(const row of await r.json()){
         const t = Date.parse(String(row.data).slice(0,19)+'+01:00'); const v = +row.valore;
-        if(isFinite(t)&&isFinite(v)&&v>=0){ const k=dayKey(t); byDay[k]=(byDay[k]||0)+v; }
+        if(isFinite(t)&&isFinite(v)&&v>=0){ const k=dayKey(t); live[k]=(live[k]||0)+v; cnt[k]=(cnt[k]||0)+1; }
       }
-    } else if(g.type==='sir'){
+      const today = dayKey(now);
+      for(const k in live) put(k, +live[k].toFixed(1), cnt[k], k===today ? null : GROUND_STEP_PER_DAY);
+      meta.src.push('ARPA live');
+    }catch(e){ meta.err.push('ARPA live: '+(e.name==='AbortError'?'timeout':e.message)); }
+  } else if(g.type==='sir'){
+    try{
       for(const line of (await getText(g.url+'?_='+Date.now())).trim().split(/\r?\n/).slice(1)){
         const [d,v] = line.split(';'); const mm = +v;
         // Giorno idrologico 09→09: il valore datato D copre quasi tutto D-1 → attribuito a D-1
         if(d && isFinite(mm)){ byDay[new Date(Date.parse(d+'T00:00:00Z')-DAY).toISOString().slice(0,10)] = mm; }
       }
-    }
-  }catch(e){ /* pluviometro opzionale */ }
+      meta.src.push('SIR');
+    }catch(e){ meta.err.push('SIR: '+e.message); }
+  }
+  byDay._meta = meta;
   return byDay;
 }
 
@@ -376,6 +401,7 @@ function build(area, models, mch, yr, cum3, arpa, ground){
       cum3: off<0 ? (cum3[k] ?? null) : null,
       arpa: off<0 && AREAS[area].arpa ? (arpa[k] ?? null) : null,
       ground: off<0 ? (ground[k] ?? null) : null,
+      groundPartial: off<0 && ground._meta ? ground._meta.partial.has(k) : false,
     });
   }
   // Serie orarie future (da adesso) per cumulata e intensità
@@ -393,7 +419,7 @@ function build(area, models, mch, yr, cum3, arpa, ground){
     for(let t=nowH; t<end; t+=H){ const v=m.h.get(t); if(v==null) break; c+=v; pts.push([t+H,c]); }
     cumModels[mk] = pts;
   }
-  return {days, hours, cumModels, models, yr, mch, nowH};
+  return {days, hours, cumModels, models, yr, mch, nowH, groundMeta: ground._meta||null};
 }
 
 // ── CARICAMENTO ──────────────────────────────────────────────────────────
@@ -409,7 +435,7 @@ async function loadArea(area){
     const c = cache[area];
     const nM = Object.keys(c.models).length;
     const mchEnd = c.mch ? Math.max(...c.mch.keys())+H : null;
-    setStatus(`Ensemble ${nM}/${OM_MODELS.length} modelli · YR ${c.yr?'ok':'non disponibile'} · MeteoSwiss ${mchEnd?'fino al '+new Date(mchEnd).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}):'non disponibile'}`);
+    setStatus(`Ensemble ${nM}/${OM_MODELS.length} modelli · YR ${c.yr?'ok':'non disponibile'} · MeteoSwiss ${mchEnd?'fino al '+new Date(mchEnd).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}):'non disponibile'}` + groundStatus(c.groundMeta, area));
     // Osservato: opzioni disponibili per l'area
     const obsSel = document.getElementById('pv-obs');
     obsSel.querySelector('option[value="arpa"]').disabled = !AREAS[area].arpa;
@@ -417,6 +443,12 @@ async function loadArea(area){
     if(state.obs==='arpa' && !AREAS[area].arpa){ state.obs='ground'; obsSel.value='ground'; }
     renderAll();
   }catch(e){ setStatus('Errore: '+e.message); }
+}
+function groundStatus(m, area){
+  const n = AREAS[area].ground.name;
+  if(!m) return '';
+  if(m.src.length) return ` · Pluviometro ${n}: ${m.src.join(' + ')}`;
+  return ` · Pluviometro ${n}: non raggiungibile (${m.err.join('; ')})`;
 }
 function setStatus(t){ document.getElementById('pv-status').textContent = t; }
 function renderAll(){
@@ -441,7 +473,7 @@ function renderDays(c){
       <div class="dd">${d.isToday?'oggi':fmtDay(d.ms)}</div>
       <div class="dv">${v==null?'<small>n.d.</small>':fmtMM(v)+'<small> mm</small>'}</div>
       <div class="bar"><i style="width:${w}%;background:${col}"></i></div>
-      <div class="kind">${d.isPast?'osservato':d.isToday?'resto del giorno':'previsto'}</div></div>`;
+      <div class="kind">${d.isPast?(state.obs==='ground'&&d.groundPartial&&v!=null?'osservato · parziale':'osservato'):d.isToday?'resto del giorno':'previsto'}</div></div>`;
   }).join('');
   box.querySelectorAll('.pv-day').forEach(el=>el.addEventListener('click',()=>{
     state.sel = +el.dataset.off; renderDays(c); renderTiles(c);
@@ -460,7 +492,7 @@ function renderTiles(c){
   document.getElementById('pv-daytitle').innerHTML = `<b>${d.isToday?'Oggi':ds}</b> · ${d.isPast?'osservato e previsto':d.isToday?'previsto per le ore che restano':'previsto'}`;
   const t = [];
   if(d.isPast){
-    t.push(tile(cssv('--s-obs'),'Pluviometro '+AREAS[state.area].ground.name, d.ground, 'misura a terra','sq'));
+    t.push(tile(cssv('--s-obs'),'Pluviometro '+AREAS[state.area].ground.name, d.ground, d.groundPartial?'misura a terra · parziale (misure mancanti, non contate come zero)':'misura a terra','sq'));
     t.push(tile(cssv('--s-obs'),'CUM3 DPC', d.cum3, 'pluviometri interpolati, media area','sq'));
     if(AREAS[state.area].arpa) t.push(tile(cssv('--s-obs'),'Radar ARPA', d.arpa, 'max sull\'area','sq'));
     if(show('ens')) t.push(tile(cssv('--s-ens'),'Previsto · Ensemble', d.ens, d.ens!=null?`intervallo ${fmtMM(d.ensMin)}–${fmtMM(d.ensMax)} mm`:''));
@@ -703,14 +735,14 @@ function renderFut(c){
 function renderTable(c){
   const a = AREAS[state.area];
   const cols = [['Giorno',d=>d.isToday?'oggi (resto)':fmtDay(d.ms)],
-    ['Pluviometro',d=>d.ground],['CUM3 DPC',d=>d.cum3]];
+    ['Pluviometro',d=>d.ground==null?null:fmtMM(d.ground)+(d.groundPartial?' *':'')],['CUM3 DPC',d=>d.cum3]];
   if(a.arpa) cols.push(['Radar ARPA',d=>d.arpa]);
   cols.push(['Ensemble media',d=>d.ens],['Ens. min',d=>d.ensMin],['Ens. worst-case',d=>d.ensMax],['Più piovoso',d=>d.ensWorst],
             ['YR',d=>d.yr],['MeteoSwiss',d=>d.mch]);
   const cell = v => v==null ? '<td class="na">—</td>' : typeof v==='string' ? `<td>${v}</td>` : `<td>${fmtMM(v)}</td>`;
   document.getElementById('pv-tbl').innerHTML = `<table class="pt"><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`
     + c.days.map(d=>`<tr class="${d.isToday?'today':''}">${cols.map((col,i)=>i===0?`<td>${col[1](d)}</td>`:cell(col[1](d))).join('')}</tr>`).join('')
-    + `</tbody></table><p class="pv-notes" style="margin-top:8px">mm/giorno (UTC). “—” = dato non disponibile o fuori dall'orizzonte del modello, non zero.</p>`;
+    + `</tbody></table><p class="pv-notes" style="margin-top:8px">mm/giorno (UTC). “—” = dato non disponibile o fuori dall'orizzonte del modello, non zero. “*” = pluviometro con misure mancanti nel giorno.</p>`;
 }
 
 // ── CONTROLLI ────────────────────────────────────────────────────────────
