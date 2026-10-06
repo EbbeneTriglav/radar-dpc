@@ -843,6 +843,11 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
 #  - anti-raffica: al massimo UN messaggio per area ogni NOWCAST_REARM_H ore tra
 #    anelli e prodotti (SRI/SRT1), salvo salita a un livello più alto.
 NOWCAST_REARM_H = float(os.environ.get('NOWCAST_REARM_H', '3'))
+# Canali della pre-allerta "cella in avvicinamento": SOLO Telegram (scelta utente 06/10/2026:
+# il backtest stagionale dà 7–15 avvisi/mese per area, troppi per l'email ai destinatari).
+# Si interseca con i canali dell'area: se un'area non ha Telegram, non parte nulla.
+# "Cella su area" e soglie DPC restano su email + Telegram come prima.
+PREALERT_CHANNELS = set(os.environ.get('NOWCAST_PREALERT_CHANNELS', 'telegram').split(','))
 _LEVEL_RANK = {'warning': 1, 'alarm': 2, 'emergency': 3}
 
 
@@ -894,8 +899,9 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
             prob = arrival_probability(signal['max_xy_tm'], motion, centroid, buf_km)
 
     subject, text, md = compose(area, product, hit, signal, motion, prob, buf_km)
-    em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
-    tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+    pch = set(channels) & PREALERT_CHANNELS
+    em = send_email(subject, text, to=rcpt_email) if 'email' in pch else 'skipped'
+    tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in pch else 'skipped'
 
     writer.writerow({
         'event_timestamp_utc': now_iso, 'area_name': area['name'],
