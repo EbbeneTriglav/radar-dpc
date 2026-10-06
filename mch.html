@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar MeteoSwiss — Radar DPC</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css?v=20261006mch">
+  <style>
+    body{ --s-area:#3987e5; --s-ring:#d95926; --card:#12121e; --card2:#171726; --grid:rgba(255,255,255,.06);
+          --ink:#e6eaf5; --ink2:#a3acc8; --ink3:#6f7899; }
+    body.light-theme{ --s-area:#2a78d6; --s-ring:#eb6834; --card:#ffffff; --card2:#f5f7fc; --grid:rgba(10,20,50,.07);
+          --ink:#141a33; --ink2:#4a5480; --ink3:#7d87a6; }
+    .mc-wrap{max-width:1600px;margin:0 auto;padding:16px 22px 36px;width:100%;height:calc(100vh - var(--topbar-h));overflow-y:auto}
+    .mc-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline}
+    .mc-head h2{font-size:19px;font-weight:600;color:var(--ink);margin:4px 0}
+    .pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--ink2);border:1px solid var(--border);
+      border-radius:999px;padding:3px 10px;background:var(--card)}
+    .mc-note{color:var(--ink2);font-size:13px;line-height:1.55;max-width:1050px;margin:6px 0 14px}
+    .mc-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:16px;align-items:start}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+    .card h3{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+    .sub{font-size:12px;color:var(--ink3);margin-top:2px}
+    #mc-map{height:560px;border-radius:10px;margin-top:10px;background:#0b0b12}
+    .player{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+    .pbtn{background:var(--card2);color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:6px 10px;
+      cursor:pointer;font:inherit;font-size:13px;min-width:34px}
+    .pbtn:hover{border-color:var(--accent)} .pbtn.on{border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+    #mc-slider{flex:1;min-width:140px;accent-color:var(--accent)}
+    .ts{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;min-width:200px}
+    .ts small{display:block;font-size:11px;font-weight:400;color:var(--ink3)}
+    .ts.old{color:#e66767}
+    .legend{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:10px;font-size:11.5px;color:var(--ink2)}
+    .legend .sw{display:inline-block;width:22px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+    .area-card{margin-bottom:16px}
+    .area-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+    .tile{background:var(--card2);border-radius:10px;padding:9px 11px}
+    .tile .k{font-size:11.5px;color:var(--ink2)}
+    .tile .v{font-size:22px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:2px}
+    .tile .v small{font-size:12px;font-weight:400;color:var(--ink2);margin-left:3px}
+    .tile .s{font-size:11px;color:var(--ink3)}
+    .cmp{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;font-variant-numeric:tabular-nums}
+    .cmp th,.cmp td{padding:5px 6px;border-bottom:1px solid var(--grid);text-align:right;color:var(--ink)}
+    .cmp th{color:var(--ink2);font-weight:500} .cmp td:first-child,.cmp th:first-child{text-align:left}
+    .cmp .dim{color:var(--ink3)}
+    .cv{position:relative;height:190px;margin-top:8px}
+    .foot{font-size:12px;color:var(--ink3);line-height:1.6;margin-top:16px;max-width:1100px}
+    .foot b{color:var(--ink2)}
+    .site-lbl{background:none;border:0;box-shadow:none;color:var(--ink);font-size:11px;font-weight:600;
+      text-shadow:0 0 3px var(--card),0 0 3px var(--card)}
+    @media (max-width:980px){ .mc-grid{grid-template-columns:1fr} #mc-map{height:420px} }
+    @media (max-width:560px){ .mc-wrap{padding:12px 12px 28px} #mc-map{height:340px} .ts{min-width:0;width:100%} }
+  </style>
+</head>
+<body>
+<nav id="topbar">
+  <div class="logo">
+    <i class="fa fa-broadcast-tower"></i>
+    RADAR<span style="color:var(--text2);font-weight:300">·</span>DPC
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🗺 Mappa Live</a>
+    <a href="storico.html" class="nav-link">📊 Storico</a>
+    <a href="archivio.html" class="nav-link">🗄 Archivio</a>
+    <a href="monitor.html" class="nav-link">🚨 Monitor</a>
+    <a href="eventi.html" class="nav-link">📋 Eventi</a>
+    <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link active">🛰 Radar MeteoSwiss</a>
+    <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
+    <a href="verifica.html" class="nav-link">✅ Verifica</a>
+    <a href="report.html" class="nav-link">📑 Report</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema"><i class="fa fa-moon"></i></button>
+</nav>
+
+<div class="mc-wrap">
+  <div class="mc-head">
+    <h2>Radar MeteoSwiss — mappa live</h2>
+    <span class="pill">🔬 dato di studio: non vota nelle allerte</span>
+    <span class="pill">Fonte: MeteoSwiss · CC BY 4.0</span>
+  </div>
+  <p class="mc-note">Intensità di pioggia (mm/h) del composito dei 5 radar svizzeri, ogni 5 minuti. Guarda la Valtellina
+    <b>da nord</b> (Weissfluhgipfel, Davos) e Ruspino dal Ticino (Monte Lema), da angolazioni diverse rispetto ai radar DPC e ARPA.
+    <b>Grigio</b> = fuori portata dei radar (nessun dato, non “zero”). Panna non è coperta.</p>
+
+  <div class="mc-grid">
+    <div class="card">
+      <h3>Mappa</h3>
+      <div class="sub" id="mc-status">Caricamento frame…</div>
+      <div id="mc-map"></div>
+      <div class="player">
+        <button class="pbtn" id="b-first" title="Primo frame">⏮</button>
+        <button class="pbtn" id="b-prev" title="Indietro">◀</button>
+        <button class="pbtn" id="b-play" title="Riproduci">▶</button>
+        <button class="pbtn" id="b-next" title="Avanti">▶|</button>
+        <button class="pbtn on" id="b-live" title="Ultimo frame, aggiornamento automatico">LIVE</button>
+        <input type="range" id="mc-slider" min="0" max="0" value="0" aria-label="Frame">
+        <select class="pbtn" id="mc-speed" title="Velocità"><option value="700">lenta</option><option value="400" selected>media</option><option value="180">veloce</option></select>
+        <div class="ts" id="mc-ts">—<small>&nbsp;</small></div>
+      </div>
+      <div class="legend" id="mc-legend"></div>
+    </div>
+    <div>
+      <div class="card area-card" id="card-ruspino"></div>
+      <div class="card area-card" id="card-cepina"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Come leggere.</b> Le schede usano l'archivio <code>&lt;area&gt;_mch.csv</code> (5'): intensità massima e media sul poligono dell'area e nell'anello
+    fino a 10 km dal bordo. “Ultime 24 h” = integrale dell'intensità <b>media d'area</b> nel tempo, per il radar MeteoSwiss, il radar DPC (SRI) e il radar ARPA:
+    calcolato solo sugli istanti (5') presenti nell'archivio MeteoSwiss, così le tre fonti sono confrontate alla pari;
+    campioni mancanti dichiarati (n/288), mai contati come zero.
+    Il valore satura a 118 mm/h (limite del prodotto). Lo scaricamento libero di MeteoSwiss tiene solo 14 giorni: l'archivio lo costruiamo noi.
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/basemap-picker.js?v=20261006mch"></script>
+<script>
+const RAW_BASE = 'https://raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/';
+async function fetchData(path, bust = true){
+  const q = bust ? '?_=' + Date.now() : '';
+  if (location.hostname.endsWith('github.io')) {
+    try { const r = await fetch(RAW_BASE + path + q, { cache: 'no-cache' }); if (r.ok) return r; } catch {}
+  }
+  return fetch(path + q, { cache: 'no-cache' });
+}
+const dataUrl = p => (location.hostname.endsWith('github.io') ? RAW_BASE : '') + p;
+const AREAS = { ruspino: 'Ruspino', cepina: 'Cepina' };
+const CLASSES = [[0.1,'#a6d8ff'],[0.5,'#5fb4f5'],[1,'#2a78d6'],[2,'#19a26b'],[5,'#9bd12f'],[10,'#f5d000'],[20,'#f08c00'],[40,'#e03030'],[70,'#b0168a']];
+const SITES = [ ['Monte Lema', 46.0420, 8.8330, 'left'], ['Weissfluhgipfel', 46.8350, 9.7944, 'right'], ['Albis', 47.2843, 8.5120, 'right'] ];
+const DAY = 864e5, FRAME = 5 * 60e3;
+const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+const fmt = (v, d = 1) => v == null || !isFinite(v) ? '—' : (v === 0 ? '0' : v.toFixed(v < 10 ? d : 0));
+const rome = (ms, o) => new Date(ms).toLocaleString('it-IT', { timeZone: 'Europe/Rome', ...o });
+function parseCSV(t){ const L = t.trim().split(/\r?\n/), H = L[0].split(',');
+  return L.slice(1).map(l => { const c = l.split(','), o = {}; H.forEach((k, i) => o[k] = c[i] ?? ''); return o; }); }
+
+// ── Tema (chiave condivisa 'radar-theme') ──────────────────────────────────
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){
+  document.body.classList.toggle('light-theme', t === 'light');
+  themeBtn.innerHTML = t === 'light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+  if (MAP && typeof BasemapPicker !== 'undefined') BasemapPicker.applyTheme(t);
+}
+themeBtn.addEventListener('click', () => {
+  const t = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+  try { localStorage.setItem('radar-theme', t); } catch {}
+  applyTheme(t); renderCards();
+});
+
+// ── Mappa ───────────────────────────────────────────────────────────────
+let MAP, OVERLAY = null, FRAMES = [], IDX = 0, PLAY = null, LIVE = true, INDEX_KEY = '';
+function initMap(areas){
+  MAP = L.map('mc-map', { zoomControl: true, attributionControl: true }).setView([46.15, 9.95], 8);
+  BasemapPicker.init(MAP);
+  let theme = 'dark'; try { theme = localStorage.getItem('radar-theme') || 'dark'; } catch {}
+  applyTheme(theme);
+  MAP.attributionControl.addAttribution('Radar: MeteoSwiss (CC BY 4.0)');
+  const grp = [];
+  for (const a of areas) {
+    if (!AREAS[a.name]) continue;
+    const poly = L.polygon(a.polygon.map(([la, lo]) => [la, lo]), { color: '#ffffff', weight: 2.5, fill: false, pane: 'labels' }).addTo(MAP);
+    L.polygon(a.polygon.map(([la, lo]) => [la, lo]), { color: '#111', weight: 5, opacity: .35, fill: false }).addTo(MAP);
+    poly.bindTooltip(AREAS[a.name], { permanent: true, direction: 'top', className: 'site-lbl' });
+    grp.push(...a.polygon);
+  }
+  for (const [n, la, lo, dir] of SITES) {
+    L.circleMarker([la, lo], { radius: 5, color: '#fff', weight: 2, fillColor: '#111', fillOpacity: 1 }).addTo(MAP)
+      .bindTooltip('📡 radar ' + n, { permanent: true, direction: dir, className: 'site-lbl' });
+  }
+  if (grp.length) MAP.fitBounds(L.latLngBounds(grp).pad(1.6));
+}
+function renderLegend(){
+  const el = document.getElementById('mc-legend');
+  el.innerHTML = '<span>mm/h</span>' + CLASSES.map(([v, c], i) =>
+      `<span><span class="sw" style="background:${c}"></span>${i < CLASSES.length - 1 ? v + '–' + CLASSES[i + 1][0] : '≥ ' + v}</span>`).join('')
+    + '<span><span class="sw" style="background:rgba(128,128,128,.45)"></span>fuori copertura</span>';
+}
+async function loadIndex(){
+  try {
+    const j = await (await fetchData('archive/data/radar_mch/index.json')).json();
+    if (!j.frames || !j.frames.length) throw new Error('nessun frame');
+    const changed = j.updated_at_utc !== INDEX_KEY;
+    INDEX_KEY = j.updated_at_utc;
+    FRAMES = j.frames.slice().sort((a, b) => a.ts_utc.localeCompare(b.ts_utc));
+    FRAMES.forEach(f => { f.url = dataUrl('archive/data/radar_mch/' + f.file) + '?v=' + encodeURIComponent(INDEX_KEY);
+      const im = new Image(); im.src = f.url; });                       // precarica: animazione senza sfarfallio
+    const sl = document.getElementById('mc-slider'); sl.max = FRAMES.length - 1;
+    if (LIVE || changed) show(LIVE ? FRAMES.length - 1 : Math.min(IDX, FRAMES.length - 1));
+    document.getElementById('mc-status').textContent =
+      `${FRAMES.length} frame (ultima ora circa) · indice aggiornato ${rome(Date.parse(j.updated_at_utc), { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (e) {
+    document.getElementById('mc-status').textContent = 'Frame radar non disponibili: ' + e.message +
+      ' (la raccolta parte dal primo giro di arpa-collect dopo il deploy).';
+  }
+}
+function show(i){
+  if (!FRAMES.length) return;
+  IDX = Math.max(0, Math.min(i, FRAMES.length - 1));
+  const f = FRAMES[IDX];
+  if (!OVERLAY) OVERLAY = L.imageOverlay(f.url, f.bounds, { opacity: .78, pane: 'radar' }).addTo(MAP);
+  else { OVERLAY.setUrl(f.url); OVERLAY.setBounds(L.latLngBounds(f.bounds)); }
+  document.getElementById('mc-slider').value = IDX;
+  const t = Date.parse(f.ts_utc), age = (Date.now() - t) / 60e3, last = IDX === FRAMES.length - 1;
+  const el = document.getElementById('mc-ts');
+  el.classList.toggle('old', last && age > 20);
+  el.innerHTML = rome(t, { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
+    `<small>${last ? (age > 20 ? `⚠️ ultimo frame di ${Math.round(age)} min fa` : `ultimo frame · ${Math.round(age)} min fa`) : `frame ${IDX + 1}/${FRAMES.length}`} · ora italiana</small>`;
+}
+function setLive(on){ LIVE = on; document.getElementById('b-live').classList.toggle('on', on); }
+function stop(){ if (PLAY) { clearInterval(PLAY); PLAY = null; document.getElementById('b-play').textContent = '▶'; } }
+document.getElementById('b-play').onclick = () => {
+  if (PLAY) return stop();
+  setLive(false); document.getElementById('b-play').textContent = '⏸';
+  PLAY = setInterval(() => show(IDX >= FRAMES.length - 1 ? 0 : IDX + 1), +document.getElementById('mc-speed').value);
+};
+document.getElementById('mc-speed').onchange = () => { if (PLAY) { stop(); document.getElementById('b-play').click(); } };
+document.getElementById('b-prev').onclick = () => { stop(); setLive(false); show(IDX - 1); };
+document.getElementById('b-next').onclick = () => { stop(); show(IDX + 1); setLive(IDX === FRAMES.length - 1); };
+document.getElementById('b-first').onclick = () => { stop(); setLive(false); show(0); };
+document.getElementById('b-live').onclick = () => { stop(); setLive(true); loadIndex(); };
+document.getElementById('mc-slider').oninput = e => { stop(); show(+e.target.value); setLive(IDX === FRAMES.length - 1); };
+
+// ── Schede area ─────────────────────────────────────────────────────────
+const DATA = {};
+async function csvRows(path){ try { const r = await fetchData(path); return r.ok ? parseCSV(await r.text()) : []; } catch { return []; } }
+async function loadArea(a){
+  const [mch, sri, arpa] = await Promise.all([
+    csvRows(`archive/data/${a}_mch.csv`), csvRows(`archive/data/${a}_sri.csv`), csvRows(`archive/data/${a}_arpa.csv`)]);
+  DATA[a] = {
+    mch: mch.filter(r => r.status === 'ok').map(r => ({ t: Date.parse(r.timestamp_utc), max: +r.max_mmh, mean: +r.mean_mmh,
+      rmax: r.ring_max_mmh === '' ? null : +r.ring_max_mmh, rwet: r.ring_wet5_pct === '' ? null : +r.ring_wet5_pct,
+      nod: +r.nodata_pct || 0 })).sort((x, y) => x.t - y.t),
+    sri: sri.filter(r => r.status === 'ok').map(r => ({ t: Date.parse(r.timestamp_utc), mean: +r.mean_mmh })),
+    arpa: arpa.filter(r => r.location_type === 'area' && r.mean_mmh !== '').map(r => ({ t: Date.parse(r.timestamp_utc), mean: +r.mean_mmh })),
+  };
+}
+function last24(rows, end){
+  const from = end - DAY, seen = new Set(); let mm = 0;
+  for (const r of rows) if (r.t > from && r.t <= end && isFinite(r.mean) && !seen.has(r.t)) { seen.add(r.t); mm += r.mean * 5 / 60; }
+  return { mm, n: seen.size };
+}
+const charts = {};
+function renderCards(){ for (const a of Object.keys(AREAS)) renderCard(a); }
+function renderCard(a){
+  const el = document.getElementById('card-' + a), d = DATA[a];
+  if (!d) { el.innerHTML = `<h3>${AREAS[a]}</h3><div class="sub">Caricamento…</div>`; return; }
+  const L0 = d.mch[d.mch.length - 1];
+  if (!L0) { el.innerHTML = `<h3>${AREAS[a]}</h3><div class="sub">Nessun dato MeteoSwiss ancora archiviato.</div>`; return; }
+  const end = L0.t, age = (Date.now() - end) / 60e3;
+  // stessi istanti per tutte le fonti: solo i frame 5' presenti nell'archivio MeteoSwiss (confronto alla pari)
+  const tset = new Set(d.mch.filter(r => r.t > end - DAY).map(r => r.t));
+  const same = rows => last24(rows.filter(r => tset.has(r.t)), end);
+  const rows = [['Radar MeteoSwiss', last24(d.mch, end)], ['Radar DPC (SRI)', same(d.sri)], ['Radar ARPA', same(d.arpa)]];
+  el.innerHTML = `<div class="area-top"><h3>${AREAS[a]}</h3>
+      <span class="sub" style="${age > 20 ? 'color:#e66767' : ''}">ultimo dato ${rome(end, { hour: '2-digit', minute: '2-digit' })}${age > 20 ? ` · ⚠️ ${Math.round(age)} min fa` : ''}</span></div>
+    <div class="tiles">
+      <div class="tile"><div class="k">Sull'area · max</div><div class="v">${fmt(L0.max)}<small>mm/h</small></div><div class="s">media ${fmt(L0.mean, 2)} mm/h${L0.nod ? ` · ${L0.nod}% senza dato` : ''}</div></div>
+      <div class="tile"><div class="k">Anello 10 km · max</div><div class="v">${fmt(L0.rmax)}<small>mm/h</small></div><div class="s">${L0.rwet == null ? '—' : fmt(L0.rwet) + '% dell\'anello sopra 5 mm/h'}</div></div>
+    </div>
+    <div class="sub">Pioggia ultime 24 h, media d'area, sugli stessi istanti per le tre fonti</div>
+    <table class="cmp"><thead><tr><th>Fonte</th><th>mm</th><th>campioni</th></tr></thead><tbody>
+      ${rows.map(([n, r]) => `<tr><td>${n}</td><td>${r.n ? fmt(r.mm) : '—'}</td><td class="dim">${r.n}/288${r.n && r.n < 230 ? ' · parziale' : ''}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="cv"><canvas id="ch-${a}"></canvas></div>`;
+  const pts = d.mch.filter(r => r.t > end - DAY);
+  const A = cssv('--s-area'), R = cssv('--s-ring'), ink2 = cssv('--ink2'), grid = cssv('--grid');
+  if (charts[a]) charts[a].destroy();
+  charts[a] = new Chart(document.getElementById('ch-' + a), { type: 'line',
+    data: { datasets: [
+      { label: 'Area · max', data: pts.map(r => ({ x: r.t, y: r.max })), borderColor: A, backgroundColor: A + '22', fill: true, borderWidth: 2, pointRadius: 0, stepped: 'before' },
+      { label: 'Anello 10 km · max', data: pts.map(r => ({ x: r.t, y: r.rmax })), borderColor: R, borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, stepped: 'before' } ] },
+    options: { parsing: false, animation: false, maintainAspectRatio: false, interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      plugins: { legend: { labels: { color: ink2, boxWidth: 14, boxHeight: 2, font: { size: 11 } } },
+        tooltip: { callbacks: { title: it => rome(it[0].parsed.x, { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
+          label: it => ` ${it.dataset.label}: ${fmt(it.parsed.y)} mm/h` } } },
+      scales: { x: { type: 'linear', min: end - DAY, max: end, ticks: { color: ink2, stepSize: 6 * 36e5, maxRotation: 0,
+          callback: v => rome(v, { hour: '2-digit', minute: '2-digit' }) }, grid: { color: grid } },
+        y: { beginAtZero: true, suggestedMax: 5, ticks: { color: ink2 }, grid: { color: grid }, title: { display: true, text: 'mm/h', color: ink2 } } } } });
+}
+
+// ── Avvio ────────────────────────────────────────────────────────────────
+(async () => {
+  renderLegend(); renderCards();
+  let areas = [];
+  try { areas = (await (await fetchData('archive/areas.json')).json()).areas || []; } catch {}
+  initMap(areas);
+  await loadIndex();
+  await Promise.all(Object.keys(AREAS).map(loadArea)); renderCards();
+  setInterval(async () => { if (LIVE && !PLAY) { await loadIndex(); await Promise.all(Object.keys(AREAS).map(loadArea)); renderCards(); } }, 5 * 60e3);
+})();
+</script>
+</body>
+</html>

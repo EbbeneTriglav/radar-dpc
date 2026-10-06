@@ -7,7 +7,7 @@
 let map, tileLayer;
 let currentProduct = 'VMI';
 let autoRefreshTimer = null;
-let isDarkTheme = true;
+let isDarkTheme = true;     // sincronizzato con localStorage 'radar-theme' (convenzione di tutte le pagine)
 let currentGeoRaster = null;
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
@@ -148,7 +148,10 @@ function startAutoRefresh() {
     try {
       await Player.loadProduct(currentProduct);
       showToast('Dati aggiornati', 'success', 2000);
-    } catch {}
+    } catch (e) {
+      setStatus('error', 'Aggiornamento fallito');
+      showToast('Aggiornamento automatico fallito: ' + (e?.message || e), 'error');
+    }
   }, CONFIG.REFRESH_MS);
 }
 
@@ -172,12 +175,24 @@ function _readUrlParams() {
 }
 
 // ─── Tema chiaro/scuro ────────────────────────────────────────────────────────
-function toggleTheme() {
-  isDarkTheme = !isDarkTheme;
+function _applyTheme(dark) {
+  isDarkTheme = dark;
   document.body.classList.toggle('light-theme', !isDarkTheme);
   if (typeof BasemapPicker !== 'undefined') {
     BasemapPicker.applyTheme(isDarkTheme ? 'dark' : 'light');
   }
+}
+
+function toggleTheme() {
+  _applyTheme(!isDarkTheme);
+  try { ChartPanel?.refresh?.(); } catch (_) {}
+  try { localStorage.setItem('radar-theme', isDarkTheme ? 'dark' : 'light'); } catch (_) {}
+}
+
+function _loadSavedTheme() {
+  let t = 'dark';
+  try { t = localStorage.getItem('radar-theme') || 'dark'; } catch (_) {}
+  _applyTheme(t !== 'light');
 }
 
 // ─── Build sidebar prodotti ───────────────────────────────────────────────────
@@ -216,8 +231,26 @@ function _buildProductList() {
 // ─── WebSocket push integration ───────────────────────────────────────────────
 let _wssUnsub = null;
 
+function _renderWssStatus(status) {
+  const el = document.getElementById('wss-status');
+  if (!el) return;
+  if (status === 'connected')       { el.className = 'wss-indicator wss-ok';   el.textContent = '⚡ WSS live'; }
+  else if (status === 'connecting') { el.className = 'wss-indicator wss-warn'; el.textContent = '🔄 WSS…'; }
+  else {
+    // WSS disabilitato (CONFIG.WSS_URL = null) o non raggiungibile → polling REST
+    const sec = Math.round(CONFIG.REFRESH_MS / 1000);
+    const on = document.getElementById('auto-refresh')?.checked !== false;
+    el.className = 'wss-indicator wss-err';
+    el.textContent = on ? `Polling ${sec}s` : 'Polling off';
+    el.title = CONFIG.WSS_URL ? 'WebSocket DPC non raggiungibile: aggiornamento via polling REST'
+                              : 'WebSocket DPC disabilitato: aggiornamento via polling REST (se Auto-refresh è attivo)';
+  }
+}
+
 function initWebSocket() {
+  _renderWssStatus(RadarWebSocket.getStatus());
   RadarWebSocket.connect((status) => {
+    _renderWssStatus(status);
     // Aggiorna l'icona auto-refresh quando il WSS è connesso
     const ar = document.getElementById('auto-refresh');
     if (status === 'connected' && ar) {
@@ -265,6 +298,7 @@ function _formatTs(ms) {
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   initMap();
+  _loadSavedTheme();   // dopo initMap: BasemapPicker.applyTheme richiede la mappa
   _buildProductList();
   _bindTimezoneToggle();
   // Pre-popola le 3 aree di studio come punti di interrogazione (Ruspino/Panna/Cepina)
@@ -298,6 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Auto-refresh toggle (polling fallback quando WSS non è connesso)
   document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
     if (e.target.checked) startAutoRefresh(); else stopAutoRefresh();
+    _renderWssStatus(RadarWebSocket.getStatus());
   });
 
   // Tema
@@ -335,7 +370,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     if (!RadarWebSocket.isConnected() && document.getElementById('auto-refresh')?.checked) {
       startAutoRefresh();
-      showToast('WSS non disponibile — uso polling REST', 'warn', 5000);
+      // Con CONFIG.WSS_URL = null il WSS è disabilitato per scelta: lo dice già l'indicatore "Polling"
+      if (CONFIG.WSS_URL) showToast('WSS non disponibile — uso polling REST', 'warn', 5000);
     }
   }, 5000);
 });
@@ -395,12 +431,22 @@ async function _loadDefaultAreas() {
       }
       for (const a of areas) {
         try {
-          await LocationPanel.addPoint(a.centroid.lat, a.centroid.lon, `📍 ${a.label}`);
+          await LocationPanel.addPoint(a.centroid.lat, a.centroid.lon, `📍 ${a.label}`, { areaName: a.name });
         } catch (e) {
           console.warn('[areas] addPoint fallito per', a.label, e);
         }
       }
       console.log(`[areas] ${areas.length} aree preset aggiunte`);
+      // Soglie operative per area (SRT1/CUM3) al tab Allerte
+      if (typeof AlertSystem !== 'undefined' && AlertSystem.setAreaThresholds) AlertSystem.setAreaThresholds(areas);
+      // Grafico vuoto all'avvio: il primo frame è stato disegnato prima che i punti
+      // esistessero → ripeti l'estrazione sul frame corrente.
+      const ts = Player.getCurrentTimestamp?.();
+      if (ts) {
+        const ts2 = Player.getTimestamps?.() || [];
+        const idx = ts2.indexOf(ts);
+        await onFrameChange(ts, idx >= 0 ? idx : 0, ts2.length);
+      }
     };
     tryAdd();
   } catch (e) {

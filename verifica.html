@@ -53,6 +53,8 @@
     .lg-chip .sw{width:22px;height:4px;border-radius:2px;flex:none}
     .lg-chip.dash .sw{height:0;border-top:3px dashed currentColor;background:none!important}
     .lg-group{font-size:11px;color:var(--text3,#94a3b8);text-transform:uppercase;letter-spacing:.05em;width:100%;margin:6px 0 0}
+    .vf-wrap{min-width:0}  /* #app è flex: senza min-width:0 le tabelle larghe allargano la pagina su telefono */
+    @media (max-width:768px){ .vf-wrap{padding:14px 12px} table.vf{display:block;overflow-x:auto} #fc-sites{grid-template-columns:1fr!important} }
   </style>
 </head>
 <body>
@@ -66,6 +68,7 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link active">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
@@ -100,12 +103,12 @@
   <div class="vf-cards" id="acc-cards"><div class="vf-card"><div class="k">Caricamento…</div></div></div>
   <p class="vf-note" id="acc-legend"></p>
 
-  <h2 style="font-size:15px;margin:24px 0 8px">Forecast sorgenti — 24/48/72h (Ruspino · Panna · Cepina)</h2>
+  <h2 style="font-size:15px;margin:24px 0 8px">Forecast sorgenti — Ruspino 24/48/72h · Panna e Cepina prossimi 3 giorni</h2>
   <p class="vf-note">Stessi ingredienti delle dashboard: 5 modelli Open-Meteo (ICON·IFS·GFS·ARPEGE·AROME),
   <b>worst-case</b> = modello più piovoso, <b>MET Norway (YR)</b> come validazione indipendente (mai mediato).
-  Se una soglia viene superata, il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice decisionale
-  dettagliata va solo via mail ai destinatari). Ricalcolo live qui sotto per controllo; il <b>trigger reale</b> gira
-  server-side ogni 6h e su cambi repentini.</p>
+  Se una soglia viene raggiunta (già al primo livello), il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice decisionale
+  dettagliata va solo via mail ai destinatari); la mail può partire anche per un <b>salto improvviso</b> della previsione.
+  Ricalcolo live qui sotto per controllo; il <b>trigger reale</b> gira server-side ogni 6h.</p>
   <div id="fc-sites" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
     <div class="vf-card"><div class="k">Caricamento forecast…</div></div>
   </div>
@@ -150,7 +153,7 @@
   <table class="vf" id="ev-table" style="display:none">
     <thead><tr>
       <th>Quando</th><th>Area</th><th>Tipo</th>
-      <th>Intensità max</th><th title="Radar ARPA Lombardia: integrale dell'intensità">Radar ARPA (max/mean)</th><th title="CUM3 DPC: pluviometri a terra interpolati, NON radar">CUM3 pluviometri DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th title="Scarto della CUM3 (pluviometri interpolati): non è una verifica del radar">Scarto CUM3</th>
+      <th title="Valore massimo registrato dalle allerte dell'evento; unità secondo il prodotto: SRI/ARPA mm/h, SRT1 mm/1h, CUM3 mm/3h">Valore max allerta</th><th title="Radar ARPA Lombardia: integrale dell'intensità">Radar ARPA (max/mean)</th><th title="CUM3 DPC: pluviometri a terra interpolati, NON radar">CUM3 pluviometri DPC (max/mean)</th><th>Pluviometro</th><th>Scarto ARPA</th><th title="Scarto della CUM3 (pluviometri interpolati): non è una verifica del radar">Scarto CUM3</th>
     </tr></thead>
     <tbody id="ev-body"><tr><td colspan="9">Caricamento…</td></tr></tbody>
   </table>
@@ -203,8 +206,12 @@ function parseCSV(text){
   return lines.slice(1).map(l=>{ const c=split(l); const o={}; h.forEach((k,i)=>o[k]=c[i]??''); return o; });
 }
 
-let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {},
-            groundPts: {}, groundCover: new Set() };
+let ALL = { events: [], verify: [], history: [], arpa: {}, cum3: {}, sri: {}, mch: {},
+            groundPts: {}, groundCover: new Set(), groundWins: {} };
+// ARPA Lombardia copre solo Ruspino e Cepina (Panna = Toscana, niente ARPA).
+const ARPA_AREAS = ['ruspino','cepina'];
+// Unità del valore observed_mm_max di events.csv, per prodotto.
+const PRODUCT_UNIT = p => p==='CUM3' ? 'mm/3h' : p==='SRT1' ? 'mm/1h' : (p==='SRI'||p==='ARPA') ? 'mm/h' : 'mm';
 
 // Distanza massima (minuti) tra due allerte consecutive della stessa area per
 // considerarle lo stesso evento continuo. Il monitoraggio gira ogni ~20',
@@ -238,7 +245,7 @@ async function loadAll(){
   await Promise.allSettled(areas.map(async a=>{
     try{ ALL.cum3[a]=parseCSV(await (await fetchData(`archive/data/${a}_cum3.csv`)).text()); }catch{ ALL.cum3[a]=[]; }
   }));
-  await Promise.allSettled(['ruspino','cepina'].map(async a=>{
+  await Promise.allSettled(ARPA_AREAS.map(async a=>{
     try{ ALL.arpa[a]=parseCSV(await (await fetchData(`archive/data/${a}_arpa.csv`)).text()); }catch{ ALL.arpa[a]=[]; }
   }));
 
@@ -257,7 +264,17 @@ async function loadAll(){
     })(),
     (async()=>{
       const rows = parseCSV(await (await fetchData('archive/data/ground_index.csv')).text());
-      for(const r of rows) ALL.groundCover.add(`${r.area_name}|${r.event_ts_utc}`);
+      for(const r of rows){
+        ALL.groundCover.add(`${r.area_name}|${r.event_ts_utc}`);
+        const s=new Date(r.win_start_utc).getTime(), e=new Date(r.win_end_utc).getTime();
+        if(isFinite(s)&&isFinite(e)&&e>s) (ALL.groundWins[r.area_name] ||= []).push([s,e]);
+      }
+      // Unione delle finestre archiviate (si sovrappongono tra eventi vicini)
+      for(const a in ALL.groundWins){
+        const w=ALL.groundWins[a].sort((x,y)=>x[0]-y[0]), m=[];
+        for(const iv of w){ if(m.length && iv[0]<=m[m.length-1][1]) m[m.length-1][1]=Math.max(m[m.length-1][1],iv[1]); else m.push(iv.slice()); }
+        ALL.groundWins[a]=m;
+      }
     })(),
   ]);
 }
@@ -282,25 +299,36 @@ function renderAccuracy(){
     return (ia<0?99:ia)-(ib<0?99:ib);
   });
   if (!keys.length){ cardsEl.innerHTML='<div class="vf-card"><div class="k">Nessun dato nella finestra</div></div>'; return; }
+  const MIN_N = 30;   // sotto questa numerosità le metriche non sono rappresentative
   cardsEl.innerHTML = keys.map(k=>{
     const g = groups[k];
     const n = g.length;
     const mae = g.reduce((s,r)=>s+Math.abs(+r.abs_error_mm||0),0)/n;
-    const bias = g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;
+    // Convenzione unica (anche in report.html): bias = previsto − osservato.
+    // Nel CSV bias_mm = osservato − previsto → si inverte il segno.
+    const bias = -g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;
     const hit = g.reduce((s,r)=>s+(+r.hit_warning||0),0);
     const miss = g.reduce((s,r)=>s+(+r.missed_warning||0),0);
     const fa = g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
     const [src,hz] = k.split('·');
     const label = ({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 (solo verifica)'}[src]||src)+' · '+hz;
+    if (n < MIN_N) return `<div class="vf-card" style="opacity:.55" title="Meno di ${MIN_N} confronti: metriche non rappresentative">
+      <div class="k">${label}</div>
+      <div class="v" style="font-size:15px;color:var(--text3,#94a3b8)">campione insufficiente (n=${n})</div>
+      <div class="s">MAE ${mae.toFixed(2)} mm · Bias ${bias>=0?'+':''}${bias.toFixed(2)} mm (indicativi)</div>
+      <div class="s">Hit ${hit} · Miss ${miss} · FA ${fa}</div>
+    </div>`;
     return `<div class="vf-card">
       <div class="k">${label}</div>
       <div class="v">MAE ${mae.toFixed(2)} <span style="font-size:14px">mm</span></div>
-      <div class="s">Bias ${bias>=0?'+':''}${bias.toFixed(2)} · ${n} confronti</div>
+      <div class="s">Bias ${bias>=0?'+':''}${bias.toFixed(2)} mm · ${n} confronti</div>
       <div class="s">Hit ${hit} · <span class="${miss>0?'miss':''}">Miss ${miss}</span> · FA ${fa}</div>
     </div>`;
   }).join('');
   document.getElementById('acc-legend').innerHTML =
-    'MAE = errore assoluto medio · Bias = osservato − previsto (negativo = il modello <b>sovrastima</b>, positivo = sottostima). '+
+    'MAE = errore assoluto medio · Bias = <b>previsto − osservato</b> (positivo = il modello <b>sovrastima</b>, negativo = sottostima; '+
+    'stessa convenzione del Report; la colonna bias_mm del CSV è osservato − previsto ed è qui invertita). '+
+    `Schede in grigio = meno di ${MIN_N} confronti nella finestra (campione insufficiente). `+
     '<b>Hit/Miss/FA</b> riferiti al superamento soglia warning: Miss = evento accaduto ma non previsto '+
     '(critico per i convettivi), FA = falso allarme. I dati vengono da forecast_verification.csv, '+
     'popolato dal workflow forecast-verify confrontando ogni previsione con la CUM3 DPC (pluviometri interpolati, blocchi 3h): '+
@@ -343,6 +371,7 @@ function eventWindow(area, evMs){
       // restringi al cluster attorno all'evento (gap>90min separa eventi diversi)
       let s=evMs, e=evMs;
       const near=wet.filter(p=>Math.abs(p.t-evMs)<=6*3600_000).sort((a,b)=>a.t-b.t);
+      if(!near.length) return {start,end};   // pioggia solo oltre ±6h: finestra di default
       s=near[0].t; e=near[near.length-1].t;
       for(let i=1;i<near.length;i++){
         if(near[i].t-near[i-1].t>90*60_000){ // gap: taglia l'evento
@@ -607,9 +636,11 @@ function renderEvents(){
       ? ` <span class="pill" style="background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b55" title="Notifica arrivata in ritardo: lo scheduler era fermo">⏱ +${delayMatch[1]}min</span>`
       : '';
 
-    // Intensità max radar (mm/h) — picco istantaneo SRI (informativo)
-    const intMax = e.members.reduce((m,x)=>Math.max(m,+x.observed_mm_max||0),0);
-    const intTxt = intMax>0 ? `${intMax.toFixed(1)} mm/h` : '—';
+    // Valore max dell'allerta: l'unità dipende dal prodotto (SRI/ARPA mm/h,
+    // SRT1 mm/1h, CUM3 mm/3h) → si mostra il membro col valore più alto.
+    const intRep = e.members.reduce((a,x)=>(+x.observed_mm_max||0)>(+a.observed_mm_max||0)?x:a, e.members[0]);
+    const intMax = +intRep.observed_mm_max||0;
+    const intTxt = intMax>0 ? `${intMax.toFixed(1)} ${PRODUCT_UNIT(intRep.product)} <span style="color:var(--text3);font-size:11px">${intRep.product||''}</span>` : '—';
 
     // Finestra evento (durata reale, gestione multi-evento)
     const win = clusterWindow(e);
@@ -686,8 +717,12 @@ async function populateGroundColumn(events){
       } else if (g && g.err){
         cell.innerHTML=`<span style="color:var(--text3);font-size:11px">n/d</span>`;
         if(scra) scra.innerHTML='—'; if(scrd) scrd.innerHTML='—';
+      } else if (g && (g.archived || (g.pts&&g.pts.length) || (g.perDay&&g.perDay.length))) {
+        cell.innerHTML=`<span style="color:var(--text3)">0 mm</span>`;   // misurato: 0 mm reali
+        if(scra) scra.innerHTML='<span style="color:var(--text3)">—</span>';
+        if(scrd) scrd.innerHTML='<span style="color:var(--text3)">—</span>';
       } else {
-        cell.innerHTML=`<span style="color:var(--text3)">0 mm</span>`;
+        cell.innerHTML=`<span style="color:var(--text3)" title="Nessuna misura del pluviometro per questa finestra">—</span>`;
         if(scra) scra.innerHTML='<span style="color:var(--text3)">—</span>';
         if(scrd) scrd.innerHTML='<span style="color:var(--text3)">—</span>';
       }
@@ -714,7 +749,7 @@ function buildInteractiveLegend(ds){
     for(const {d,i} of groups[g].items){
       const dash=d.borderDash?'dash':'';
       const col=d.borderColor;
-      html+=`<span class="lg-chip ${dash}" data-i="${i}" style="color:${col}">`
+      html+=`<span class="lg-chip ${dash}${d.hidden?' off':''}" data-i="${i}" style="color:${col}">`
         +`<span class="sw" style="background:${col}"></span>`
         +`<span style="color:var(--text,#e2e8f0)">${d.label}</span></span>`;
     }
@@ -736,7 +771,8 @@ function downloadEventCSV(){
   if(!_lastDs||!_lastEv) return;
   const byT={};
   for(const d of _lastDs){
-    for(const p of d.data){
+    for(const p of (d._csv||d.data)){
+      if(p.y==null) continue;
       const iso=new Date(p.x).toISOString();
       (byT[iso] ??= {})[d.label]=p.y;
     }
@@ -787,8 +823,13 @@ function loadSirCsv(url){
 // Ritorna null se l'evento non è ancora stato archiviato → si va live.
 function groundFromArchive(area, winStart, winEnd, evTs){
   const s=GROUND_SENSORS[area];
-  if(!s || s.type!=='arpa' || !evTs) return null;
-  if(!ALL.groundCover.has(`${area}|${evTs}`)) return null;
+  if(!s || s.type!=='arpa') return null;
+  // Archivio valido se l'evento è indicizzato, oppure se la finestra richiesta
+  // è interamente dentro le finestre già raccolte (ground_index.csv): lì i
+  // punti mancanti in ground_rain.csv sono davvero 0 mm (gli zeri non si salvano).
+  const covered = (evTs && ALL.groundCover.has(`${area}|${evTs}`)) ||
+    (ALL.groundWins[area]||[]).some(([a,b])=>a<=winStart && b>=winEnd);
+  if(!covered) return null;
   const all=ALL.groundPts[String(s.id)]||[];
   const pts=all.filter(p=>p.x>=winStart && p.x<=winEnd);
   return {name:s.name, type:'arpa', archived:true, ...cumulate(pts)};
@@ -875,11 +916,33 @@ async function openChart(ev){
   const area = ev.area_name;
   const evMs = new Date(ev.event_timestamp_utc).getTime();
 
-  // Carica ARPA + CUM3 dell'area (cache locale) — serve PRIMA per la finestra adattiva
+  // Carica ARPA + CUM3 dell'area (cache locale) — serve PRIMA per la finestra adattiva.
+  // ARPA esiste solo per Ruspino/Cepina: per Panna nessuna fetch (404 inutile).
   if (!ALL.arpa[area]){
-    try { ALL.arpa[area] = parseCSV(await (await fetchData(`archive/data/${area}_arpa.csv`)).text()); }
-    catch { ALL.arpa[area] = []; }
+    if (!ARPA_AREAS.includes(area)) ALL.arpa[area] = [];
+    else {
+      try { const r = await fetchData(`archive/data/${area}_arpa.csv`); ALL.arpa[area] = r.ok ? parseCSV(await r.text()) : []; }
+      catch { ALL.arpa[area] = []; }
+    }
   }
+  // Radar DPC SRI (5', tutte le aree): archivio live + backfill, solo status 'ok'.
+  // Radar MeteoSwiss (dati di STUDIO, non votano nelle allerte): solo Ruspino/Cepina.
+  const loadRadar = async (kind, a) => {
+    const byT = new Map();
+    for (const f of [`archive/data/${a}_${kind}_backfill.csv`, `archive/data/${a}_${kind}.csv`]){
+      try {
+        const r = await fetchData(f); if (!r.ok) continue;
+        for (const row of parseCSV(await r.text())){
+          if (row.status !== 'ok' || row.max_mmh === '') continue;
+          const t = new Date(row.timestamp_utc).getTime(), v = +row.max_mmh;
+          if (isFinite(t) && isFinite(v)) byT.set(t, v);   // il file live prevale sul backfill
+        }
+      } catch {}
+    }
+    return [...byT].map(([x,y])=>({x,y})).sort((p,q)=>p.x-q.x);
+  };
+  if (!ALL.sri[area]) ALL.sri[area] = await loadRadar('sri', area);
+  if (!ALL.mch[area]) ALL.mch[area] = ARPA_AREAS.includes(area) ? await loadRadar('mch', area) : [];
   if (!ALL.cum3[area]){
     try { ALL.cum3[area] = parseCSV(await (await fetchData(`archive/data/${area}_cum3.csv`)).text()); }
     catch { ALL.cum3[area] = []; }
@@ -893,9 +956,12 @@ async function openChart(ev){
   let winEnd   = evMs + 3*3600_000;
   try {
     const arpaAll = (ALL.arpa[area]||[]);
-    if (arpaAll.length){
-      const near = arpaAll.filter(r=>r.location_type==='area')
-        .map(r=>({t:new Date(r.timestamp_utc).getTime(), v:+r.max_mmh||0}))
+    // Fonte per la finestra: ARPA se c'è, altrimenti SRI DPC (Panna)
+    const wsrc = arpaAll.length
+      ? arpaAll.filter(r=>r.location_type==='area').map(r=>({t:new Date(r.timestamp_utc).getTime(), v:+r.max_mmh||0}))
+      : (ALL.sri[area]||[]).map(p=>({t:p.x, v:p.y}));
+    if (wsrc.length){
+      const near = wsrc
         .filter(p=>isFinite(p.t) && p.t>=evMs-24*3600_000 && p.t<=evMs+24*3600_000 && p.v>0.5);
       if (near.length){
         const tmin=Math.min(...near.map(p=>p.t)), tmax=Math.max(...near.map(p=>p.t));
@@ -933,22 +999,38 @@ async function openChart(ev){
   }
   const eventTotal = acc;  // mm totali evento (radar)
 
+  // Radar DPC SRI e MeteoSwiss (mm/h, pixel max d'area) nella finestra
+  const sriPts = (ALL.sri[area]||[]).filter(p=>p.x>=winStart && p.x<=winEnd);
+  const mchPts = (ALL.mch[area]||[]).filter(p=>p.x>=winStart && p.x<=winEnd);
+
   // Serie osservata DPC CUM3 (mm/3h) nella finestra.
   // MAX = picco nel punto peggiore dell'area (rappresenta la pioggia caduta
   // dove ha piovuto di più, vicino al reale). MEAN = media sui 16 pixel
   // (annacqua il picco della cella convettiva). Mostriamo entrambi, il MAX
   // in evidenza perché più fedele a quanto misurato al pluviometro.
-  const cum3MaxPts = ALL.cum3[area]
-    .filter(r=>r.location_type==='area')
-    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.max||0}))
-    .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
-  const cum3MeanPts = ALL.cum3[area]
-    .filter(r=>r.location_type==='area')
-    .map(r=>({x:new Date(r.timestamp_utc).getTime(), y:+r.mean||0}))
-    .filter(p=>p.x>=winStart && p.x<=winEnd && isFinite(p.x));
+  // Il timestamp di un blocco CUM3 è la FINE del blocco: il valore copre
+  // [ts−3h, ts]. Per disegnarlo nel punto giusto ogni blocco diventa un
+  // gradino esplicito (ts−3h → ts); blocchi non adiacenti = buco (null).
+  const cum3Blocks = ALL.cum3[area]
+    .filter(r=>r.location_type==='area' && r.max!=='' )
+    .map(r=>({x:new Date(r.timestamp_utc).getTime(), max:+r.max, mean:r.mean!==''?+r.mean:null}))
+    .filter(p=>isFinite(p.x) && p.x>winStart && p.x-3*3600_000<winEnd)
+    .sort((a,b)=>a.x-b.x);
+  const stepSeries = key => { const out=[]; let prevEnd=null;
+    for(const b of cum3Blocks){ const v=b[key]; if(v==null||!isFinite(v)) { prevEnd=null; continue; }
+      if(prevEnd!=null && prevEnd!==b.x-3*3600_000) out.push({x:prevEnd+1, y:null});
+      out.push({x:b.x-3*3600_000, y:v}, {x:b.x, y:v, _end:true}); prevEnd=b.x; }
+    return out; };
+  const cum3MaxPts = stepSeries('max'), cum3MeanPts = stepSeries('mean');
+  // Per l'export CSV: un valore per blocco, al timestamp originale (fine blocco)
+  const cum3MaxCsv = cum3Blocks.map(b=>({x:b.x, y:b.max}));
+  const cum3MeanCsv = cum3Blocks.filter(b=>b.mean!=null).map(b=>({x:b.x, y:b.mean}));
 
-  // Pluviometro a terra (verità al suolo) — fetch live da API Socrata ARPA
-  const ground = await fetchGroundRain(area, winStart, winEnd);
+  // Pluviometro a terra (verità al suolo): prima l'archivio (ground_rain.csv,
+  // se la finestra è coperta da ground_index.csv), altrimenti live Socrata/SIR.
+  const ground = await fetchGroundRain(area, winStart, winEnd, ev.event_timestamp_utc);
+  const groundOk = !!(ground && !ground.err &&
+    (ground.daily ? (ground.perDay||[]).length>0 : (ground.archived || (ground.pts||[]).length>0)));
 
   // Serie previsto (forecast_history) nelle 6h prima: OM e MET max_1h
   const omPts=[], metPts=[];
@@ -962,10 +1044,12 @@ async function openChart(ev){
   }
   omPts.sort((a,b)=>a.x-b.x); metPts.sort((a,b)=>a.x-b.x);
 
-  // Nowcast SRI: il picco osservato dell'evento come punto singolo all'istante evento
+  // Picco dell'allerta (prodotto ev.product) come punto singolo all'istante evento.
+  // Unità secondo il prodotto: CUM3 è mm/3h → va sull'asse delle cumulate (mm).
+  const evProd = ev.product||'', evUnit = PRODUCT_UNIT(evProd);
   const nowPts = [];
-  if ((ev.level||'').includes('storm') || (ev.level||'').includes('nowcast')){
-    nowPts.push({x:evMs, y:+ev.observed_mm_max||0});
+  if (((ev.level||'').includes('storm') || (ev.level||'').includes('nowcast')) && ev.observed_mm_max!=='' && ev.observed_mm_max!=null){
+    nowPts.push({x:evMs, y:+ev.observed_mm_max});
   }
 
   const ds = [];
@@ -975,24 +1059,29 @@ async function openChart(ev){
   if (arpaPts.length) ds.push({label:'Intensità ARPA (mm/h)', data:arpaPts, yAxisID:'y', _grp:'int',
     borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.12)', pointRadius:0, tension:.3,
     borderWidth:1.5, fill:true});
+  if (sriPts.length) ds.push({label:'Intensità SRI DPC (mm/h)', data:sriPts, yAxisID:'y', _grp:'int',
+    borderColor:'#a78bfa', backgroundColor:'#a78bfa', pointRadius:0, tension:.3, borderWidth:1.5});
+  if (mchPts.length) ds.push({label:'Radar MeteoSwiss (studio) (mm/h)', data:mchPts, yAxisID:'y', _grp:'int', hidden:true,
+    borderColor:'#94a3b8', backgroundColor:'#94a3b8', pointRadius:0, tension:.3, borderWidth:1.2, borderDash:[3,3]});
   if (omPts.length) ds.push({label:'Previsto OM (max 1h)', data:omPts, yAxisID:'y', _grp:'int',
     borderColor:'#f59e0b', backgroundColor:'#f59e0b', pointRadius:0, tension:.3, borderWidth:2});
   if (metPts.length) ds.push({label:'Previsto MET/YR (max 1h)', data:metPts, yAxisID:'y', _grp:'int',
     borderColor:'#06b6d4', backgroundColor:'#06b6d4', pointRadius:0, tension:.3, borderWidth:2, borderDash:[5,4]});
-  if (nowPts.length) ds.push({label:'Nowcast SRI (picco)', data:nowPts, yAxisID:'y', _grp:'int',
+  if (nowPts.length) ds.push({label:`Picco allerta ${evProd||'—'} (${evUnit})`, data:nowPts,
+    yAxisID: evProd==='CUM3'?'y1':'y', _grp: evProd==='CUM3'?'cum':'int',
     borderColor:'#eab308', backgroundColor:'#eab308', pointRadius:8, pointStyle:'triangle', showLine:false});
 
   // ── Cumulate (asse Y destro, mm) — colori nettamente diversi dall'intensità ──
   if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1', _grp:'cum',
     borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:0, tension:.2, borderWidth:3.5});
-  if (cum3MaxPts.length) ds.push({label:'CUM3 pluviometri DPC max (mm/3h)', data:cum3MaxPts, yAxisID:'y1', _grp:'cum',
-    borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:3, tension:0, borderWidth:2.5, stepped:true});
-  if (cum3MeanPts.length) ds.push({label:'CUM3 pluviometri DPC mean (mm/3h)', data:cum3MeanPts, yAxisID:'y1', _grp:'cum',
-    borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:1.5, borderDash:[2,3], stepped:true});
-  if (ground && ground.daily && ground.total>0 && arpaPts.length){
-    const xs=arpaPts.map(p=>p.x); const x0=Math.min(...xs), x1=Math.max(...xs);
+  if (cum3MaxPts.length) ds.push({label:'CUM3 pluviometri DPC max (mm/3h)', data:cum3MaxPts, _csv:cum3MaxCsv, yAxisID:'y1', _grp:'cum',
+    borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:c=>c.raw&&c.raw._end?3:0, tension:0, borderWidth:2.5, spanGaps:false});
+  if (cum3MeanPts.length) ds.push({label:'CUM3 pluviometri DPC mean (mm/3h)', data:cum3MeanPts, _csv:cum3MeanCsv, yAxisID:'y1', _grp:'cum',
+    borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:1.5, borderDash:[2,3], tension:0, spanGaps:false});
+  if (ground && ground.daily && ground.total>0){
+    // SIR giornaliero (09→09): nessun andamento orario → linea piatta sulla finestra
     ds.push({label:`${ground.name} — totale giorno ${ground.total.toFixed(0)} mm (SIR)`,
-      data:[{x:x0,y:ground.total},{x:x1,y:ground.total}], yAxisID:'y1', _grp:'cum',
+      data:[{x:winStart,y:ground.total},{x:winEnd,y:ground.total}], yAxisID:'y1', _grp:'cum',
       borderColor:'#ec4899', backgroundColor:'#ec4899', pointRadius:0, borderWidth:2.5, borderDash:[6,4]});
   } else if (ground && ground.cumTot && ground.cumTot.length){
     const gtot = ground.total||0;
@@ -1004,6 +1093,9 @@ async function openChart(ev){
 
   const ctx = document.getElementById('evChart');
   if (_chart) _chart.destroy();
+  // Colori assi dai token CSS del tema (leggibili sia in scuro che in chiaro)
+  const cssVar = (v, fb) => getComputedStyle(document.body).getPropertyValue(v).trim() || fb;
+  const tickCol = cssVar('--text2', '#94a3b8'), gridCol = 'rgba(128,128,128,.15)';
   _chart = new Chart(ctx, {
     type:'line',
     data:{ datasets: ds },
@@ -1012,12 +1104,12 @@ async function openChart(ev){
       interaction:{ mode:'index', intersect:false },
       scales:{
         x:{ type:'linear',
-            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:'#cbd5e1', maxTicksLimit:10, font:{size:13} },
-            grid:{ color:'rgba(148,163,184,.08)' } },
+            ticks:{ callback:v=>new Date(v).toLocaleTimeString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit'}), color:tickCol, maxTicksLimit:10, font:{size:13} },
+            grid:{ color:gridCol } },
         y:{ position:'left', beginAtZero:true, title:{display:true,text:'Intensità (mm/h)',color:'#22c55e',font:{size:13,weight:'600'}},
-            ticks:{color:'#cbd5e1',font:{size:13}}, grid:{ color:'rgba(148,163,184,.08)' } },
+            ticks:{color:tickCol,font:{size:13}}, grid:{ color:gridCol } },
         y1:{ position:'right', beginAtZero:true, title:{display:true,text:'Cumulata (mm)',color:'#2dd4bf',font:{size:13,weight:'600'}},
-            ticks:{color:'#cbd5e1',font:{size:13}}, grid:{ drawOnChartArea:false } },
+            ticks:{color:tickCol,font:{size:13}}, grid:{ drawOnChartArea:false } },
       },
       plugins:{
         legend:{ display:false },
@@ -1035,12 +1127,13 @@ async function openChart(ev){
   let note = '';
   if ((ev.level||'').includes('storm') && f.om!=null){
     const ratio = peak/Math.max(f.om,0.1);
-    if (peak>=10 && ratio>=3){
+    // Rapporto confrontabile solo per prodotti orari (SRI/ARPA mm/h, SRT1 mm/1h), non per la CUM3 (mm/3h)
+    if (evProd!=='CUM3' && peak>=10 && ratio>=3){
       note = `⚠️ Evento convettivo sottostimato: il modello prevedeva ~${f.om.toFixed(1)} mm/1h, `+
-             `il radar ha misurato un picco SRI di ${peak.toFixed(0)} mm/h (×${ratio.toFixed(0)}). `+
+             `il prodotto ${evProd||'—'} ha misurato un picco di ${peak.toFixed(0)} ${evUnit} (×${ratio.toFixed(0)}). `+
              `Tipico dei temporali estivi: la previsione a 6h non li localizza, il nowcasting radar è la difesa reale.`;
     } else {
-      note = `Picco SRI ${peak.toFixed(0)} mm/h vs previsto OM ${f.om.toFixed(1)} mm/1h.`;
+      note = `Picco ${evProd||'—'} ${peak.toFixed(0)} ${evUnit} vs previsto OM ${f.om.toFixed(1)} mm/1h.`;
     }
   } else if ((ev.level||'').includes('forecast')){
     note = `Allerta previsionale: soglia ${ev.threshold_mm} mm, valore previsto ${(+ev.forecast_max_6h_mm||0).toFixed(1)} mm. `+
@@ -1064,9 +1157,12 @@ async function openChart(ev){
       note += ` Scarto ${diff>=0?'+':''}${diff.toFixed(0)} mm (${pct>=0?'+':''}${pct.toFixed(0)}%): buon accordo.`;
     }
   } else if (ground && ground.err){
-    note += ` (Dato a terra ${ground.name} non raggiungibile: ${ground.err}.)`;
+    note += ` (Pluviometro non disponibile: ${ground.name} non raggiungibile — ${ground.err}.)`;
+  } else if (GROUND_SENSORS[area] && !groundOk){
+    note += ` (Pluviometro non disponibile: nessuna misura di ${GROUND_SENSORS[area].name} archiviata per questa finestra.)`;
   }
-  if (!arpaPts.length && !cum3MaxPts.length && !(ground&&ground.total>0)) note += ' (Nessun dato osservato in questa finestra.)';
+  if (!arpaPts.length && !sriPts.length && !cum3MaxPts.length && !(ground&&ground.total>0)) note += ' (Nessun dato osservato in questa finestra.)';
+  if (mchPts.length) note += ' Radar MeteoSwiss: dato di studio, non vota nelle allerte (nascosto: clic sulla legenda per mostrarlo). Fonte: MeteoSwiss.';
   document.getElementById('chartNote').textContent = note;
 }
 function closeChart(){ document.getElementById('chartModal').style.display='none'; if(_chart){_chart.destroy();_chart=null;} }
@@ -1104,7 +1200,9 @@ async function fetchOMhourly(lat,lon){
   const keys=FC_MODELS.map(m=>m[0]).join(',');
   const r=await fetch(`${OM_URL}?latitude=${lat}&longitude=${lon}&hourly=precipitation&forecast_hours=72&models=${keys}&timezone=UTC`);
   if(!r.ok) return null; const h=(await r.json()).hourly||{}; const out={};
-  for(const [k] of FC_MODELS){ const v=h['precipitation_'+k]||h.precipitation; if(v) out[k]=v.slice(0,72).map(x=>x==null?0:x); }
+  // null Open-Meteo = ora non coperta dal modello (es. AROME HD oltre ~48h):
+  // resta null, NON diventa 0 mm.
+  for(const [k] of FC_MODELS){ const v=h['precipitation_'+k]||h.precipitation; if(v) out[k]=v.slice(0,72).map(x=>x==null?null:+x); }
   return {series:out, times:(h.time||[]).slice(0,72)};
 }
 async function fetchYRhourly(lat,lon){
@@ -1114,79 +1212,143 @@ async function fetchYRhourly(lat,lon){
     return out.length?out:null;
   }catch{ return null; }
 }
-function rollMax(s,H){ if(!s.length) return 0; if(s.length<=H) return +s.reduce((a,b)=>a+b,0).toFixed(1);
-  let sum=s.slice(0,H).reduce((a,b)=>a+b,0),best=sum; for(let i=H;i<s.length;i++){sum+=s[i]-s[i-H]; if(sum>best)best=sum;} return +best.toFixed(1); }
+// Massima somma mobile su H ore. Considera solo finestre COMPLETE (nessuna
+// ora null): un modello senza dati su tutte le finestre → null (escluso).
+// Serie più corta di H (es. YR ~60h) → somma del disponibile (come il server).
+function rollMax(s,H){
+  if(!s||!s.length) return null;
+  if(s.length<=H) return s.some(v=>v==null) ? null : +s.reduce((a,b)=>a+b,0).toFixed(1);
+  let best=null;
+  for(let i=0;i+H<=s.length;i++){
+    let sum=0, ok=true;
+    for(let j=i;j<i+H;j++){ if(s[j]==null){ ok=false; break; } sum+=s[j]; }
+    if(ok && (best==null || sum>best)) best=sum;
+  }
+  return best==null ? null : +best.toFixed(1);
+}
 
 async function computeSiteForecast(site){
-  const per={}; let yrAgg=null,yrW=0,mw={},times0=null,nOK=0;
-  FC_MODELS.forEach(([k])=>{per[k]=new Array(72).fill(0); mw[k]=0;});
+  const per={}, nul={}; let yrAgg=null,yrW=0,yrLen=72,mw={},times0=null,nOK=0;
+  FC_MODELS.forEach(([k])=>{per[k]=new Array(72).fill(0); nul[k]=new Array(72).fill(false); mw[k]=0;});
   for(const [lat,lon,w] of site.pts){
     const om=await fetchOMhourly(lat,lon);
     if(om&&Object.keys(om.series).length){ nOK++; times0=times0||om.times;
-      for(const k in om.series){ om.series[k].forEach((v,i)=>per[k][i]+=v*w); mw[k]+=w; } }
+      for(const k in om.series){ const v=om.series[k];
+        for(let i=0;i<72;i++){ if(i>=v.length||v[i]==null) nul[k][i]=true; else per[k][i]+=v[i]*w; }
+        mw[k]+=w; } }
     const yr=await fetchYRhourly(lat,lon);
-    if(yr){ if(!yrAgg)yrAgg=new Array(72).fill(0); yr.forEach((v,i)=>{if(i<72)yrAgg[i]+=v*w;}); yrW+=w; }
+    if(yr){ if(!yrAgg)yrAgg=new Array(72).fill(0); yrLen=Math.min(yrLen,yr.length); yr.forEach((v,i)=>{if(i<72)yrAgg[i]+=v*w;}); yrW+=w; }
   }
-  const series={}; for(const k in per){ if(mw[k]>0) series[k]=per[k].map(v=>v/mw[k]); }
-  const yr=yrAgg&&yrW>0?yrAgg.map(v=>v/yrW):null;
+  const nH=times0?Math.min(72,times0.length):72;
+  const series={}; for(const k in per){ if(mw[k]>0) series[k]=per[k].slice(0,nH).map((v,i)=>nul[k][i]?null:v/mw[k]); }
+  // YR: solo la copertura oraria comune a tutti i punti (niente code inventate)
+  const yr=yrAgg&&yrW>0?yrAgg.slice(0,yrLen).map(v=>v/yrW):null;
   const nMod=Object.keys(series).length;
-  const ensMean=new Array(72).fill(0).map((_,i)=>{let s=0;for(const k in series)s+=series[k][i];return s/nMod;});
-  return {series,yr,ensMean,nMod,nOK,times0};
+  // Media ensemble oraria sui soli modelli con dato in quell'ora (MET/YR mai incluso)
+  const ensMean=new Array(nH).fill(0).map((_,i)=>{ const v=Object.values(series).map(s=>s[i]).filter(x=>x!=null);
+    return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; });
+  return {series,yr,ensMean,nMod,nOK,times0:times0?times0.slice(0,nH):null};
+}
+
+// Worst-case per GIORNO CIVILE Europe/Rome (come compute_days_worstcase in
+// forecast_matrix.py): ore raggruppate per data locale, somma per modello,
+// worst = modello più piovoso. Un modello con ore mancanti nel giorno è escluso.
+function dailyWorst(fc, nDays){
+  if(!fc.times0||!fc.times0.length) return [];
+  const keys=[], idx={};
+  fc.times0.forEach((t,i)=>{ const k=new Date(t+(/Z$/.test(t)?'':'Z')).toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
+    if(!idx[k]){ idx[k]=[]; keys.push(k); } idx[k].push(i); });
+  return keys.slice(0,nDays).map(k=>{
+    const ii=idx[k], perM={};
+    for(const m in fc.series){ const s=fc.series[m]; if(ii.some(i=>s[i]==null)) continue;
+      perM[m]=+ii.reduce((a,i)=>a+s[i],0).toFixed(1); }
+    const vals=Object.values(perM);
+    const mean=vals.length? +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : null;
+    let yr=null, yrPart=false;
+    if(fc.yr){ const cov=ii.filter(i=>i<fc.yr.length); if(cov.length){ yr=+cov.reduce((a,i)=>a+fc.yr[i],0).toFixed(1); yrPart=cov.length<ii.length; } }
+    const d=new Date(k+'T12:00:00Z');
+    const label=d.toLocaleDateString('it-IT',{weekday:'short',timeZone:'UTC'}).replace('.','')+' '+
+      d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
+    return {key:k, label, nHours:ii.length, perM, mean, yr, yrPart};
+  });
 }
 
 function renderForecastSites(){
   const el=document.getElementById('fc-sites');
+  const LEVELS={matrix:['Attenzione','Critico'], day:['Attenzione','Critico','Estremo']};
+  const dim=t=>`<span style="color:var(--text3,#94a3b8)">${t}</span>`;
   Promise.all(FC_SITES.map(async site=>{
     let fc; try{ fc=await computeSiteForecast(site); }catch(e){ return {site,err:e.message}; }
     return {site,fc};
   })).then(results=>{
     el.innerHTML=results.map(({site,fc,err})=>{
-      if(err||!fc) return `<div class="vf-card"><div class="k">${site.label}</div><div class="s miss">forecast non disponibile: ${err||''}</div></div>`;
-      const H={'24h':24,'48h':48,'72h':72};
-      let rows='', maxLvl=-1, anyOver=false;
-      for(const hz of ['24h','48h','72h']){
-        const perM={}; for(const k in fc.series) perM[k]=rollMax(fc.series[k],H[hz]);
-        const worstK=Object.keys(perM).reduce((a,b)=>perM[a]>=perM[b]?a:b,Object.keys(perM)[0]);
-        const worst=perM[worstK]||0, mean=rollMax(fc.ensMean,H[hz]), yr=fc.yr?rollMax(fc.yr,H[hz]):null;
-        let lvl=-1, thrTxt='', col='#64748b';
-        if(site.crit==='matrix'){ const t=site.thr[hz]; lvl=worst>=t[1]?1:worst>=t[0]?0:-1;
-          thrTxt=`Att ${t[0]} · Crit ${t[1]}`; col=lvl===1?'#dc2626':lvl===0?'#0ea5e9':'#64748b'; }
-        else { const t=site.thrDay; lvl=worst>=t[2]?2:worst>=t[1]?1:worst>=t[0]?0:-1;
-          thrTxt=`${t[0]}/${t[1]}/${t[2]} mm`; col=DAY_COL(worst); }
-        if(lvl>maxLvl)maxLvl=lvl; if(lvl>=(site.crit==='matrix'?1:1))anyOver=true;
-        const nAgree=Object.values(perM).filter(v=>v>=(site.crit==='matrix'?site.thr[hz][0]:site.thrDay[0])).length;
-        rows+=`<tr><td style="padding:4px 8px;font-weight:600">${hz}</td>
-          <td style="padding:4px 8px;text-align:right;font-weight:700;color:${col}">${worst.toFixed(0)} mm</td>
-          <td style="padding:4px 8px;text-align:right;color:#94a3b8">${mean.toFixed(0)}</td>
-          <td style="padding:4px 8px;text-align:right;color:#22d3ee">${yr!=null?yr.toFixed(0):'—'}</td>
-          <td style="padding:4px 8px;color:#94a3b8;font-size:11px">${thrTxt} · ${nAgree}/${fc.nMod}</td></tr>`;
+      if(err||!fc||!fc.nMod) return `<div class="vf-card"><div class="k">${site.label}</div><div class="s miss">forecast non disponibile${err?': '+err:''}</div></div>`;
+      // Righe: Ruspino = cumulate mobili 24/48/72h; Panna/Cepina = giorni civili Europe/Rome
+      let lines=[];
+      if(site.crit==='matrix'){
+        const H={'24h':24,'48h':48,'72h':72};
+        lines=['24h','48h','72h'].map(hz=>{ const perM={};
+          for(const k in fc.series){ const v=rollMax(fc.series[k],H[hz]); if(v!=null) perM[k]=v; }
+          const yr=fc.yr?rollMax(fc.yr,H[hz]):null;
+          return {label:hz, perM, mean:rollMax(fc.ensMean,H[hz]), yr, yrPart:!!(fc.yr&&fc.yr.length<H[hz]), thr:site.thr[hz]}; });
+      } else {
+        lines=dailyWorst(fc,3).map(d=>({...d, label:d.label+(d.nHours!==24?` <span style="font-weight:400;color:var(--text3,#94a3b8)">(${d.nHours}h)</span>`:''), thr:site.thrDay}));
       }
-      const critLvl=site.crit==='matrix'?1:1;
-      const alertOn = maxLvl>=critLvl;
+      let rows='', maxLvl=-1;
+      for(const L of lines){
+        const ks=Object.keys(L.perM);
+        const worst=ks.length? Math.max(...ks.map(k=>L.perM[k])) : null;
+        let lvl=-1, thrTxt='', col='#64748b';
+        if(worst!=null){
+          if(site.crit==='matrix'){ const t=L.thr; lvl=worst>=t[1]?1:worst>=t[0]?0:-1;
+            col=lvl===1?'#dc2626':lvl===0?'#0ea5e9':'#64748b'; }
+          else { const t=L.thr; lvl=worst>=t[2]?2:worst>=t[1]?1:worst>=t[0]?0:-1; col=DAY_COL(worst); }
+        }
+        thrTxt = site.crit==='matrix' ? `Att ${L.thr[0]} · Crit ${L.thr[1]}` : `${L.thr[0]}/${L.thr[1]}/${L.thr[2]} mm`;
+        if(lvl>maxLvl) maxLvl=lvl;
+        // concordi = modelli (con dato completo) sopra la prima soglia / modelli considerati
+        const nAgree=ks.filter(k=>L.perM[k]>=L.thr[0]).length;
+        rows+=`<tr><td style="padding:4px 8px;font-weight:600;white-space:nowrap">${L.label}</td>
+          <td style="padding:4px 8px;text-align:right;font-weight:700;color:${col}">${worst!=null?worst.toFixed(0)+' mm':'—'}</td>
+          <td style="padding:4px 8px;text-align:right;color:#94a3b8">${L.mean!=null?L.mean.toFixed(0):'—'}</td>
+          <td style="padding:4px 8px;text-align:right;color:#22d3ee">${L.yr!=null?L.yr.toFixed(0)+(L.yrPart?'*':''):'—'}</td>
+          <td style="padding:4px 8px;color:#94a3b8;font-size:11px">${thrTxt} · ${nAgree}/${ks.length}</td></tr>`;
+      }
+      // Il server (forecast_matrix.py, decide_send) invia quando rank = max_level+1 ≥ 1,
+      // cioè già al PRIMO livello (Attenzione Ruspino / 5 mm Panna-Cepina).
+      const alertOn = maxLvl>=0;
+      const lvlName = alertOn ? LEVELS[site.crit][maxLvl] : '';
       const badge = alertOn
-        ? `<span class="pill obs" style="background:#7f1d1d;color:#fecaca">⛔ soglia superata → mail+telegram</span>`
-        : maxLvl>=0 ? `<span class="pill" style="background:#78350f;color:#fde68a">⚠️ attenzione (sotto soglia allerta)</span>`
+        ? (maxLvl>=1
+            ? `<span class="pill" style="background:#7f1d1d;color:#fecaca">⛔ ${lvlName} → mail + Telegram</span>`
+            : `<span class="pill" style="background:#78350f;color:#fde68a">⚠️ ${lvlName} → mail + Telegram</span>`)
         : `<span class="pill good" style="background:#14532d;color:#bbf7d0">✓ sotto soglia</span>`;
+      const anyYrPart=lines.some(L=>L.yr!=null&&L.yrPart);
       return `<div class="vf-card" style="padding:0;overflow:hidden">
         <div style="padding:12px 14px;border-bottom:1px solid var(--border,#334155)">
-          <div style="font-weight:700;font-size:15px">${site.label}</div>
+          <div style="font-weight:700;font-size:15px">${site.label} ${dim(`<span style="font-size:11px;font-weight:400">· ${site.crit==='matrix'?'cumulate mobili 24/48/72h':'worst-case per giorno civile'}</span>`)}</div>
           <div style="margin-top:4px">${badge}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <tr style="color:#94a3b8;font-size:10px;text-transform:uppercase">
-            <th style="text-align:left;padding:4px 8px">Orizz.</th><th style="text-align:right;padding:4px 8px">Worst</th>
+            <th style="text-align:left;padding:4px 8px">${site.crit==='matrix'?'Orizz.':'Giorno'}</th><th style="text-align:right;padding:4px 8px">Worst</th>
             <th style="text-align:right;padding:4px 8px">Ens.</th><th style="text-align:right;padding:4px 8px">YR</th>
             <th style="text-align:left;padding:4px 8px">Soglie · concordi</th></tr>
           ${rows}
         </table>
-        <div style="padding:6px 14px;font-size:10px;color:#94a3b8">${fc.nMod}/5 modelli · ${fc.nOK}/${site.pts.length} punti · YR ${fc.yr?'ok':'N/D'}${site.name==='cepina'?' · soglie provvisorie (=Panna)':''}</div>
+        <div style="padding:6px 14px;font-size:10px;color:#94a3b8">${fc.nMod}/5 modelli · ${fc.nOK}/${site.pts.length} punti · YR ${fc.yr?fc.yr.length+'h':'N/D'}${anyYrPart?' (* copertura YR parziale)':''}${site.name==='cepina'?' · soglie provvisorie (=Panna)':''}</div>
       </div>`;
     }).join('');
   });
   document.getElementById('fc-note').innerHTML=
-    'Worst-case = modello più piovoso (mai mediato con YR). Colonna <b>Ens.</b> = media dei 5 modelli, <b>YR</b> = MET Norway indipendente. '+
+    'Worst-case = modello più piovoso (mai mediato con YR). Colonna <b>Ens.</b> = media dei modelli, <b>YR</b> = MET Norway indipendente. '+
+    '<b>Ruspino</b>: massima cumulata mobile su 24/48/72h. <b>Panna e Cepina</b>: cumulata per <b>giorno civile</b> (ora italiana) sui prossimi 3 giorni; '+
+    'il primo giorno comprende solo le ore restanti (indicate tra parentesi). '+
+    'Un modello senza dati Open-Meteo per alcune ore (es. AROME oltre il suo orizzonte) è <b>escluso</b> da quell\'orizzonte/giorno e dal conteggio dei concordi, non contato come 0 mm. '+
     'Il <b>trigger reale</b> di invio mail+Telegram gira server-side (workflow forecast-alert, ogni 6h) con la stessa logica: '+
-    'una mail parte al superamento soglia (matrice decisionale dettagliata solo via mail). Questo ricalcolo live serve al controllo visivo.';
+    'la mail parte già al <b>primo livello</b> (Attenzione per Ruspino, 5 mm/giorno per Panna e Cepina), al massimo una volta al giorno più le escalation. '+
+    '<b>La mail può partire anche per un salto improvviso della previsione</b> (worst-case in forte aumento rispetto al run precedente, anche sotto soglia): '+
+    'questo canale dipende dallo storico dei run e non è ricalcolato qui. Questo ricalcolo live serve al controllo visivo.';
 }
 
 

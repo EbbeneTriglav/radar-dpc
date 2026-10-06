@@ -63,6 +63,7 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link active">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
@@ -81,7 +82,8 @@
     <div class="arpa-info">
       Mosaico radar <b>ARPA Lombardia</b> (Desio MB + Flero BS). Riflettività massima sulla verticale (MAX) in <b>dBZ</b>, scansioni ogni 5 minuti.
       Conversione in mm/h tramite relazione di <b>Marshall-Palmer</b> (Z = 200·R<sup>1.6</sup>).<br>
-      Confronto con dati <b>DPC</b> per verifica di attendibilità. Solo aree <b>Ruspino</b> e <b>Cepina</b> sono in copertura radar lombardo. <i>Nessun alert attivo su questi dati.</i>
+      Confronto con la <b>CUM3 DPC</b> (pluviometri a terra interpolati, non radar) per verifica di attendibilità. Solo aree <b>Ruspino</b> e <b>Cepina</b> sono in copertura radar lombardo.
+      <b>ARPA vota nelle allerte nowcast</b> ("cella su area"): a <b>Ruspino</b> in OR con l'SRI DPC; a <b>Cepina</b> solo come riserva, quando l'SRI DPC manca o è più vecchio di 20 minuti.
     </div>
 
     <div class="arpa-grid">
@@ -174,14 +176,20 @@ const AREAS_URL = 'archive/areas.json';
 const ARPA_AREAS = ['ruspino', 'cepina'];
 const ARPA_COLORS = { ruspino: '#4ade80', cepina: '#60a5fa' };
 
-// ── Tema ─────────────────────────────────────────────────────────────────
+// ── Tema (chiave condivisa 'radar-theme', come le altre pagine) ─────────
 const themeBtn = document.getElementById('btn-theme');
+let ARPA_MAP = null, DARK_BASE = null;   // basemap scura: segue il tema
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function applyTheme(t) {
   document.body.classList.toggle('light-theme', t === 'light');
   themeBtn.innerHTML = t === 'light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-  localStorage.setItem('theme', t);
+  try { localStorage.setItem('radar-theme', t); } catch {}
+  if (ARPA_MAP && DARK_BASE) {
+    if (t === 'light') ARPA_MAP.removeLayer(DARK_BASE);
+    else if (!ARPA_MAP.hasLayer(DARK_BASE)) DARK_BASE.addTo(ARPA_MAP);
+  }
 }
-applyTheme(localStorage.getItem('theme') || 'dark');
+applyTheme(lsGet('radar-theme') || lsGet('theme') || 'dark');
 themeBtn.onclick = () => applyTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
 
 // ── CSV parsing minimo ───────────────────────────────────────────────────
@@ -252,23 +260,24 @@ function renderStats(area, rows) {
     return;
   }
   const last = rows[rows.length - 1];
+  const fx = (v, d) => isFinite(v) ? v.toFixed(d) : '—';   // dato mancante → '—', mai 0
   // Classifica intensità mm/h
   const cls = last.max_mmh >= 20 ? 'danger' : last.max_mmh >= 5 ? 'warning' : '';
   stub.innerHTML = `
     <div class="arpa-stats">
       <div class="arpa-stat ${cls}">
         <div class="label">max mm/h</div>
-        <div class="value">${last.max_mmh.toFixed(2)}</div>
-        <div class="sub">${last.max_dbz.toFixed(1)} dBZ</div>
+        <div class="value">${fx(last.max_mmh, 2)}</div>
+        <div class="sub">${fx(last.max_dbz, 1)} dBZ</div>
       </div>
       <div class="arpa-stat">
         <div class="label">mean mm/h</div>
-        <div class="value">${last.mean_mmh.toFixed(3)}</div>
-        <div class="sub">${last.mean_dbz.toFixed(1)} dBZ</div>
+        <div class="value">${fx(last.mean_mmh, 3)}</div>
+        <div class="sub">${fx(last.mean_dbz, 1)} dBZ</div>
       </div>
       <div class="arpa-stat">
         <div class="label">pixel</div>
-        <div class="value">${last.pixel_count}</div>
+        <div class="value">${isFinite(last.pixel_count) ? last.pixel_count : '—'}</div>
         <div class="sub">nel poligono</div>
       </div>
       <div class="arpa-stat">
@@ -317,58 +326,68 @@ function renderCompare(area, arpaRows, dpcRows) {
   const stub = document.getElementById(`${area}-compare`);
   if (!arpaRows.length || !dpcRows.length) { stub.innerHTML = ''; return; }
 
-  // Per il confronto: aggrega ARPA su 3h e confronta con DPC CUM3
-  // Strategia: per ogni timestamp DPC, calcola la somma stimata mm di ARPA nelle 3h precedenti
-  // ARPA = mean_mmh * (Δt/60) per ogni campione (campionamento ~5 min)
+  // Confronto: per ogni blocco CUM3 DPC (pluviometri interpolati, timestamp =
+  // FINE del blocco, copre (ts−3h, ts]) si integra la media d'area ARPA
+  // (mean_mmh × 5 min) sugli stessi 3h. Attesi 36 campioni da 5 min: quelli
+  // mancanti NON valgono 0 → si dichiara la copertura n/36.
+  const N_EXP = 36;
   function arpaCum3At(ts) {
     const target = new Date(ts).getTime();
     const start  = target - 3 * 3600 * 1000;
+    const seen = new Set();
     let sum = 0;
     for (const a of arpaRows) {
       const t = new Date(a.ts).getTime();
-      if (t > start && t <= target && isFinite(a.mean_mmh)) {
-        // 5-min sample → mm = mean_mmh × (5/60)
-        sum += a.mean_mmh * (5 / 60);
+      if (t > start && t <= target && isFinite(a.mean_mmh) && !seen.has(t)) {
+        seen.add(t);
+        sum += a.mean_mmh * (5 / 60);   // campione 5 min → mm
       }
     }
-    return sum;
+    return { sum, n: seen.size };
   }
 
-  // Mostra ultimi 5 punti DPC con confronto ARPA stimato
+  // Mostra ultimi 5 blocchi CUM3 con confronto ARPA
   const lastDpc = dpcRows.slice(-5).reverse();
   if (!lastDpc.length) { stub.innerHTML = ''; return; }
   stub.innerHTML = `
     <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
-      Confronto DPC CUM3 vs ARPA aggregato 3h
+      CUM3 pluviometri DPC vs ARPA media area (3h)
     </div>
     ${lastDpc.map(d => {
-      const arpaSum = arpaCum3At(d.ts);
-      const dpcVal = isFinite(d.mean) ? d.mean : 0;
-      const delta = arpaSum - dpcVal;
-      const deltaColor = Math.abs(delta) < 0.5 ? 'var(--success)' : delta > 0 ? 'var(--warn)' : 'var(--accent)';
+      const a = arpaCum3At(d.ts);
+      const dpcOk = isFinite(d.mean);
+      const arpaOk = a.n > 0;
+      const covOk = a.n >= N_EXP * 0.8;   // Δ solo con copertura ARPA ≥ 80%
+      const delta = (dpcOk && arpaOk) ? a.sum - d.mean : null;
+      const deltaColor = delta == null || !covOk ? 'var(--text3)'
+        : Math.abs(delta) < 0.5 ? 'var(--success)' : delta > 0 ? 'var(--warn)' : 'var(--accent)';
+      const deltaTxt = delta == null ? 'Δ —'
+        : `Δ ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}${covOk ? '' : ' (parziale)'}`;
       return `<div class="arpa-compare-row">
         <span class="lbl">${fmtDate(d.ts)}</span>
         <span class="vals">
-          <span>DPC: ${dpcVal.toFixed(2)} mm</span>
-          <span>ARPA: ${arpaSum.toFixed(2)} mm</span>
+          <span>CUM3: ${dpcOk ? d.mean.toFixed(2) + ' mm' : '—'}</span>
+          <span>ARPA: ${arpaOk ? a.sum.toFixed(2) + ' mm' : '—'} <span style="color:var(--text3);font-size:10px" title="Campioni ARPA da 5 min presenti sui 36 attesi nelle 3h">(${a.n}/${N_EXP})</span></span>
         </span>
-        <span class="delta" style="color:${deltaColor}">Δ ${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</span>
+        <span class="delta" style="color:${deltaColor}">${deltaTxt}</span>
       </div>`;
     }).join('')}
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">Valori medi d'area. La CUM3 è fatta di pluviometri, non di radar. Copertura ARPA &lt; 80% → Δ parziale (i campioni mancanti non sono contati come 0 mm).</div>
   `;
 }
 
 function renderMap(areas) {
   const map = L.map('arpa-map', { zoomControl: true });
+  ARPA_MAP = map;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap', maxZoom: 18,
   }).addTo(map);
-  // Basemap scura Esri (CARTO ora richiede API key)
-  if (document.body.classList.contains('light-theme') === false) {
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '© Esri, © OpenStreetMap', maxZoom: 16,
-    }).addTo(map);
-  }
+  // Basemap scura Esri (CARTO ora richiede API key): solo col tema scuro,
+  // aggiunta/rimossa da applyTheme() al cambio tema.
+  DARK_BASE = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© Esri, © OpenStreetMap', maxZoom: 16,
+  });
+  if (!document.body.classList.contains('light-theme')) DARK_BASE.addTo(map);
 
   const allBounds = [];
   for (const area of ARPA_AREAS) {
@@ -455,6 +474,7 @@ function initRadarOverlay(map) {
       const j = await r.json();
       frames = (j.frames || []).filter(f => f.file && f.bounds);
       frames.sort((a, b) => a.ts_utc.localeCompare(b.ts_utc));
+      frameVer = j.updated_at_utc || '';
       if (elSlider) elSlider.max = String(Math.max(0, frames.length - 1));
       return frames.length > 0;
     } catch (e) {
@@ -464,11 +484,14 @@ function initRadarOverlay(map) {
   }
 
   let framePathPrefix = RAW;   // live: radar_arpa/ ; evento: radar_arpa/events/<id>/
+  // Chiave cache dei PNG = updated_at_utc dell'indice (non Date.now() per frame):
+  // il browser riusa i frame già scaricati → niente ri-download né sfarfallio.
+  let frameVer = '';
 
   function showIdx(i) {
     if (i < 0 || i >= frames.length) return;
     const fr = frames[i];
-    const newLayer = L.imageOverlay(framePathPrefix + fr.file + '?_=' + Date.now(), fr.bounds, {
+    const newLayer = L.imageOverlay(framePathPrefix + fr.file + '?v=' + encodeURIComponent(frameVer || fr.ts_utc), fr.bounds, {
       opacity: 0.72, interactive: false,
     });
     if (layer) map.removeLayer(layer);
@@ -523,6 +546,7 @@ function initRadarOverlay(map) {
       const j = await r.json();
       frames = (j.frames || []).filter(f => f.file && f.bounds);
       frames.sort((a, b) => a.ts_utc.localeCompare(b.ts_utc));
+      frameVer = j.updated_at_utc || eventId;
       if (elSlider) { elSlider.max = String(Math.max(0, frames.length - 1)); }
       if (!frames.length) { setStatus('evento senza frame'); return; }
       showIdx(0);

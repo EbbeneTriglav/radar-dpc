@@ -11,6 +11,7 @@ const LocationPanel = (() => {
   let _points = []; // { id, lat, lon, label, marker, circle, color }
   let _onPointsChanged = null;
   let _geocodeTimeout = null;
+  let _seq = 0;     // contatore per id univoci anche se più punti nello stesso ms
 
   let elSearchInput, elSearchResults, elPointsList;
 
@@ -79,7 +80,10 @@ const LocationPanel = (() => {
     });
   }
 
-  async function addPoint(lat, lon, label = null) {
+  /**
+   * @param {object} [opts]  { areaName } — area preset di archive/areas.json (soglie operative)
+   */
+  async function addPoint(lat, lon, label = null, opts = {}) {
     if (_points.length >= MAX_POINTS) {
       showToast(`Massimo ${MAX_POINTS} punti contemporaneamente`, 'warn');
       return;
@@ -87,7 +91,8 @@ const LocationPanel = (() => {
 
     if (!label) label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
-    const id = Date.now();
+    // Date.now() da solo duplica l'id quando le aree preset sono aggiunte nello stesso ms
+    const id = Date.now() * 100 + (_seq++ % 100);
     const color = COLORS[_points.length % COLORS.length];
 
     // Marker personalizzato
@@ -111,7 +116,7 @@ const LocationPanel = (() => {
       dashArray: '5 4',
     }).addTo(_map);
 
-    const point = { id, lat, lon, label, marker, circle, color };
+    const point = { id, lat, lon, label, marker, circle, color, areaName: opts?.areaName ?? null };
     _points.push(point);
     _renderPointsList();
     _onPointsChanged?.([..._points]);

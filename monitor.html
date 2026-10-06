@@ -56,6 +56,9 @@
     .mon-thresh-list { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
     .mon-thresh-tag { padding: 3px 8px; border-radius: 10px; font-size: 10px; background: var(--bg2); border: 1px solid var(--border2); color: var(--text3); }
     .mon-thresh-tag.active { background: #6a2a14; color: #ffb38e; border-color: #c54521; }
+    .mon-thresh-tag.fc { border-style: dashed; border-color: #82b1ff; color: #82b1ff; }
+    .mon-run-info { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+    .mon-run-info .run-stale { color: var(--danger); font-weight: 600; }
     .mon-edit-btn { background: transparent; border: 0; color: var(--text3); cursor: pointer; font-size: 11px; }
     .mon-edit-btn:hover { color: var(--text); }
 
@@ -67,9 +70,10 @@
     .mon-event { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 11px; }
     .mon-event:last-child { border-bottom: 0; }
     .mon-event .lvl { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; margin-right: 5px; font-weight: 600; }
-    .lvl-warning, .lvl-forecast_warning   { background: #5e4a0c; color: #ffd76b; }
-    .lvl-alarm, .lvl-forecast_alarm       { background: #6a2a14; color: #ffb38e; }
-    .lvl-emergency, .lvl-forecast_emergency { background: #6e1830; color: #ff8aa8; }
+    .lvl-warning, .lvl-forecast_warning, .lvl-forecast24h_warning, .lvl-nowcast_warning, .lvl-storm_on_area { background: #5e4a0c; color: #ffd76b; }
+    .lvl-alarm, .lvl-forecast_alarm, .lvl-forecast24h_alarm, .lvl-nowcast_alarm { background: #6a2a14; color: #ffb38e; }
+    .lvl-emergency, .lvl-forecast_emergency, .lvl-forecast24h_emergency, .lvl-nowcast_emergency { background: #6e1830; color: #ff8aa8; }
+    .lvl-storm_cleared { background: #1e4d28; color: #b8f0c5; }
     .mon-event .pred { color: #82b1ff; }
 
     .mon-chart-wrap { height: 220px; }
@@ -78,6 +82,9 @@
     .mon-override-badge, .mon-fc-badge { padding: 3px 8px; border-radius: 10px; font-size: 10px; }
     .mon-override-badge { background: #1e3a5f; color: #cfe7ff; }
     .mon-fc-badge { background: #2e3d5e; color: #82b1ff; }
+    .mon-fc-badge.fc-warning   { border: 1px dashed #ffd76b; }
+    .mon-fc-badge.fc-alarm     { border: 1px dashed #ffb38e; }
+    .mon-fc-badge.fc-emergency { border: 1px dashed #ff8aa8; }
 
     .mon-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
     .mon-modal-bg.open { display: flex; }
@@ -98,11 +105,13 @@
     <a href="monitor.html" class="nav-link active">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
   </div>
   <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema chiaro/scuro"><i class="fa fa-moon"></i></button>
   <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
     <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
   </button>
@@ -121,6 +130,7 @@
       </select>
     </label>
     <span id="overrides-badge" class="mon-override-badge" style="display:none">⚠️ Hai modifiche locali alle soglie</span>
+    <span id="run-info" class="mon-run-info" title="Ora italiana (Europe/Rome). Rosso se il nowcast non gira da più di 20 minuti."></span>
     <span style="flex:1"></span>
     <button class="btn-sm" id="btn-reset-overrides" style="display:none"><i class="fa fa-undo"></i> Default</button>
   </div>
@@ -164,6 +174,86 @@ let _archive = {};      // {area: {cum3: rows, cum24: rows}}
 let _charts = {};
 let _editing = {};
 let _timing = 3;        // ore selezionate
+let _archiveLoadedAt = 0;              // ms dell'ultimo caricamento CUM3/CUM24
+const ARCHIVE_TTL_MS = 10 * 60_000;    // ricarica CUM3/CUM24 al massimo ogni 10'
+const EXT_TTL_MS     = 10 * 60_000;    // cache 10' per OpenMeteo / MET Norway
+
+// ── Tema (stessa convenzione delle altre pagine: localStorage 'radar-theme') ──
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+applyTheme(localStorage.getItem('radar-theme')||'dark');
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  localStorage.setItem('radar-theme',t); applyTheme(t); if (_areas.length) render(); });
+
+// ── Parsing CSV minimale (gestisce virgolette) — stessa funzione di verifica.html ──
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const split = l => { const out=[]; let cur='',q=false;
+    for (const ch of l){ if(ch==='"'){q=!q;} else if(ch===','&&!q){out.push(cur);cur='';} else cur+=ch; }
+    out.push(cur); return out; };
+  const h = split(lines[0]);
+  return lines.slice(1).map(l=>{ const c=split(l); const o={}; h.forEach((k,i)=>o[k]=c[i]??''); return o; });
+}
+
+// Numero da stringa CSV/JSON: '—' se mancante o non numerico (mai 0 inventato)
+function fmtNum(v, d = 1){ const n = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(n) ? n.toFixed(d) : '—'; }
+
+// ── Classificazione livelli events.csv ────────────────────────────────────
+// observed  = soglie DPC (warning/alarm/emergency)       → stato osservato
+// nowcast   = nowcast_<lv> (radar nel buffer, osservato)  → stato osservato
+// storm_on  = storm_on_area ("cella su area")            → stato osservato, almeno warning
+// storm_off = storm_cleared                               → chiude la cella, non è un'allerta
+// forecast  = forecast_<lv> / forecast24h_<lv>           → SOLO badge "PREVISTO", mai stato osservato
+const LEVEL_PRI = { warning: 1, alarm: 2, emergency: 3 };
+function classifyEvent(e){
+  const raw = e.level || '';
+  if (raw === 'storm_on_area') return { kind: 'storm_on', lv: 'warning' };
+  if (raw === 'storm_cleared') return { kind: 'storm_off', lv: null };
+  const m = raw.match(/^(forecast24h_|forecast_|nowcast_)?(.*)$/);
+  const pre = m[1] || '';
+  const lv = LEVEL_PRI[m[2]] ? m[2] : null;
+  const kind = pre.startsWith('forecast') ? 'forecast' : (pre === 'nowcast_' ? 'nowcast' : 'observed');
+  return { kind, lv };
+}
+
+// ── Cache fetch esterni (OpenMeteo / MET Norway): 10' per URL ─────────────
+const _extCache = new Map();   // url → { t, p }
+function cachedJson(url){
+  const c = _extCache.get(url);
+  if (c && Date.now() - c.t < EXT_TTL_MS) return c.p;
+  const p = fetch(url, { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  _extCache.set(url, { t: Date.now(), p });
+  p.catch(() => { if (_extCache.get(url)?.p === p) _extCache.delete(url); });  // gli errori non restano in cache
+  return p;
+}
+
+// ── Colori grafico leggibili in entrambi i temi (da variabili CSS) ────────
+function chartTheme(){
+  const cs = getComputedStyle(document.body);
+  const light = document.body.classList.contains('light-theme');
+  return {
+    text: cs.getPropertyValue('--text2').trim() || '#aaa',
+    grid: light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)',
+  };
+}
+
+// ── Ultimi run dei workflow (ora italiana) ────────────────────────────────
+const _fmtRome = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' });
+function renderRunInfo(){
+  const el = document.getElementById('run-info');
+  if (!el) return;
+  const part = (lbl, iso, staleMin) => {
+    const ms = Date.parse(iso || '');
+    if (!Number.isFinite(ms)) return `<span>${lbl}: ultimo run —</span>`;
+    const ago = Math.max(0, Math.round((Date.now() - ms) / 60000));
+    const stale = staleMin != null && ago > staleMin;
+    return `<span class="${stale ? 'run-stale' : ''}">${lbl}: ultimo run ${_fmtRome.format(ms)} (${ago} min fa)${stale ? ' ⚠️' : ''}</span>`;
+  };
+  el.innerHTML = part('Nowcast', _lastObs._nowcast_last_run_utc, 20) +
+    (_lastObs._monitor_last_run_utc ? ' · ' + part('Monitor', _lastObs._monitor_last_run_utc, null) : '');
+}
 
 // ── Override storage ──────────────────────────────────────────────────────
 function loadOverrides(n){ try{return JSON.parse(localStorage.getItem(LS_PREFIX+n)||'null');}catch{return null;} }
@@ -212,11 +302,7 @@ async function init(){
   render();
   refreshOverridesBadge();
 
-  document.getElementById('btn-refresh').onclick = async () => {
-    await Promise.all([loadEvents(), loadLastObs()]);
-    await loadArchiveForAll();
-    render();
-  };
+  document.getElementById('btn-refresh').onclick = refreshAll;
   document.getElementById('btn-reset-overrides').onclick = () => {
     if (confirm('Cancella le modifiche locali e ripristina default?')) { clearAllOverrides(); render(); }
   };
@@ -228,7 +314,15 @@ async function init(){
   tzBtn.onclick = () => Timezone.toggle();
   window.addEventListener('timezone-changed', () => { refTz(); render(); });
 
-  setInterval(async () => { await Promise.all([loadEvents(), loadLastObs()]); render(); }, 60_000);
+  setInterval(refreshAll, 60_000);
+}
+
+// Aggiorna eventi + ultime osservazioni; CUM3/CUM24 si ricaricano al massimo
+// ogni ARCHIVE_TTL_MS (10'), OpenMeteo/MET sono in cache 10' (cachedJson).
+async function refreshAll(){
+  await Promise.all([loadEvents(), loadLastObs()]);
+  await loadArchiveForAll();
+  render();
 }
 
 async function loadAreas(){
@@ -243,10 +337,7 @@ async function loadEvents(){
   try {
     const r = await fetchData(EVENTS_URL);
     if (!r.ok) { _events = []; return; }
-    const lines = (await r.text()).trim().split(/\r?\n/);
-    if (lines.length < 2) { _events = []; return; }
-    const h = lines[0].split(',');
-    _events = lines.slice(1).map(line => { const c = line.split(','); const o = {}; h.forEach((x,i) => o[x] = c[i]||''); return o; });
+    _events = parseCSV(await r.text());
   } catch { _events = []; }
 }
 
@@ -259,21 +350,23 @@ async function loadLastObs(){
 }
 
 async function loadArchiveForAll(){
+  const stale = Date.now() - _archiveLoadedAt >= ARCHIVE_TTL_MS;
+  if (!stale && _areas.every(a => _archive[a.name])) return;
+  const next = stale ? {} : { ..._archive };
   for (const a of _areas) {
-    if (_archive[a.name]) continue;
-    _archive[a.name] = { cum3: await loadCsv(`archive/data/${a.name}_cum3.csv`),
-                         cum24: await loadCsv(`archive/data/${a.name}_cum24.csv`) };
+    if (next[a.name]) continue;
+    next[a.name] = { cum3: await loadCsv(`archive/data/${a.name}_cum3.csv`),
+                     cum24: await loadCsv(`archive/data/${a.name}_cum24.csv`) };
   }
+  _archive = next;               // swap atomico: il render non vede mai un archivio a metà
+  _archiveLoadedAt = Date.now();
 }
 
 async function loadCsv(url){
   try {
     const r = await fetchData(url);
     if (!r.ok) return [];
-    const lines = (await r.text()).trim().split(/\r?\n/);
-    if (lines.length < 2) return [];
-    const h = lines[0].split(',');
-    return lines.slice(1).map(line => { const c = line.split(','); const o = {}; h.forEach((x,i) => o[x] = c[i]||''); return o; });
+    return parseCSV(await r.text());
   } catch { return []; }
 }
 
@@ -285,6 +378,7 @@ function render(){
       <i class="fa fa-info-circle"></i> Nessuna area con monitoring attivo.</div>`;
     return;
   }
+  renderRunInfo();
   grid.innerHTML = _areas.map(renderAreaCard).join('');
   _areas.forEach(a => loadChart(a));
 }
@@ -300,13 +394,27 @@ function renderAreaCard(area){
   const now = Date.now();
   const recentEvents = areaEvents.filter(e => (now - new Date(e.event_timestamp_utc).getTime()) < 2 * 3600_000);
 
-  // Stato corrente (livello max attivo)
-  const pri = { warning: 1, alarm: 2, emergency: 3 };
-  let level = 'ok';
+  // Stato corrente OSSERVATO (soglie DPC + nowcast + cella su area).
+  // Le previsioni (forecast_/forecast24h_) NON guidano lo stato: badge separato "PREVISTO".
+  const pri = LEVEL_PRI;
+  let level = 'ok', fcLevel = null;
   recentEvents.forEach(e => {
-    const lv = e.level.replace('forecast_', '');
-    if ((pri[lv]||0) > (pri[level]||0)) level = lv;
+    const c = classifyEvent(e);
+    if (!c.lv) return;
+    if (c.kind === 'forecast') { if ((pri[c.lv]||0) > (pri[fcLevel]||0)) fcLevel = c.lv; return; }
+    if (c.kind === 'storm_on') return;   // gestita sotto (con storm_cleared)
+    if ((pri[c.lv]||0) > (pri[level]||0)) level = c.lv;
   });
+  // Cella su area: attiva se l'ultimo evento storm_* dell'area è storm_on_area
+  // (non seguito da storm_cleared) ed è nella stessa finestra delle 2h.
+  const lastStorm = areaEvents.find(e => e.level === 'storm_on_area' || e.level === 'storm_cleared');
+  const stormOn = !!lastStorm && lastStorm.level === 'storm_on_area' && recentEvents.includes(lastStorm);
+  if (stormOn && (pri[level]||0) < pri.warning) level = 'warning';
+  const obsLevels = recentEvents.map(classifyEvent).filter(c => (c.kind === 'observed' || c.kind === 'nowcast') && c.lv);
+  const statusParts = [];
+  if (obsLevels.length) statusParts.push(level.toUpperCase());
+  if (stormOn) statusParts.push('CELLA SU AREA');
+  const statusText = statusParts.join(' · ') || 'OK';
 
   const productCards = Object.entries(products).map(([prod, cfg]) =>
     renderProductPanel(area, prod, cfg, recentEvents, isEditing)
@@ -314,17 +422,28 @@ function renderAreaCard(area){
 
   const evList = areaEvents.slice(0, 6).map(e => {
     const tsStr = Timezone.formatDateTime(new Date(e.event_timestamp_utc).getTime());
-    const isFc = e.level.startsWith('forecast_');
-    const lv = e.level.replace('forecast_', '');
+    const c = classifyEvent(e);
+    const isFc = c.kind === 'forecast';
+    const lvText = c.kind === 'storm_on' ? 'cella su area' : c.kind === 'storm_off' ? 'cella uscita'
+                 : (c.kind === 'nowcast' ? 'nowcast ' : '') + (c.lv || e.level);
+    const icon = isFc ? '🔮' : c.kind === 'storm_on' ? '⛈️' : c.kind === 'storm_off' ? '🌤' : c.kind === 'nowcast' ? '📡' : '';
     const em = e.notified_email === 'true' ? '✉️' : (e.notified_email === 'skipped' ? '' : '⚠️');
     const tg = e.notified_telegram === 'true' ? '✈️' : (e.notified_telegram === 'skipped' ? '' : '⚠️');
-    const val = isFc ? `prev. ${parseFloat(e.forecast_max_6h_mm).toFixed(1)} mm` :
-                       `${parseFloat(e.observed_mm_mean).toFixed(1)} mm`;
+    // SRI/ARPA e nowcast scattano sul MASSIMO d'area → si mostra il max (intensità);
+    // CUM3/SRT1 (monitor) scattano sulla media → si mostra la media.
+    const maxFirst = e.product === 'SRI' || e.product === 'ARPA' || c.kind === 'nowcast';
+    const maxUnit = (e.product === 'SRI' || e.product === 'ARPA') ? 'mm/h' : 'mm';
+    let val;
+    if (isFc) val = `prev. ${fmtNum(e.forecast_max_6h_mm)} mm`;
+    else if (maxFirst) val = `max ${fmtNum(e.observed_mm_max)} ${maxUnit}`;
+    else if (Number.isFinite(parseFloat(e.observed_mm_mean)) || !Number.isFinite(parseFloat(e.observed_mm_max)))
+      val = `${fmtNum(e.observed_mm_mean)} mm`;
+    else val = `max ${fmtNum(e.observed_mm_max)} mm`;   // righe ricostruite: solo il max
     return `<div class="mon-event">
-      <span class="lvl lvl-${lv}">${isFc ? '🔮' : ''}${lv}</span>
+      <span class="lvl lvl-${e.level}">${icon}${lvText}</span>
       <span><b>${e.product}</b> ${val}</span>
       <span style="color:var(--text3)"> ≥ ${e.threshold_mm}</span>
-      ${e.note ? `<span class="pred"> · ${e.note}</span>` : ''}
+      ${e.note ? `<span class="pred"> · ${String(e.note).replace(/\d+\.\d{3,}/g, v => (+v).toFixed(1))}</span>` : ''}
       <span style="float:right;color:var(--text3);font-size:10px">${tsStr} ${em}${tg}</span>
     </div>`;
   }).join('') || `<div class="mon-noevents">Nessun evento registrato</div>`;
@@ -333,7 +452,8 @@ function renderAreaCard(area){
     <div class="mon-area-card">
       <div class="mon-area-head">
         <h2>📍 ${area.label}</h2>
-        <span class="mon-area-status status-${level}">${level === 'ok' ? 'OK' : level.toUpperCase()}</span>
+        <span class="mon-area-status status-${level}" title="Stato osservato (soglie DPC, nowcast, cella su area) — ultime 2h">${statusText}</span>
+        ${fcLevel ? `<span class="mon-fc-badge fc-${fcLevel}" title="Allerta da PREVISIONE (non osservata) — ultime 2h">🔮 PREVISTO: ${fcLevel.toUpperCase()}</span>` : ''}
         ${isOverridden ? '<span class="mon-override-badge">soglie locali</span>' : ''}
         <span style="flex:1"></span>
       </div>
@@ -374,7 +494,7 @@ function renderAreaCard(area){
 
       <div class="mon-prod-row" style="margin-top:10px">
         <div class="mon-panel">
-          <h3>📊 Grafico ${_timing}h <span class="pill">DPC + OpenMeteo</span></h3>
+          <h3>📊 Grafico ${_timing === 24 ? 'CUM24 · ultimi 7 giorni' : '±' + _timing + 'h'} <span class="pill" id="pill-${area.name}">${_timing === 24 ? 'CUM24 DPC (pluviometri)' : 'DPC'}</span></h3>
           <div class="mon-chart-wrap"><canvas id="chart-${area.name}"></canvas></div>
         </div>
         <div class="mon-panel">
@@ -394,10 +514,13 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
   const obs = _lastObs[area.name]?.[prod];
   let valueHtml;
   if (obs) {
-    const isStale = (Date.now() - new Date(obs.timestamp_utc).getTime()) > 6 * 3600_000;
+    // Dato vecchio: SRT1 (orario, aggiornato ogni ~10') > 30 min; CUM3 (blocchi 3h + latenza) > 4 h
+    const staleMs = prod === 'SRT1' ? 30 * 60_000 : prod === 'CUM3' ? 4 * 3600_000 : 6 * 3600_000;
+    const obsMs = new Date(obs.timestamp_utc).getTime();
+    const isStale = !Number.isFinite(obsMs) || (Date.now() - obsMs) > staleMs;
     valueHtml = `
-      <div class="mon-bignum ${isStale ? 'stale' : ''}">${obs.mean.toFixed(1)} <span class="mon-unit">${unit} (media)</span></div>
-      <div class="mon-subtle">max ${obs.max.toFixed(1)} mm · ${Timezone.formatDateTime(new Date(obs.timestamp_utc).getTime())}</div>
+      <div class="mon-bignum ${isStale ? 'stale' : ''}">${fmtNum(obs.mean)} <span class="mon-unit">${unit} (media)</span></div>
+      <div class="mon-subtle">max ${fmtNum(obs.max)} mm · ${Number.isFinite(obsMs) ? Timezone.formatDateTime(obsMs) : '—'}${isStale ? ' · <span style="color:var(--warn)">⚠️ dato non aggiornato</span>' : ''}</div>
     `;
   } else {
     valueHtml = `<div class="mon-na">In attesa primo aggiornamento dal workflow…</div>`;
@@ -410,17 +533,23 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
     const key = prod === 'SRT1' ? 'max_1h' : 'max_3h';
     const om = fc.openmeteo?.[key];
     const mt = fc.metno?.[key];
-    const fmt = v => (v == null ? '—' : v.toFixed(1));
-    const both = (om != null && mt != null);
+    const fmt = v => fmtNum(v);
+    const both = Number.isFinite(om) && Number.isFinite(mt);
+    const hz = Number.isFinite(fc.horizon_hours) ? ` nelle prossime ${fc.horizon_hours}h` : '';
     fcHtml = `<div class="mon-subtle" style="margin-top:4px">
-      🔮 forecast ${prod === 'SRT1' ? '1h' : '3h'}: OM <b>${fmt(om)}</b> · MET <b>${fmt(mt)}</b> mm
-      ${both ? '<span style="color:#82b1ff">· 2 modelli ✓</span>' : '<span style="color:#888">· in attesa MET</span>'}
+      🔮 max ${prod === 'SRT1' ? '1h' : '3h'}${hz}: OM <b>${fmt(om)}</b> · MET <b>${fmt(mt)}</b> mm
+      ${both ? '<span style="color:#82b1ff">· dati da 2 modelli</span>' : '<span style="color:#888">· in attesa MET</span>'}
     </div>`;
   }
 
+  // Tag soglia: "active" solo per eventi OSSERVATI (soglia DPC o nowcast);
+  // un evento previsto marca il tag in tratteggio ("fc"), mai come attivo.
   const tags = thresholds.map(t => {
-    const active = recentEvents.some(e => e.product === prod && e.level.replace('forecast_','') === t.level);
-    return `<span class="mon-thresh-tag ${active?'active':''}">${t.icon} ${t.level} ≥ ${t.value_mm}</span>`;
+    const match = kind => recentEvents.some(e => { const c = classifyEvent(e);
+      return e.product === prod && c.lv === t.level && kind.includes(c.kind); });
+    const active = match(['observed', 'nowcast']);
+    const fcOnly = !active && match(['forecast']);
+    return `<span class="mon-thresh-tag ${active ? 'active' : fcOnly ? 'fc' : ''}"${fcOnly ? ' title="Soglia superata solo in PREVISIONE"' : ''}>${t.icon} ${t.level} ≥ ${t.value_mm}${fcOnly ? ' (prev.)' : ''}</span>`;
   }).join('');
 
   const editor = !isEditing ? '' : thresholds.map((t, i) => `
@@ -441,38 +570,58 @@ function renderProductPanel(area, prod, cfg, recentEvents, isEditing){
   `;
 }
 
-// ── Grafico DPC osservato + OpenMeteo (passato + forecast) ────────────────
+// ── Grafico DPC osservato + OpenMeteo + MET Norway ────────────────────────
+// Finestra [now−H, now+H]. Unità omogenea: INTENSITÀ MEDIA mm/h
+//   CUM3 DPC (mm/3h) ÷ 3 · SRT1 DPC (mm/1h) as is · OpenMeteo 15' (mm/15min) × 4 · MET 1h (mm/1h) as is.
+// Vista 24h: SOLO CUM24 DPC (mm/24h, ultimi 7 giorni), senza previsioni (unità non confrontabili).
 async function loadChart(area){
   const canvas = document.getElementById(`chart-${area.name}`);
   if (!canvas) return;
 
-  const dpcSeries = buildDpcSeries(area, _timing);
+  const H = _timing;
+  const nowMs = Date.now();
+  const is24 = H === 24;
+  const t0 = is24 ? nowMs - 7 * 86400_000 : nowMs - H * 3600_000;
+  const t1 = is24 ? nowMs : nowMs + H * 3600_000;
+  const inWin = d => d.ts >= t0 && d.ts <= t1;
 
-  let omSeries = [];
-  try {
-    const futH = _timing;
-    const r = await fetch(`${OM_URL}?latitude=${area.centroid.lat}&longitude=${area.centroid.lon}` +
-      `&minutely_15=precipitation&past_minutely_15=4&forecast_minutes=${futH * 60}&timezone=UTC`,
-      { cache: 'no-cache' });
-    const data = await r.json();
-    const times = data.minutely_15?.time || [];
-    const prec  = data.minutely_15?.precipitation || [];
-    omSeries = times.map((t, i) => ({ ts: new Date(t + 'Z').getTime(), v: prec[i] || 0 }));
-  } catch (e) { console.warn('OM fetch err', area.name, e); }
+  const dpc = buildDpcSeries(area, H);
+  const dpcSeries = dpc.series.filter(inWin);
 
-  // MET Norway forecast (granularità oraria)
-  let metSeries = [];
-  try {
-    const r = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact` +
-      `?lat=${area.centroid.lat.toFixed(4)}&lon=${area.centroid.lon.toFixed(4)}`, { cache: 'no-cache' });
-    const data = await r.json();
-    const ts = data.properties?.timeseries || [];
-    metSeries = ts.map(e => {
-      const det = e.data?.next_1_hours?.details;
-      if (!det || det.precipitation_amount == null) return null;
-      return { ts: new Date(e.time).getTime(), v: det.precipitation_amount };
-    }).filter(Boolean);
-  } catch (e) { console.warn('MET fetch err', area.name, e); }
+  let omSeries = [], metSeries = [];
+  if (!is24) {
+    try {
+      const data = await cachedJson(`${OM_URL}?latitude=${area.centroid.lat}&longitude=${area.centroid.lon}` +
+        `&minutely_15=precipitation&past_minutely_15=${H * 4}&forecast_minutes=${H * 60}&timezone=UTC`);
+      const times = data.minutely_15?.time || [];
+      const prec  = data.minutely_15?.precipitation || [];
+      omSeries = times.map((t, i) => {
+        const v = prec[i] ?? null;                       // valore mancante → null, mai 0
+        return { ts: new Date(t + 'Z').getTime(), v: Number.isFinite(v) ? +(v * 4).toFixed(2) : null };
+      }).filter(inWin);
+    } catch (e) { console.warn('OM fetch err', area.name, e); }
+
+    // MET Norway forecast (granularità oraria: next_1_hours = mm nell'ora → mm/h)
+    try {
+      const data = await cachedJson(`https://api.met.no/weatherapi/locationforecast/2.0/compact` +
+        `?lat=${area.centroid.lat.toFixed(4)}&lon=${area.centroid.lon.toFixed(4)}`);
+      const ts = data.properties?.timeseries || [];
+      metSeries = ts.map(e => {
+        const det = e.data?.next_1_hours?.details;
+        if (!det || !Number.isFinite(det.precipitation_amount)) return null;
+        return { ts: new Date(e.time).getTime(), v: det.precipitation_amount };
+      }).filter(Boolean).filter(inWin);
+    } catch (e) { console.warn('MET fetch err', area.name, e); }
+  }
+
+  // Il canvas può essere stato sostituito da un render() più recente durante i fetch
+  if (!canvas.isConnected) return;
+
+  const hasOm  = omSeries.some(d => d.v != null);
+  const hasMet = metSeries.length > 0;
+  const pill = document.getElementById(`pill-${area.name}`);
+  if (pill) pill.textContent = is24 ? dpc.label
+    : ['DPC', hasOm ? 'OpenMeteo' : null, hasMet ? 'MET Norway' : null].filter(Boolean).join(' + ');
 
   // Unifica timeline
   const allTs = new Set();
@@ -487,32 +636,34 @@ async function loadChart(area){
   const dpcData = tsList.map(t => dpcMap.has(t) ? dpcMap.get(t) : null);
   const omData  = tsList.map(t => omMap.has(t) ? omMap.get(t) : null);
   const metData = tsList.map(t => metMap.has(t) ? metMap.get(t) : null);
-  const nowMs = Date.now();
+  const unit = is24 ? 'mm/24h' : 'mm/h';
+  const th = chartTheme();
+
+  const datasets = [
+    { type: 'bar', label: dpc.label,
+      data: dpcData, backgroundColor: '#7bed9fcc', borderColor: '#7bed9f', borderWidth: 1 },
+  ];
+  if (!is24) datasets.push(
+    { type: 'line', label: 'OpenMeteo 15\' (×4 → mm/h)',
+      data: omData, borderColor: '#82b1ff', backgroundColor: '#82b1ff44',
+      tension: 0.3, pointRadius: 1, fill: true,
+      segment: {
+        borderDash: ctx => (tsList[ctx.p1DataIndex] > nowMs) ? [5, 4] : undefined,
+      },
+    },
+    { type: 'line', label: 'MET Norway 1h (forecast)',
+      data: metData, borderColor: '#ff9f6b', backgroundColor: 'transparent',
+      tension: 0.3, pointRadius: 2, borderDash: [3, 3], fill: false, spanGaps: true },
+  );
 
   if (_charts[area.name]) _charts[area.name].destroy();
   _charts[area.name] = new Chart(canvas, {
-    data: {
-      labels,
-      datasets: [
-        { type: 'bar', label: 'DPC osservato',
-          data: dpcData, backgroundColor: '#7bed9fcc', borderColor: '#7bed9f', borderWidth: 1 },
-        { type: 'line', label: 'OpenMeteo (forecast)',
-          data: omData, borderColor: '#82b1ff', backgroundColor: '#82b1ff44',
-          tension: 0.3, pointRadius: 1, fill: true,
-          segment: {
-            borderDash: ctx => (tsList[ctx.p1DataIndex] > nowMs) ? [5, 4] : undefined,
-          },
-        },
-        { type: 'line', label: 'MET Norway (forecast)',
-          data: metData, borderColor: '#ff9f6b', backgroundColor: 'transparent',
-          tension: 0.3, pointRadius: 2, borderDash: [3, 3], fill: false, spanGaps: true },
-      ],
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#aaa', font: { size: 10 } }, position: 'bottom' },
+        legend: { labels: { color: th.text, font: { size: 10 } }, position: 'bottom' },
         tooltip: {
           backgroundColor: 'rgba(20,20,30,0.95)',
           titleColor: '#fff', bodyColor: '#ddd', borderColor: '#444', borderWidth: 1,
@@ -525,54 +676,56 @@ async function loadChart(area){
             },
             label: item => {
               if (item.parsed.y == null) return null;
-              return `${item.dataset.label}: ${item.parsed.y.toFixed(2)} mm`;
+              return `${item.dataset.label}: ${item.parsed.y.toFixed(2)} ${unit}`;
             },
           },
         },
       },
       scales: {
-        x: { ticks: { color: '#aaa', maxTicksLimit: 12, autoSkip: true,
+        x: { ticks: { color: th.text, maxTicksLimit: 12, autoSkip: true,
                      callback: function(v, i){
                        const ts = tsList[i];
                        if (ts == null) return '';
-                       const d = new Date(ts);
                        // mostra data + ora per i tick
                        return Timezone.format(ts, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
                      } },
-             grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { title: { display: true, text: 'mm', color: '#aaa' },
-             ticks: { color: '#aaa' },
-             grid: { color: 'rgba(255,255,255,0.05)' },
+             grid: { color: th.grid } },
+        y: { title: { display: true, text: is24 ? 'mm/24h (CUM24 DPC)' : 'mm/h (intensità media)', color: th.text },
+             ticks: { color: th.text },
+             grid: { color: th.grid },
              beginAtZero: true },
       },
     },
   });
 }
 
+// Serie DPC osservata (barre). Valori mancanti/non numerici → null (barra assente), mai 0.
 function buildDpcSeries(area, timing){
   const cum3 = (_archive[area.name]?.cum3 || []).filter(r => r.location_type === 'area');
   const cum24 = (_archive[area.name]?.cum24 || []).filter(r => r.location_type === 'area');
   const lastSRT1 = _lastObs[area.name]?.SRT1;
   const lastCUM3 = _lastObs[area.name]?.CUM3;
+  const num = v => { const n = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(n) ? n : null; };
 
-  let series = [];
+  let series = [], label;
   if (timing === 24) {
-    series = cum24.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }));
+    label = 'CUM24 DPC (pluviometri)';
+    series = cum24.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: num(r.mean) }));
   } else if (timing === 1) {
-    if (lastSRT1) series = [{ ts: new Date(lastSRT1.timestamp_utc).getTime(), v: lastSRT1.mean }];
+    label = 'SRT1 DPC (radar+pluviometri)';
+    if (lastSRT1) series = [{ ts: new Date(lastSRT1.timestamp_utc).getTime(), v: num(lastSRT1.mean) }];
   } else {
-    // 3h / 6h / 12h → serie CUM3 + ultimo valore
-    const days = timing <= 3 ? 1 : (timing <= 6 ? 2 : 4);
-    const cutoff = Date.now() - days * 86400_000;
-    series = cum3.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: parseFloat(r.mean) || 0 }))
-                 .filter(d => d.ts >= cutoff);
-    // Aggiungi anche l'ultimo valore live da last_observations (se più recente dell'archivio)
+    // 3h / 6h / 12h → serie CUM3 (mm/3h ÷ 3 = mm/h medi sul blocco) + ultimo valore live
+    label = 'CUM3 DPC (pluviometri) ÷3 → mm/h';
+    const toRate = v => v == null ? null : +(v / 3).toFixed(2);
+    series = cum3.map(r => ({ ts: new Date(r.timestamp_utc).getTime(), v: toRate(num(r.mean)) }));
     if (lastCUM3) {
       const ts = new Date(lastCUM3.timestamp_utc).getTime();
-      if (!series.some(d => d.ts === ts)) series.push({ ts, v: lastCUM3.mean });
+      if (!series.some(d => d.ts === ts)) series.push({ ts, v: toRate(num(lastCUM3.mean)) });
     }
   }
-  return series.sort((a,b) => a.ts - b.ts);
+  series = series.filter(d => Number.isFinite(d.ts));
+  return { label, series: series.sort((a,b) => a.ts - b.ts) };
 }
 
 // ── Editor ───────────────────────────────────────────────────────────────

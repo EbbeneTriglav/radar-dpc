@@ -29,6 +29,7 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
@@ -36,6 +37,7 @@
 
   <div class="spacer"></div>
 
+  <button class="topbar-btn" id="btn-theme" title="Tema chiaro/scuro"><i class="fa fa-moon"></i></button>
   <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
     <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
   </button>
@@ -58,7 +60,18 @@
 <script src="js/timezone.js?v=20260518j"></script>
 <script src="js/basemap-picker.js?v=20260518j"></script>
 <script src="js/config.js?v=20260518j"></script>
-<script src="js/archive-tab.js?v=20260518j"></script>
+<script src="js/archive-tab.js?v=20261006a"></script>
+
+<!-- Tema chiaro/scuro (stessa convenzione delle altre pagine: localStorage 'radar-theme') -->
+<script>
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+applyTheme(localStorage.getItem('radar-theme')||'dark');
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  localStorage.setItem('radar-theme',t); applyTheme(t);
+  window.dispatchEvent(new CustomEvent('radar-theme-changed', { detail: t })); });
+</script>
 
 <!-- Bootstrap pagina -->
 <script>

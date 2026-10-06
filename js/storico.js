@@ -1,6 +1,12 @@
 /**
  * storico.js — Logica pagina storico dati
- * Download CUM24 giornaliero per range date e punti selezionati.
+ * Download cumulate DPC (CUM24 = giorno UTC intero) per range date e punti selezionati.
+ * NB: CUM3/6/12/24 DPC sono pluviometri DPC interpolati (non radar).
+ *
+ * Finestre temporali (prodotto DPC datato T = cumulata delle N ore che TERMINANO a T):
+ *   - CUM24: si richiede il prodotto delle 00:00 UTC di D+1 → copre esattamente il giorno UTC D.
+ *   - CUM3/CUM6/CUM12: si richiede UN solo blocco, quello che termina alle 12:00 UTC di D
+ *     (NON è il totale del giorno; sommare tutti i blocchi richiederebbe 2–8 richieste/giorno).
  */
 
 const StoricoApp = (() => {
@@ -31,27 +37,41 @@ const StoricoApp = (() => {
     elProgress     = document.getElementById('progress-wrap');
     elProgressBar  = document.getElementById('progress-bar');
     elProgressText = document.getElementById('progress-text');
-    elResultTable  = document.getElementById('result-table');
+    elResultTable  = document.getElementById('storico-results-inner');
     elDownloadBtn  = document.getElementById('btn-download');
     elLog          = document.getElementById('run-log');
 
-    // Default: ultime 7 giorni
-    const today = new Date();
-    const week  = new Date(today - 7 * 86400_000);
-    if (elDateTo)   elDateTo.value   = _toInputDate(today);
-    if (elDateFrom) elDateFrom.value = _toInputDate(week);
+    // Default: ultimi 7 giorni CONCLUSI (fino a ieri UTC: il giorno in corso non ha ancora la CUM24)
+    const yesterday = new Date(Date.now() - 86400_000);
+    const weekAgo   = new Date(yesterday.getTime() - 6 * 86400_000);
+    if (elDateTo)   elDateTo.value   = _toInputDate(yesterday);
+    if (elDateFrom) elDateFrom.value = _toInputDate(weekAgo);
 
-    // Popola prodotti selezionabili (quelli con step ≥ 1h)
+    // Popola prodotti selezionabili: CUM24 per primo (default) = giorno UTC intero;
+    // gli altri sono un singolo blocco che termina alle 12 UTC (dichiarato nell'etichetta).
     if (elProduct) {
       const cumProds = Object.entries(CONFIG.PRODUCTS)
-        .filter(([, p]) => p.category === 'cumulate');
+        .filter(([, p]) => p.category === 'cumulate')
+        .sort(([a], [b]) => (a === 'CUM24' ? -1 : b === 'CUM24' ? 1 : 0));
       elProduct.innerHTML = cumProds.map(([type, p]) =>
-        `<option value="${type}">${p.label}</option>`
+        `<option value="${type}"${type === 'CUM24' ? ' selected' : ''}>${p.label} — ${_windowLabel(type)}</option>`
       ).join('');
     }
 
     elRun?.addEventListener('click', run);
-    elDownloadBtn?.addEventListener('click', downloadCSV);
+    // Il download CSV è collegato via onclick nell'HTML (un solo handler → un solo file).
+  }
+
+  /** Descrizione della finestra temporale del valore giornaliero per il prodotto. */
+  function _windowLabel(type) {
+    return type === 'CUM24'
+      ? 'giorno UTC intero (00→24 UTC)'
+      : 'blocco che termina alle 12 UTC (non il giorno intero)';
+  }
+
+  /** Istante (ms) del prodotto da richiedere per il giorno UTC che inizia a dayMs. */
+  function _productTs(type, dayMs) {
+    return type === 'CUM24' ? dayMs + 86400_000 : dayMs + 12 * 3600_000;
   }
 
   let _results = []; // [{ date, ...pointId: value }]
@@ -61,21 +81,21 @@ const StoricoApp = (() => {
     if (!_points.length) { showToast('Aggiungi almeno un punto dalla mappa', 'warn'); return; }
 
     const from = new Date(elDateFrom.value + 'T00:00:00Z');
-    const to   = new Date(elDateTo.value   + 'T23:59:59Z');
-    if (isNaN(from) || isNaN(to) || from > to) {
+    const toDay = Date.parse(elDateTo.value + 'T00:00:00Z');
+    if (isNaN(from) || isNaN(toDay) || from.getTime() > toDay) {
       showToast('Range date non valido', 'error'); return;
     }
 
     const productType = elProduct.value;
     const prod = CONFIG.PRODUCTS[productType];
-    const days = Math.round((to - from) / 86400_000) + 1;
+    const days = Math.round((toDay - from.getTime()) / 86400_000) + 1;
     if (days > 90) { showToast('Range massimo 90 giorni', 'warn'); return; }
 
     _isRunning = true;
     _results = [];
     elRun.disabled = true;
     elRun.innerHTML = '<i class="fa fa-circle-notch fa-spin"></i> Esecuzione…';
-    elProgress.style.display = '';
+    elProgress.style.display = 'block';  // style.css nasconde #progress-wrap di default
     elLog.innerHTML = '';
 
     let processed = 0;
@@ -85,15 +105,21 @@ const StoricoApp = (() => {
       const dayMs = from.getTime() + d * 86400_000;
       const dayStr = new Date(dayMs).toISOString().slice(0, 10);
 
-      _log(`📅 ${dayStr} — Richiesta ${productType}…`);
       setProgress(d, days, `Giorno ${d + 1}/${days}: ${dayStr}`);
 
-      try {
-        // Prendi l'ultimo prodotto disponibile per quel giorno
-        // L'API non ha filtro data storica diretta → usiamo mezzanotte del giorno come ts
-        const noonTs = dayMs + 12 * 3600_000; // mezzogiorno del giorno
+      // Mai richiedere prodotti futuri: il giorno non è ancora concluso → dato mancante.
+      const prodTs = _productTs(productType, dayMs);
+      if (prodTs <= Date.now()) _log(`📅 ${dayStr} — Richiesta ${productType}…`);
+      if (prodTs > Date.now()) {
+        const why = 'prodotto non ancora disponibile (finestra non conclusa)';
+        _log(`  ⏳ ${dayStr}: ${why}`);
+        _results.push({ date: dayStr, error: why });
+        processed++;
+        continue;
+      }
 
-        const { url } = await RadarAPI.getDownloadUrl(productType, noonTs);
+      try {
+        const { url } = await RadarAPI.getDownloadUrl(productType, prodTs);
         const buffer = await RadarAPI.fetchGeoTiff(url);
         const georaster = await GeoRasterUtils.parseGeoTiff(buffer);
 
@@ -105,7 +131,7 @@ const StoricoApp = (() => {
           row[`${point.id}_max`] = res.max;
         }
         _results.push(row);
-        _log(`  ✅ OK — ${_points.map(p => `${p.label}: ${row[p.id]?.toFixed(1) ?? 'N/D'} ${prod.unit}`).join(' | ')}`);
+        _log(`  ✅ OK — ${_points.map(p => `${p.label}: ${row[p.id]?.toFixed(1) ?? '—'} ${prod.unit}`).join(' | ')}`);
 
       } catch (e) {
         _log(`  ⚠️ ${dayStr}: ${e.message}`);
@@ -125,21 +151,28 @@ const StoricoApp = (() => {
     _isRunning = false;
     elRun.disabled = false;
     elRun.innerHTML = '<i class="fa fa-play"></i> Avvia';
-    showToast(`Elaborazione completata: ${processed} giorni`, 'success');
+    const nMiss = _results.filter(r => r.error).length;
+    showToast(`Elaborazione completata: ${processed} giorni` +
+      (nMiss ? ` (${nMiss} senza dato, mostrati come —)` : ''), nMiss ? 'warn' : 'success');
   }
 
   function _renderTable(productType) {
     if (!elResultTable || !_results.length) return;
     const prod = CONFIG.PRODUCTS[productType];
-    const header = ['Data', ..._points.map(p => p.label + ' (' + prod.unit + ')')].join('</th><th>');
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const dateHdr = productType === 'CUM24' ? 'Giorno UTC' : 'Giorno (blocco fino alle 12 UTC)';
+    const header = [dateHdr, ..._points.map(p => esc(p.label) + ' (' + prod.unit + ')')].join('</th><th>');
     const rows = _results.map(row => {
+      // Dato mancante = "—" (mai 0); il motivo è nel tooltip
+      const miss = `<span title="${esc(row.error || 'nessun valore nel buffer')}">—</span>`;
       const cells = [row.date, ..._points.map(p => {
         const v = row[p.id];
-        return v !== undefined && v !== null ? v.toFixed(2) : (row.error ? '⚠️' : 'N/D');
+        return v !== undefined && v !== null ? v.toFixed(2) : miss;
       })].join('</td><td>');
       return `<tr><td>${cells}</td></tr>`;
     }).join('');
-    elResultTable.innerHTML = `<table class="result-table"><thead><tr><th>${header}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const note = `<p style="font-size:10px;color:var(--text3);margin:0 0 6px">${productType} = pluviometri DPC interpolati (non radar) — ${_windowLabel(productType)}. Media nel buffer di ${CONFIG.BUFFER_KM} km. "—" = dato mancante.</p>`;
+    elResultTable.innerHTML = `${note}<table class="result-table"><thead><tr><th>${header}</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function downloadCSV() {
@@ -203,12 +236,15 @@ const StoricoApp = (() => {
     // ─── Foglio metadati ──────────────────────────────────────────────────
     const meta = [
       { Campo: 'Prodotto',   Valore: prodType },
+      { Campo: 'Finestra',   Valore: _windowLabel(prodType) +
+          (prodType === 'CUM24' ? ' (prodotto delle 00:00 UTC del giorno successivo)' : ' (un solo blocco al giorno)') },
       { Campo: 'Unità',      Valore: unit },
       { Campo: 'Da',         Valore: elDateFrom.value },
       { Campo: 'A',          Valore: elDateTo.value },
       { Campo: 'Buffer km',  Valore: CONFIG.BUFFER_KM },
       { Campo: 'Generato',   Valore: new Date().toISOString() },
-      { Campo: 'Fonte',      Valore: 'Radar DPC — Protezione Civile Italiana' },
+      { Campo: 'Fonte',      Valore: 'DPC Protezione Civile — cumulate CUM = pluviometri DPC interpolati (non radar)' },
+      { Campo: 'Dati mancanti', Valore: 'celle vuote (nessun valore inventato)' },
       { Campo: 'API',        Valore: 'https://radar-api.protezionecivile.it' },
       ..._points.map((p, i) => ({
         Campo: `Punto ${i + 1}`,

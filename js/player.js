@@ -71,7 +71,9 @@ const Player = (() => {
       _preloadAll();
     } catch (e) {
       console.error('Player.loadProduct:', e);
-      showToast('Errore caricamento prodotto: ' + e.message, 'error');
+      // Rilancia: il chiamante (selectProduct / auto-refresh / WSS) mostra lo stato
+      // di errore. Prima l'errore era inghiottito e la barra diventava "Aggiornato".
+      throw e;
     }
   }
 

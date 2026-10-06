@@ -11,6 +11,14 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/style.css?v=20260518h">
+  <style>
+    /* Mobile: sidebar sopra, mappa + risultati sotto (pagina scorrevole) */
+    @media (max-width: 700px) {
+      .storico-layout { flex-direction: column; overflow-y: auto; }
+      #storico-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow: visible; flex-shrink: 0; }
+      .storico-right { flex: none !important; height: 85vh; }
+    }
+  </style>
 </head>
 <body>
 
@@ -27,11 +35,13 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
   </div>
   <div class="spacer"></div>
+  <button class="topbar-btn" id="btn-theme" title="Tema chiaro/scuro"><i class="fa fa-moon"></i></button>
   <button class="topbar-btn" id="btn-timezone" title="Cambia fuso orario">
     <i class="fa fa-globe"></i> <span class="tz-label">Locale</span>
   </button>
@@ -42,18 +52,20 @@
 
 <!-- ── Body ────────────────────────────────────────────── -->
 <div id="app" style="height:calc(100vh - 48px)">
-  <div class="storico-layout" style="height:100%">
+  <div class="storico-layout" style="flex:1;min-width:0;height:100%">
 
     <!-- ── Sidebar parametri ──────────────────────────── -->
     <aside id="storico-sidebar">
 
       <div>
         <div class="sidebar-label" style="margin-bottom:8px">
-          <i class="fa fa-database"></i> Download Storico Radar
+          <i class="fa fa-database"></i> Download storico cumulate DPC
         </div>
         <p style="font-size:11px;color:var(--text3);line-height:1.6">
-          Estrae i valori di precipitazione dai prodotti radar DPC per i punti selezionati,
-          per un range di date. Il download genera un file CSV pronto per Excel.
+          Estrae le cumulate di precipitazione DPC (CUM24/CUM12/CUM6/CUM3 =
+          <b>pluviometri DPC interpolati, non radar</b>) per i punti selezionati, un valore per giorno UTC.
+          <b>CUM24</b> = giorno UTC intero (00→24 UTC). CUM3/CUM6/CUM12 = solo il blocco che termina
+          alle 12 UTC, <b>non</b> il totale del giorno. Dati mancanti = "—". Export CSV / Excel.
         </p>
       </div>
 
@@ -89,7 +101,7 @@
           <i class="fa fa-mouse-pointer"></i> Click su mappa per aggiungere punto
         </label>
       </div>
-      <div id="points-list" style="font-size:11px">
+      <div id="points-list" style="font-size:11px;flex:none">
         <p class="no-points">Nessun punto. Cerca o clicca sulla mappa.</p>
       </div>
 
@@ -119,7 +131,8 @@
 
       <div style="margin-top:auto;padding-top:10px;border-top:1px solid var(--border2)">
         <p style="font-size:10px;color:var(--text3);line-height:1.6">
-          ⚠️ L'elaborazione effettua una richiesta API per ogni giorno del range.
+          ⚠️ L'elaborazione effettua una richiesta API per ogni giorno concluso del range
+          (i giorni non ancora conclusi non vengono richiesti).
           Mantenere la pagina aperta durante il processo. Max 90 giorni per esecuzione.
         </p>
       </div>
@@ -127,7 +140,7 @@
     </aside><!-- /storico-sidebar -->
 
     <!-- ── Area destra: mappa + risultati ───────────────── -->
-    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="storico-right" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
 
       <!-- Mappa -->
       <div id="storico-map" style="height:70%;min-height:300px"></div>
@@ -166,23 +179,17 @@
 <script src="js/colormap.js?v=20260518h"></script>
 <script src="js/georaster-utils.js?v=20260518h"></script>
 <script src="js/location.js?v=20260518h"></script>
-<script src="js/storico.js?v=20260518h"></script>
+<script src="js/storico.js?v=20261006a"></script>
 
-<!-- Inietta il risultato nella tabella -->
+<!-- Tema chiaro/scuro (stessa convenzione delle altre pagine: localStorage 'radar-theme') -->
 <script>
-  // Sovrascrive il rendering tabella in storico-results-inner
-  const origRender = StoricoApp._renderTable;
-  document.addEventListener('DOMContentLoaded', () => {
-    const observer = new MutationObserver(() => {
-      const inner = document.getElementById('storico-results-inner');
-      const table = document.querySelector('.result-table');
-      if (table && inner && !inner.contains(table)) {
-        inner.innerHTML = '';
-        inner.appendChild(table);
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  });
+const themeBtn = document.getElementById('btn-theme');
+function applyTheme(t){ document.body.classList.toggle('light-theme', t==='light');
+  themeBtn.innerHTML = t==='light' ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>'; }
+applyTheme(localStorage.getItem('radar-theme')||'dark');
+themeBtn.addEventListener('click',()=>{ const t=document.body.classList.contains('light-theme')?'dark':'light';
+  localStorage.setItem('radar-theme',t); applyTheme(t);
+  if (typeof BasemapPicker !== 'undefined') BasemapPicker.applyTheme(t); });
 </script>
 
 

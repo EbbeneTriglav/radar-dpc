@@ -1,5 +1,38 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — Pagina Radar MeteoSwiss + revisione di tutte le pagine
+
+### Nuova pagina 🛰 Radar MeteoSwiss (`mch.html`)
+- Mappa live (ultima ora, player, LIVE ogni 5') con aree Ruspino/Cepina e radar Lema/Weissfluhgipfel/Albis; legenda mm/h;
+  grigio = fuori copertura (nessun dato, non zero). Schede area: max/media sull'area, anello 10 km, pioggia 24 h
+  MeteoSwiss vs DPC SRI vs ARPA **sugli stessi istanti**, grafico 24 h. "Dato di studio, non vota nelle allerte" · CC BY 4.0.
+- `mch_collect.py`: ogni frame recente → PNG in `archive/data/radar_mch/` (Web Mercator, ultimi 12) + `index.json`;
+  `arpa-collect.yml` li committa. Link nel menu di tutte le pagine.
+
+### Correzioni dati (cosa mostrava numeri o stati sbagliati)
+- **Monitor**: lo stato area ignorava gli eventi nowcast/cella su area e lasciava che una previsione accendesse "ALARM"
+  → stato osservato da soglie + nowcast + cella attiva; previsioni in un badge separato "PREVISTO". Valori evento con unità
+  giuste (SRI/ARPA = max mm/h), "NaN" → "—", note con virgole lette bene. Grafico: finestra reale (3h = ±3h), tutto in mm/h,
+  dati mancanti = vuoto. Riga "Nowcast: ultimo run …" (rossa se > 20'). CUM3/CUM24 ora si aggiornano davvero.
+- **Mappa Live**: id duplicati delle aree preimpostate (Cepina mostrava i dati di Panna); crash del grafico; stato verde
+  "Aggiornato" anche con API DPC in errore; scheda Allerte con soglie inventate → soglie di `areas.json` + nota "indicativo".
+- **Storico**: CUM24 ora = giorno UTC esatto (prima un campione alle 12 UTC); CUM3/6/12 dichiarati "blocco che termina alle
+  12 UTC"; tabella risultati che non compariva; giorno in più; CSV scaricato due volte; "pluviometri, non radar".
+- **Archivio**: barre CUM24 spostate di un giorno; 121 blocchi CUM3 mancanti dichiarati (totale "incompleto"); previsione
+  allineata ai blocchi 3h; animazione sul giorno completo; mappa IDW etichettata come stima, scala fissa.
+- **Eventi**: note con virgole spezzate; conteggi senza le chiusure; filtri forecast24h/nowcast; unità mm vs mm/h.
+- **Verifica**: badge forecast allineato a quando il server invia davvero (dal primo livello); Panna/Cepina per giorno
+  civile come il server; crash vista "Tutto"; CUM3 disegnata 3 h in ritardo; pluviometro mancante nel grafico evento;
+  aggiunta serie SRI DPC (e MeteoSwiss, nascosta); unità per prodotto; fonti con < 30 confronti "campione insufficiente";
+  bias = previsto − osservato su Verifica e Report.
+- **ARPA**: il testo diceva "nessun alert su questi dati" (falso: ARPA vota a Ruspino e fa da riserva a Cepina); confronto
+  "CUM3 pluviometri vs ARPA" con copertura n/36.
+- **Report**: grafico episodi con barre invisibili; KPI "allerte non agganciate a un episodio".
+
+### UX
+- Tema chiaro/scuro coerente su tutte le pagine (chiave `radar-theme`), grafici leggibili in tema chiaro; menu scorrevole su
+  telefono; "ultimo aggiornamento" su Archivio, Eventi, Monitor; numeri lunghi nelle note arrotondati.
+
 ## Sessione 2026-10-06 — "Cella in avvicinamento" di nuovo attiva
 
 - 🐞 `nowcast.py` `_eval_product` — gli avvisi "cella radar in avvicinamento" (anelli 5/10 km, SRI e SRT1)

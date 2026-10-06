@@ -74,7 +74,9 @@ prima del commit.
 **Frontend** (GitHub Pages): pagine HTML single-file che leggono i dati da
 `raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/archive/data/` via un
 helper `fetchData()`. Chart.js + Leaflet.js. Pagine:
-`index, storico, archivio, monitor, eventi, arpa, previsioni, verifica, report`.
+`index, storico, archivio, monitor, eventi, arpa, mch, previsioni, verifica, report`.
+`mch.html` = radar MeteoSwiss live (PNG da `archive/data/radar_mch/`, dato di studio). Tema: chiave localStorage
+`radar-theme` + `body.light-theme` su tutte le pagine.
 `report.html` genera nel browser report deterministici (sintesi stakeholder + tecnico)
 da `episodes.csv`, `episodes_alerts.csv`, `events.csv`, `forecast_verification.csv`.
 
@@ -113,6 +115,7 @@ Cloudflare **e** committato qui (i due devono coincidere).
   **adiacenti e non sovrapposti → sommabili** per la cumulata evento.
 - `*_arpa.csv` — ARPA 5-min, `max_mmh`/`mean_mmh`. Copre **solo Ruspino e
   Cepina** (Lombardia), NON Panna.
+- `radar_mch/` — 12 PNG MeteoSwiss (Web Mercator, rotanti) + `index.json`, scritti da `mch_collect.py`.
 - `radar_arpa/` — 12 PNG live (rotanti) + `index.json`; `events/<id>/` archivio
   eventi per replay (creato al primo evento post-deploy).
 

@@ -27,6 +27,9 @@ COSA FA
 OUTPUT
   archive/data/<area>_mch.csv            raccolta continua (ogni 10', da arpa-collect)
   archive/data/<area>_mch_backfill.csv   --backfill (ultimi 14 giorni disponibili)
+  archive/data/radar_mch/<yymmddHHMM>.png + index.json   mappa live (pagina mch.html):
+    ultimi MCH_PNG_KEEP frame, riproiettati in Web Mercator su Lombardia nord/Ticino/Grigioni;
+    grigio = fuori copertura radar (nessun dato), trasparente = nessuna pioggia rilevata.
     timestamp_utc,area_name,max_mmh,mean_mmh,pixel_count,nodata_pct,
     ring_max_mmh,ring_wet5_pct,ring_nodata_pct,status,file,fetched_at_utc
 
@@ -61,6 +64,14 @@ FIELDS = ['timestamp_utc', 'area_name', 'max_mmh', 'mean_mmh', 'pixel_count', 'n
 RZC_RE = re.compile(r'RZC(\d{2})(\d{3})(\d{2})(\d{2})', re.I)
 UTC = timezone.utc
 BACKFILL = False
+PNG_DIR = DATA / 'radar_mch'
+PNG_KEEP = int(os.environ.get('MCH_PNG_KEEP', '12'))
+PNG_VIEW = (8.2, 45.25, 11.3, 47.25)          # lon/lat O,S,E,N: Ruspino, Cepina e i radar Lema/Weissfluh
+PNG_RES_M = 500                                 # passo della griglia Web Mercator
+# classi mm/h (stessa scala nella legenda di mch.html): (soglia, colore RGB)
+PNG_CLASSES = [(0.1, (166, 216, 255)), (0.5, (95, 180, 245)), (1, (42, 120, 214)), (2, (25, 162, 107)),
+               (5, (155, 209, 47)), (10, (245, 208, 0)), (20, (240, 140, 0)), (40, (224, 48, 48)),
+               (70, (176, 22, 138))]
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
 log = logging.getLogger('mch')
@@ -210,6 +221,53 @@ def area_row(t, area, g, fname, fetched):
             'status': status, 'file': fname, 'fetched_at_utc': fetched}
 
 
+# ── Mappa live (PNG) ─────────────────────────────────────────────────────────
+def render_png(g, t):
+    """Frame PNG RGBA della vista PNG_VIEW in EPSG:3857 (allineato ai bounds di Leaflet)."""
+    import numpy as np
+    from PIL import Image
+    from pyproj import Transformer
+    from rasterio.crs import CRS as RCRS
+    from rasterio.transform import from_origin
+    from rasterio.warp import Resampling, reproject
+    W, S, E, N = PNG_VIEW
+    tr = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    x0, y0 = tr.transform(W, S)
+    x1, y1 = tr.transform(E, N)
+    w, h = int((x1 - x0) / PNG_RES_M), int((y1 - y0) / PNG_RES_M)
+    dst = np.full((h, w), np.nan)
+    reproject(source=g['v'], destination=dst, src_transform=g['tr'], src_crs=RCRS.from_wkt(g['crs'].to_wkt()),
+              dst_transform=from_origin(x0, y1, PNG_RES_M, PNG_RES_M), dst_crs='EPSG:3857',
+              resampling=Resampling.nearest, src_nodata=np.nan, dst_nodata=np.nan)
+    rgba = np.zeros((h, w, 4), np.uint8)
+    nan = ~np.isfinite(dst)
+    rgba[nan] = (128, 128, 128, 70)                          # fuori copertura radar: grigio velato
+    v = np.where(nan, 0, dst)
+    for thr, rgb in PNG_CLASSES:
+        m = v >= thr
+        rgba[m] = (*rgb, 225)
+    PNG_DIR.mkdir(parents=True, exist_ok=True)
+    name = t.strftime('%y%m%d%H%M') + '.png'
+    Image.fromarray(rgba, 'RGBA').save(PNG_DIR / name, optimize=True)
+    return name
+
+
+def update_png_index():
+    """Tiene gli ultimi PNG_KEEP frame e riscrive index.json (stesso schema di radar_arpa)."""
+    if not PNG_DIR.exists():
+        return
+    files = sorted(p for p in PNG_DIR.glob('*.png'))
+    for p in files[:-PNG_KEEP]:
+        p.unlink()
+    W, S, E, N = PNG_VIEW
+    frames = [{'file': p.name,
+               'ts_utc': iso(datetime.strptime(p.stem, '%y%m%d%H%M').replace(tzinfo=UTC)),
+               'bounds': [[S, W], [N, E]]} for p in files[-PNG_KEEP:]]
+    (PNG_DIR / 'index.json').write_text(json.dumps({
+        'updated_at_utc': iso(datetime.now(UTC)), 'source': 'MeteoSwiss PRECIP (RZC), CC BY 4.0',
+        'classes_mmh': [c for c, _ in PNG_CLASSES], 'frames': frames}, indent=1), encoding='utf-8')
+
+
 # ── CSV ──────────────────────────────────────────────────────────────────────
 def csv_path(area, backfill=None):
     bf = BACKFILL if backfill is None else backfill
@@ -262,6 +320,7 @@ def collect(files, areas, newest_first=False):
     log.info(f'MeteoSwiss: {len(files)} file RZC nel STAC, {len(todo)} da archiviare (max {MAX_FILES} per run)')
     now = iso(datetime.now(UTC))
     n_ok = 0
+    rendered = False
     pause = float(os.environ.get('MCH_PAUSE_S', '0.2' if BACKFILL else '0'))   # uso non eccessivo (condizioni MeteoSwiss)
     for t in todo[:MAX_FILES]:
         if pause:
@@ -275,6 +334,12 @@ def collect(files, areas, newest_first=False):
             log.warning(f'  {iso(t)} {fname}: {e}')     # riprovato al prossimo run (non marcato)
             continue
         n_ok += 1
+        if not BACKFILL and datetime.now(UTC) - t <= timedelta(hours=2):
+            try:
+                render_png(g, t)
+                rendered = True
+            except Exception as e:
+                log.warning(f'  {iso(t)}: PNG non generato ({e})')
         for a in areas:
             if iso(t) not in have[a['name']]:
                 try:
@@ -284,6 +349,8 @@ def collect(files, areas, newest_first=False):
                     continue
                 append(a['name'], row)
                 have[a['name']].add(iso(t))
+    if rendered:
+        update_png_index()
     log.info(f'MeteoSwiss: {n_ok} file archiviati, restano {remaining}')
     report_progress(n_ok, remaining)
     return n_ok

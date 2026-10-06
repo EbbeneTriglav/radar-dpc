@@ -33,6 +33,7 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link">📑 Report</a>
@@ -41,7 +42,7 @@
   <div class="spacer"></div>
 
   <!-- Indicatore WebSocket live -->
-  <span id="wss-status" class="wss-indicator wss-warn">🔄 WSS…</span>
+  <span id="wss-status" class="wss-indicator wss-err" title="WebSocket DPC disabilitato: aggiornamento via polling REST">Polling 60s</span>
 
   <div id="status-bar" class="status-loading">
     <i class="fa fa-circle-notch fa-spin"></i> Inizializzazione…
@@ -217,6 +218,10 @@
           </label>
           <div style="flex:1"></div>
           <button class="btn-sm" id="btn-clear-alerts"><i class="fa fa-trash"></i> Azzera</button>
+        </div>
+        <div class="alert-note" style="padding:6px 8px;font-size:11px;color:var(--warn);border-bottom:1px solid var(--border2);flex-shrink:0">
+          ⚠️ <b>Indicativo: le allerte operative sono quelle della pagina <a href="monitor.html" style="color:inherit">Monitor</a>.</b>
+          <span style="color:var(--text3)">Aree preset: soglie SRT1/CUM3 da archive/areas.json, ma sulla media nel buffer di 2 km (non sul poligono dell'area). Punti personalizzati e altri prodotti: soglie indicative locali.</span>
         </div>
         <div id="alert-log" style="flex:1;overflow-y:auto;padding:6px 8px">
           <p class="no-alerts">Nessuna allerta. Attiva il monitoraggio e seleziona una località.</p>

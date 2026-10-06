@@ -246,6 +246,11 @@ const CONFIG = {
 
   // ───────────────────────────────────────────────────────────────────────
   // Soglie allerta per prodotto (warn = avviso, danger = critico)
+  // ⚠️ INDICATIVE, NON OPERATIVE. Usate solo dal tab "Allerte" della Mappa Live
+  // per i punti personalizzati e per i prodotti non monitorati in produzione.
+  // Per le aree preset (Ruspino/Panna/Cepina) SRT1 e CUM3 usano le soglie
+  // operative di archive/areas.json (alerts.js → setAreaThresholds).
+  // Le allerte operative sono SOLO quelle della pagina Monitor (monitor.py/nowcast.py).
   // ───────────────────────────────────────────────────────────────────────
   ALERT_THRESHOLDS: {
     SRI:   { warn: 10,  danger: 30,  unit: 'mm/h'  },

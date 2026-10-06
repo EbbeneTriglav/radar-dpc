@@ -8,6 +8,7 @@ const ChartPanel = (() => {
   let _history = {}; // { pointId: [{ ts, mean, min, max }] }
   let _productType = 'VMI';
   let _maxHistoryPoints = 48;
+  let _labelTs = [];   // timestamp (ms) corrispondenti alle etichette dell'asse X
 
   let elPanel, elCanvas, elEmpty, elUnit;
 
@@ -72,10 +73,8 @@ const ChartPanel = (() => {
       Object.values(_history).flatMap(arr => arr.map(d => d.ts))
     )].sort((a, b) => a - b);
 
-    const labels = allTs.map(ts => {
-      const d = new Date(ts);
-      return Timezone.formatShort(d.getTime());
-    });
+    _labelTs = allTs;   // timestamp grezzi: servono per riformattare le etichette al cambio fuso
+    const labels = allTs.map(ts => Timezone.formatShort(ts));
 
     const datasets = points.map(point => {
       const hist = _history[point.id] ?? [];
@@ -85,7 +84,7 @@ const ChartPanel = (() => {
         label: point.label,
         data: allTs.map(ts => {
           const d = tsMap[ts];
-          return d?.mean !== null ? +(d.mean.toFixed(2)) : null;
+          return (d && d.mean != null) ? +d.mean.toFixed(2) : null;
         }),
         borderColor: point.color,
         backgroundColor: point.color + '22',
@@ -149,10 +148,25 @@ const ChartPanel = (() => {
         },
       },
     });
+    _applyThemeColors();
+    _chart.update('none');
+  }
+
+  // Colori assi/legenda dalle variabili CSS del tema (leggibili anche in light-theme)
+  function _applyThemeColors() {
+    if (!_chart) return;
+    const cs = getComputedStyle(document.body);
+    const text = cs.getPropertyValue('--text2').trim() || '#6c7086';
+    const grid = cs.getPropertyValue('--border2').trim() || '#313244';
+    const o = _chart.options;
+    o.plugins.legend.labels.color = cs.getPropertyValue('--text').trim() || '#cdd6f4';
+    o.scales.x.ticks.color = text; o.scales.y.ticks.color = text; o.scales.y.title.color = text;
+    o.scales.x.grid.color = grid;  o.scales.y.grid.color = grid;
   }
 
   function clearHistory() {
     _history = {};
+    _labelTs = [];
     if (_chart) { _chart.destroy(); _chart = null; }
     if (elEmpty) elEmpty.style.display = 'flex';
   }
@@ -261,9 +275,13 @@ const ChartPanel = (() => {
 
   function getHistory() { return JSON.parse(JSON.stringify(_history)); }
   function refresh() {
-    if (typeof _chart !== 'undefined' && _chart) {
-      try { _chart.update(); } catch (_) {}
-    }
+    if (!_chart) return;
+    try {
+      // Le etichette sono stringhe già formattate: rigenerarle dai timestamp grezzi
+      _chart.data.labels = _labelTs.map(ts => Timezone.formatShort(ts));
+      _applyThemeColors();
+      _chart.update('none');
+    } catch (_) {}
   }
 
 

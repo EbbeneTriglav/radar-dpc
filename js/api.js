@@ -129,17 +129,22 @@ const RadarAPI = (() => {
 
   async function loadGeoTiff(productType, productDate) {
     const key = `${productType}_${productDate}`;
-    if (_cache.has(key)) return _cache.get(key);
+    // parseGeoraster trasferisce l'ArrayBuffer al worker (→ "detached"): la cache
+    // conserva l'originale e restituisce sempre una COPIA, altrimenti il secondo
+    // render dello stesso frame (animazione, passo indietro) fallisce.
+    if (_cache.has(key)) return _cache.get(key).slice(0);
 
     const { url } = await getDownloadUrl(productType, productDate);
     const buffer = await fetchGeoTiff(url);
 
-    if (_cache.size >= 20) {
+    // ≥ MAX_FRAMES + margine: con 20 < 24 frame il preload si autoespelleva
+    // (ogni ciclo di animazione riscaricava tutti i GeoTIFF)
+    if (_cache.size >= Math.max(20, (CONFIG.MAX_FRAMES || 0) + 4)) {
       const firstKey = _cache.keys().next().value;
       _cache.delete(firstKey);
     }
     _cache.set(key, buffer);
-    return buffer;
+    return buffer.slice(0);
   }
 
   function buildTimestamps(lastTs, stepMs, count) {

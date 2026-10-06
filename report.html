@@ -41,6 +41,8 @@
     .chart-box{position:relative;height:300px}
     .rp-caveat{border-left:3px solid #fbbf24;padding:6px 10px;font-size:12px;color:var(--text2,#94a3b8);background:rgba(251,191,36,.06);margin:8px 0}
     .hidden{display:none}
+    .rp-wrap{min-width:0}  /* #app è flex: evita che le tabelle allarghino la pagina su telefono */
+    @media (max-width:768px){ .rp-wrap{padding:14px 12px 30px} table.rp{display:block;overflow-x:auto} }
     @media print{
       #topbar,.rp-ctrl,.no-print{display:none!important}
       body,#app{background:#fff!important;color:#000!important;height:auto!important;overflow:visible!important}
@@ -61,6 +63,7 @@
     <a href="monitor.html" class="nav-link">🚨 Monitor</a>
     <a href="eventi.html" class="nav-link">📋 Eventi</a>
     <a href="arpa.html" class="nav-link">📡 Radar ARPA Lombardia</a>
+    <a href="mch.html" class="nav-link">🛰 Radar MeteoSwiss</a>
     <a href="previsioni.html" class="nav-link">🌧 Previsioni</a>
     <a href="verifica.html" class="nav-link">✅ Verifica</a>
     <a href="report.html" class="nav-link active">📑 Report</a>
@@ -337,7 +340,7 @@ function renderSint(S,R){
 function renderTec(S,R){
   let h=`<div class="rp-kpis">
     ${kpi('Episodi', R.n, `${R.nSig} significativi · ${S.eps.filter(e=>observed(e).gauge).length} con pluviometro confrontabile`)}
-    ${kpi('Allerte senza pioggia', R.orphan, Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(' · ')||'nessuna')}
+    ${kpi('Allerte non agganciate a un episodio', R.orphan, Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(' · ')||'nessuna')}
     ${kpi('Significativi senza allerta', R.sigNone, R.nSig?`su ${R.nSig} significativi`:'—')}
     ${kpi('Allerte in ritardo', R.sigLate, R.nSig?'prima allerta dopo il picco':'—')}
   </div>`;
@@ -365,7 +368,7 @@ function renderTec(S,R){
       <td class="${a.kind==='ok'?'good':a.kind==='late'?'warn':'bad'}">${a.txt}</td>
       <td class="n">${a.n}</td><td>${+e.n_forecast?`sì (${num(e.forecast_lead_h)!=null?Math.abs(+e.forecast_lead_h)+' h '+(+e.forecast_lead_h>=0?'prima':'dopo')+' il picco':''})`:'<span class="dim">no</span>'}</td></tr>`; }).join('')+`</tbody></table>`
     :'<p class="dim">Nessun episodio significativo nel periodo.</p>')+
-    `<p class="rp-note">Allerte senza un episodio di pioggia nel periodo: ${R.orphan} (${Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(', ')||'—'}).
+    `<p class="rp-note">Allerte non agganciate a un episodio di pioggia nel periodo: ${R.orphan} (${Object.entries(R.orphanByClass).map(([k,v])=>`${k} ${v}`).join(', ')||'—'}).
      Un'allerta conta come "in anticipo" se la prima allerta nowcast/temporale/soglia precede il picco d'intensità radar.</p></div>`;
   // 3. Forecast
   const vv=S.ver.filter(v=>v.horizon==='3h');
@@ -376,11 +379,12 @@ function renderTec(S,R){
       const mae=g.reduce((s,r)=>s+Math.abs(+r.abs_error_mm||0),0)/n;
       const bias=-g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;   // bias_mm nel CSV = osservato − previsto
       const hit=g.reduce((s,r)=>s+(+r.hit_warning||0),0), miss=g.reduce((s,r)=>s+(+r.missed_warning||0),0), fa=g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
-      return `<tr><td>${({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 <span class="dim">(solo verifica)</span>'})[src]||src}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
+      const few=n<30;   // campione insufficiente: metriche solo indicative (come in Verifica)
+      return `<tr${few?' class="dim" title="Meno di 30 confronti: metriche non rappresentative"':''}><td>${({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 <span class="dim">(solo verifica)</span>'})[src]||src}${few?' <span class="dim">· campione insufficiente</span>':''}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
         <td class="n">${bias>=0?'+':''}${bias.toFixed(2)} mm</td><td class="n">${hit}</td><td class="n ${miss?'bad':''}">${miss}</td><td class="n">${fa}</td></tr>`; }).join('')+`</tbody></table>`
     :'<p class="dim">Nessuna verifica previsionale nel periodo.</p>')+
     `<div class="rp-caveat">L'osservato di confronto è la CUM3 DPC (pluviometri interpolati, blocchi di 3 h): per questo si mostra solo l'orizzonte 3 h.
-      Bias positivo = il modello prevede più pioggia di quella osservata.</div></div>`;
+      Convenzione bias: <b>previsto − osservato</b> (positivo = il modello sovrastima, negativo = sottostima); la colonna <code>bias_mm</code> del CSV è osservato − previsto ed è qui invertita di segno.</div></div>`;
   // 4. Elenco completo
   h+=`<div class="rp-sec"><h2>4 · Tutti gli episodi del periodo (${S.eps.length})</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Osservata</th><th class="n">Radar</th><th>Descrizione automatica</th></tr></thead><tbody>`+
     S.eps.slice().reverse().map(e=>{ const o=observed(e), r=radar(e);
@@ -396,7 +400,7 @@ function drawSintCharts(S,R){
   const el=document.getElementById('c-time'); if(!el) return;
   const areas=['ruspino','cepina','panna'].filter(a=>S.eps.some(e=>e.area_name===a));
   CHARTS.push(new Chart(el,{type:'bar',
-    data:{datasets:areas.map(a=>({label:AREA_LABEL[a],backgroundColor:AREA_COLOR[a],borderRadius:4,maxBarThickness:14,
+    data:{datasets:areas.map(a=>({label:AREA_LABEL[a],backgroundColor:AREA_COLOR[a],borderRadius:3,barThickness:6,minBarLength:2,grouped:false,
       data:S.eps.filter(e=>e.area_name===a&&observed(e).mm!=null).map(e=>({x:new Date(e.start_utc).getTime(),y:+observed(e).mm.toFixed(1),_e:e}))}))},
     options:{responsive:true,maintainAspectRatio:false,parsing:{xAxisKey:'x',yAxisKey:'y'},
       scales:{x:{type:'linear',...axisOpts(''),ticks:{color:css('--text3'),callback:v=>new Date(v).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})}},y:{...axisOpts('mm per episodio'),beginAtZero:true}},

@@ -35,10 +35,30 @@ async function fetchData(path){
   const DATA_BASE    = 'archive/data';
   const IDW_POWER    = 2;     // esponente IDW: 2 dà transizioni morbide
   const IDW_PIXEL_PX = 4;     // dimensione "pixel" canvas in pixel CSS
-  const CHART_COLORS = {
-    cum24: '#7bed9f',  // verde menta
-    cum3:  '#3eaaff',  // blu
-  };
+  const SLOT_MS = 3 * 3600_000;    // blocchi CUM3 a ore fisse UTC (00,03,…,21), timestamp = fine blocco
+  const DAY_MS  = 86400_000;
+  // Scala colori FISSA per la mappa IDW (mm/3h) — scelta di visualizzazione, non un dato.
+  // Classi: [da, a) mm/3h; sotto 0.1 mm trasparente.
+  const IDW_BINS = [
+    { from: 0.1, to: 1,    rgba: [100, 170, 255, 110] },
+    { from: 1,   to: 2.5,  rgba: [  0, 220, 220, 160] },
+    { from: 2.5, to: 5,    rgba: [  0, 200,   0, 200] },
+    { from: 5,   to: 10,   rgba: [255, 200,   0, 220] },
+    { from: 10,  to: 20,   rgba: [255, 120,   0, 230] },
+    { from: 20,  to: null, rgba: [230,  30,  60, 240] },
+  ];
+
+  // Colori grafici leggibili in tema scuro e chiaro
+  function _isLight() { return document.body.classList.contains('light-theme'); }
+  function _cssVar(name, fallback) {
+    try { return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback; }
+    catch { return fallback; }
+  }
+  function _chartColors() {
+    return _isLight()
+      ? { cum24: '#1e9e57', cum3: '#1f6fd1', fc: '#7a3fd1' }
+      : { cum24: '#7bed9f', cum3: '#3eaaff', fc: '#c3a6ff' };
+  }
 
   let _areasConfig = null;
   let _currentArea = null;        // nome area selezionata
@@ -51,6 +71,8 @@ async function fetchData(path){
   let _animationTimer = null;
 
   let _selectedDateMs = null;      // giorno selezionato per l'animazione CUM3
+  let _cum3RenderSeq = 0;          // evita che un render vecchio (fetch lento) sovrascriva quello nuovo
+  const _omCache = {};             // { area: { t, blocks: Map(endMs → mm|null) } }
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   async function init() {
@@ -104,17 +126,22 @@ async function fetchData(path){
             <input type="range" id="archive-anim-slider" min="0" max="7" value="0" disabled>
             <span class="mono" id="archive-anim-label">—</span>
           </div>
+          <div class="archive-map-note">
+            <div id="archive-map-day">—</div>
+            <div>Mappa: <b>interpolazione IDW (stima)</b> da 5 vertici + media area — CUM3 pluviometri DPC interpolati, non radar.</div>
+            <div class="archive-legend">${_legendHtml()}</div>
+          </div>
         </div>
         <div class="archive-col-charts">
           <div class="archive-chart-wrap">
             <div class="archive-chart-title">
-              CUM24 — Cumulata 24h <span id="archive-cum24-summary"></span>
+              CUM24 — pioggia del giorno UTC (00→24), pluviometri DPC interpolati <span id="archive-cum24-summary"></span>
             </div>
             <canvas id="archive-chart-cum24"></canvas>
           </div>
           <div class="archive-chart-wrap">
             <div class="archive-chart-title">
-              CUM3 — Cumulata 3h (8 valori/giorno) <span id="archive-cum3-summary"></span>
+              CUM3 — blocchi 3h a ore fisse UTC (8 attesi/giorno), pluviometri DPC interpolati <span id="archive-cum3-summary"></span>
             </div>
             <canvas id="archive-chart-cum3"></canvas>
           </div>
@@ -150,6 +177,21 @@ async function fetchData(path){
         .archive-chart-title { font-size:11px; color:var(--text2); margin-bottom:4px; flex-shrink:0; }
         .archive-chart-title span { color:var(--text3); font-size:10px; margin-left:6px; }
         .archive-chart-wrap canvas { flex:1; min-height:0; }
+        .archive-map-note { font-size:10px; color:var(--text3); line-height:1.5; padding:2px 4px; }
+        .archive-map-note b { color:var(--text2); font-weight:600; }
+        #archive-map-day { color:var(--text2); }
+        .archive-legend { display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; margin-top:2px; }
+        .archive-legend i { display:inline-block; width:12px; height:10px; border-radius:2px; vertical-align:middle; margin-right:3px; }
+        .archive-toolbar { flex-wrap:wrap; }
+        .archive-area-picker { flex-wrap:wrap; }
+        .archive-warn, .archive-chart-title .archive-warn { color:var(--warn); }
+        @media (max-width:700px) {
+          .archive-body { flex-direction:column; overflow:auto; }
+          .archive-col-map { width:100%; min-width:0; flex-shrink:0; }
+          .archive-mini-map { min-height:300px !important; flex:none; height:300px; }
+          .archive-col-charts { overflow:visible; flex:none; }
+          .archive-chart-wrap { flex:none; height:280px; }
+        }
       `;
       document.head.appendChild(s);
     }
@@ -166,6 +208,10 @@ async function fetchData(path){
     });
     // Re-render al cambio TZ (timestamps in grafico cambiano)
     window.addEventListener('timezone-changed', () => {
+      if (_currentArea) _renderCharts();
+    });
+    // Re-render al cambio tema (colori assi/legenda letti dalle variabili CSS)
+    window.addEventListener('radar-theme-changed', () => {
       if (_currentArea) _renderCharts();
     });
   }
@@ -230,10 +276,38 @@ async function fetchData(path){
         '(Run workflow → days=7) per il bootstrap iniziale.';
       return;
     }
-    const dates24 = areaRows24.map(r => r.timestamp_utc.slice(0, 10)).sort();
-    const dates3  = areaRows3.map(r  => r.timestamp_utc.slice(0, 10)).sort();
-    info.innerHTML = `CUM24: ${areaRows24.length} giorni${dates24.length ? ` (${dates24[0]}…${dates24[dates24.length-1]})` : ''}` +
-                     ` • CUM3: ${areaRows3.length} record`;
+    // CUM24 con timestamp T = 24h che TERMINANO a T → il giorno coperto è T − 1 giorno
+    const dates24 = areaRows24.map(r => _cum24Day(r.timestamp_utc)).sort();
+    const g3 = _cum3Gaps(areaRows3);
+    // Ultimo aggiornamento = fetched_at_utc più recente nei CSV caricati
+    const lastFetch = [...cum24, ...cum3].reduce(
+      (m, r) => (r.fetched_at_utc && r.fetched_at_utc > m ? r.fetched_at_utc : m), '');
+    const lastStr = lastFetch
+      ? ((typeof Timezone !== 'undefined') ? Timezone.formatDateTime(Date.parse(lastFetch)) : lastFetch)
+      : '—';
+    info.innerHTML = `CUM24: ${areaRows24.length} giorni${dates24.length ? ` (${dates24[0]}…${dates24[dates24.length-1]}, giorni UTC)` : ''}` +
+                     ` • CUM3: ${areaRows3.length} blocchi` +
+                     (g3.missing ? ` <span class="archive-warn">(${g3.missing} mancanti)</span>` : '') +
+                     ` • Ultimo aggiornamento dati: ${lastStr}`;
+  }
+
+  /** Giorno UTC (YYYY-MM-DD) coperto da una riga CUM24 con timestamp di fine finestra. */
+  function _cum24Day(tsIso) {
+    return new Date(Date.parse(tsIso) - DAY_MS).toISOString().slice(0, 10);
+  }
+
+  /** Blocchi CUM3 attesi tra il primo e l'ultimo timestamp e quanti mancano (righe area). */
+  function _cum3Gaps(areaRows3) {
+    const have = new Set();
+    areaRows3.forEach(r => {
+      const ms = Date.parse(r.timestamp_utc);
+      if (isFinite(ms) && r.mean !== '' && r.mean != null) have.add(ms);
+    });
+    if (!have.size) return { expected: 0, missing: 0 };
+    const all = [...have];
+    const t0 = Math.min(...all), t1 = Math.max(...all);
+    const expected = Math.round((t1 - t0) / SLOT_MS) + 1;
+    return { expected, missing: Math.max(0, expected - have.size) };
   }
 
   // ─── Mini-mappa con poligono e arealizzazione IDW ────────────────────────
@@ -283,9 +357,28 @@ async function fetchData(path){
       return;
     }
 
-    // Usa il giorno più recente disponibile
-    _selectedDateMs = days[days.length - 1];
+    // Giorno di default: l'ultimo con tutti gli 8 blocchi CUM3 (giorno concluso e completo),
+    // non il giorno in corso (parziale). Se nessun giorno è completo: l'ultimo con dati.
+    const isComplete = d => {
+      const f = _framesForDay(cum3, d);
+      return f.length === 8 && f.every(x => x.area && x.area.mean !== '');
+    };
+    let pick = null;
+    for (let i = days.length - 1; i >= 0 && pick == null; i--) if (isComplete(days[i])) pick = days[i];
+    let dayNote = 'giorno completo';
+    if (pick == null) {
+      for (let i = days.length - 1; i >= 0 && pick == null; i--) {
+        if (_framesForDay(cum3, days[i]).length) pick = days[i];
+      }
+      dayNote = 'nessun giorno completo: blocchi parziali';
+    }
+    _selectedDateMs = pick ?? days[days.length - 1];
     const frames = _framesForDay(cum3, _selectedDateMs);
+    const dayEl = document.getElementById('archive-map-day');
+    if (dayEl) {
+      dayEl.textContent = `Giorno animato: ${new Date(_selectedDateMs).toISOString().slice(0, 10)} UTC — ` +
+        `${frames.length}/8 blocchi, ${dayNote}`;
+    }
     slider.disabled = frames.length === 0;
     slider.max = Math.max(0, frames.length - 1);
     slider.value = 0;
@@ -337,8 +430,8 @@ async function fetchData(path){
       const tsStr = (typeof Timezone !== 'undefined')
         ? Timezone.formatDateTime(new Date(frame.ts).getTime())
         : frame.ts;
-      const mean = frame.area?.mean ? parseFloat(frame.area.mean).toFixed(1) : '—';
-      label.textContent = `${tsStr} • ${mean} mm`;
+      const mean = (frame.area && frame.area.mean !== '') ? parseFloat(frame.area.mean).toFixed(1) : '—';
+      label.textContent = `${tsStr} • media area ${mean} mm/3h`;
     }
 
     _drawIdwOverlay(frame);
@@ -402,9 +495,7 @@ async function fetchData(path){
       west:  Math.min(...lons), east:  Math.max(...lons),
     };
 
-    // Trova min/max per la scala colori dinamica (rain rate)
-    const vals = pts.map(p => p.value);
-    const vmax = Math.max(...vals, 0.1);
+    // Scala colori FISSA (IDW_BINS, mm/3h): confrontabile tra frame e giorni.
 
     // Crea un canvas overlay sulla bbox
     const imgBounds = [[bbox.south, bbox.west], [bbox.north, bbox.east]];
@@ -440,7 +531,7 @@ async function fetchData(path){
         const nx = (px + 0.5) / W;
         const ny = (py + 0.5) / H;
         const v = _idw(nx, ny, ptsNorm);
-        const [r, g, b, a] = _valueToRGBA(v, vmax);
+        const [r, g, b, a] = _valueToRGBA(v);
         const idx4 = (py * W + px) * 4;
         imgData.data[idx4]     = r;
         imgData.data[idx4 + 1] = g;
@@ -481,27 +572,21 @@ async function fetchData(path){
     return inside;
   }
 
-  /** Scala colori semplificata blu→verde→giallo→rosso per mm di pioggia. */
-  function _valueToRGBA(v, vmax) {
-    if (!isFinite(v) || v <= 0.05) return [0, 0, 0, 0];
-    const t = Math.min(1, v / vmax);
-    // Gradient stops
-    const stops = [
-      [0.00, [100, 170, 255, 100]],
-      [0.25, [  0, 220, 220, 160]],
-      [0.50, [  0, 210,   0, 200]],
-      [0.75, [255, 200,   0, 220]],
-      [1.00, [255,  60,   0, 240]],
-    ];
-    for (let i = 0; i < stops.length - 1; i++) {
-      const [t0, c0] = stops[i];
-      const [t1, c1] = stops[i + 1];
-      if (t >= t0 && t <= t1) {
-        const k = (t - t0) / (t1 - t0);
-        return c0.map((ch, j) => Math.round(ch + k * (c1[j] - ch)));
-      }
+  /** Scala colori a classi FISSE in mm/3h (IDW_BINS). Sotto 0.1 mm: trasparente. */
+  function _valueToRGBA(v) {
+    if (!isFinite(v) || v < IDW_BINS[0].from) return [0, 0, 0, 0];
+    for (const b of IDW_BINS) {
+      if (b.to == null || v < b.to) return b.rgba;
     }
-    return stops[stops.length - 1][1];
+    return IDW_BINS[IDW_BINS.length - 1].rgba;
+  }
+
+  function _legendHtml() {
+    return '<span>mm/3h (scala fissa):</span>' + IDW_BINS.map(b => {
+      const [r, g, bl, a] = b.rgba;
+      const lbl = b.to == null ? `≥${b.from}` : `${b.from}–${b.to}`;
+      return `<span><i style="background:rgba(${r},${g},${bl},${(a / 255).toFixed(2)})"></i>${lbl}</span>`;
+    }).join('');
   }
 
   // ─── Charts ───────────────────────────────────────────────────────────────
@@ -513,20 +598,41 @@ async function fetchData(path){
   function _renderChartCum24() {
     const ctx = document.getElementById('archive-chart-cum24');
     if (!ctx) return;
+    const C = _chartColors();
     const rows = (_data[_currentArea]?.cum24 || []).filter(r => r.location_type === 'area');
-    const labels = rows.map(r => {
-      const ms = new Date(r.timestamp_utc).getTime();
-      return (typeof Timezone !== 'undefined')
-        ? Timezone.format(ms, { day: '2-digit', month: '2-digit' })
-        : r.timestamp_utc.slice(0, 10);
+    // Asse continuo a passo 1 giorno: i giorni senza riga restano null (buco visibile, mai 0)
+    const byTs = new Map();
+    rows.forEach(r => {
+      const ms = Date.parse(r.timestamp_utc);
+      if (!isFinite(ms)) return;
+      const v = (r.mean !== '' && r.mean != null) ? parseFloat(r.mean) : null;
+      byTs.set(ms, isFinite(v) ? v : null);
     });
-    const data = rows.map(r => r.mean ? parseFloat(r.mean) : null);
+    const tsList = [...byTs.keys()].sort((a, b) => a - b);
+    const labels = [], data = [];
+    let missing = 0;
+    if (tsList.length) {
+      for (let t = tsList[0]; t <= tsList[tsList.length - 1]; t += DAY_MS) {
+        // Riga con timestamp T = 24h che terminano a T → etichetta = giorno UTC precedente
+        const d = new Date(t - DAY_MS).toISOString();
+        labels.push(`${d.slice(8, 10)}/${d.slice(5, 7)}`);
+        const v = byTs.has(t) ? byTs.get(t) : null;
+        if (v == null) missing++;
+        data.push(v);
+      }
+    }
 
-    const sum   = data.filter(v => v != null).reduce((a, v) => a + v, 0);
-    const max   = data.filter(v => v != null).reduce((a, v) => Math.max(a, v), 0);
-    const ndays = data.filter(v => v != null && v > 0.1).length;
-    document.getElementById('archive-cum24-summary').textContent =
-      `totale ${sum.toFixed(1)} mm • max ${max.toFixed(1)} mm • ${ndays} giorni con pioggia`;
+    const valid = data.filter(v => v != null);
+    const sum   = valid.reduce((a, v) => a + v, 0);
+    const max   = valid.reduce((a, v) => Math.max(a, v), -Infinity);
+    const ndays = valid.filter(v => v > 0.1).length;
+    const sumEl = document.getElementById('archive-cum24-summary');
+    if (sumEl) {
+      sumEl.innerHTML = valid.length
+        ? `totale ${sum.toFixed(1)} mm • max ${max.toFixed(1)} mm • ${ndays} giorni con pioggia (&gt;0.1 mm)` +
+          (missing ? ` • <span class="archive-warn">${missing} ${missing === 1 ? 'giorno mancante' : 'giorni mancanti'} — totale incompleto</span>` : '')
+        : 'nessun dato (—)';
+    }
 
     if (_chartCum24) _chartCum24.destroy();
     _chartCum24 = new Chart(ctx, {
@@ -534,86 +640,131 @@ async function fetchData(path){
       data: {
         labels,
         datasets: [{
-          label: 'CUM24 medio area (mm)',
+          label: 'CUM24 medio area (mm, giorno UTC)',
           data,
-          backgroundColor: CHART_COLORS.cum24 + 'cc',
-          borderColor: CHART_COLORS.cum24,
+          backgroundColor: C.cum24 + 'cc',
+          borderColor: C.cum24,
           borderWidth: 1,
         }],
       },
-      options: _commonChartOpts('mm'),
+      options: _commonChartOpts('mm/giorno'),
     });
+  }
+
+  /**
+   * Previsione Open-Meteo (minutely_15, prossime 24h) aggregata in blocchi 3h UTC
+   * allineati alla CUM3 DPC (timestamp = fine blocco). Il valore 15' al tempo t copre (t−15', t].
+   * Un blocco senza tutti i 12 valori (es. blocco in corso, già iniziato) → null, mai 0.
+   */
+  async function _fetchOmBlocks(area) {
+    const c = _omCache[area.name];
+    if (c && Date.now() - c.t < 10 * 60_000) return c.blocks;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${area.centroid.lat}` +
+      `&longitude=${area.centroid.lon}&minutely_15=precipitation&forecast_minutes=1440&timezone=UTC`,
+      { cache: 'no-cache' });
+    if (!r.ok) throw new Error(`Open-Meteo HTTP ${r.status}`);
+    const d = await r.json();
+    const ts = d.minutely_15?.time || [];
+    const pr = d.minutely_15?.precipitation || [];
+    const acc = new Map();
+    ts.forEach((t, i) => {
+      const ms = Date.parse(t + 'Z');
+      if (!isFinite(ms)) return;
+      const end = Math.ceil(ms / SLOT_MS) * SLOT_MS;
+      const a = acc.get(end) || { sum: 0, n: 0, bad: false };
+      const v = pr[i];
+      if (v == null || !isFinite(v)) a.bad = true; else { a.sum += v; a.n++; }
+      acc.set(end, a);
+    });
+    const blocks = new Map();
+    for (const [end, a] of acc) blocks.set(end, (!a.bad && a.n === 12) ? +a.sum.toFixed(2) : null);
+    _omCache[area.name] = { t: Date.now(), blocks };
+    return blocks;
   }
 
   async function _renderChartCum3() {
     const ctx = document.getElementById('archive-chart-cum3');
     if (!ctx) return;
-    const rows = (_data[_currentArea]?.cum3 || [])
-      .filter(r => r.location_type === 'area')
-      .sort((a, b) => a.timestamp_utc.localeCompare(b.timestamp_utc));
+    const seq = ++_cum3RenderSeq;
+    const areaName = _currentArea;
+    const rows = (_data[areaName]?.cum3 || []).filter(r => r.location_type === 'area');
 
-    // Costruisci labels timeline
-    const labels = rows.map(r => {
-      const ms = new Date(r.timestamp_utc).getTime();
-      return (typeof Timezone !== 'undefined')
-        ? Timezone.format(ms, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
-        : r.timestamp_utc.slice(0, 16).replace('T', ' ');
+    // Osservato su slot 3h attesi: blocchi assenti → null (buco visibile nel grafico)
+    const obs = new Map();
+    rows.forEach(r => {
+      const ms = Date.parse(r.timestamp_utc);
+      if (!isFinite(ms)) return;
+      const v = (r.mean !== '' && r.mean != null) ? parseFloat(r.mean) : null;
+      obs.set(ms, isFinite(v) ? v : null);
     });
-    const data = rows.map(r => r.mean ? parseFloat(r.mean) : null);
+    const obsTs = [...obs.keys()].filter(t => obs.get(t) != null).sort((a, b) => a - b);
+    const g = _cum3Gaps(rows);
 
-    const sum = data.filter(v => v != null).reduce((a, v) => a + v, 0);
-    const max = data.filter(v => v != null).reduce((a, v) => Math.max(a, v), 0);
-    document.getElementById('archive-cum3-summary').textContent =
-      `${rows.length} record • totale ${sum.toFixed(1)} mm • picco 3h ${max.toFixed(1)} mm`;
+    const valid = obsTs.map(t => obs.get(t));
+    const sum = valid.reduce((a, v) => a + v, 0);
+    const max = valid.reduce((a, v) => Math.max(a, v), -Infinity);
+    const sumEl = document.getElementById('archive-cum3-summary');
+    if (sumEl) {
+      sumEl.innerHTML = valid.length
+        ? `${valid.length}/${g.expected} blocchi • totale ${sum.toFixed(1)} mm • picco 3h ${max.toFixed(1)} mm` +
+          (g.missing ? ` • <span class="archive-warn">${g.missing} ${g.missing === 1 ? 'blocco mancante' : 'blocchi mancanti'} — totale incompleto</span>` : '')
+        : 'nessun dato (—)';
+    }
 
-    // OpenMeteo forecast prossime 24h come overlay (linea blu chiaro)
-    let omLabels = [], omData = [];
+    // Previsione OpenMeteo (prossime 24h) come dataset separato sullo stesso asse 3h
+    let fc = new Map();
+    let fcErr = '';
     try {
-      const area = _areasConfig.areas.find(a => a.name === _currentArea);
-      if (area) {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${area.centroid.lat}` +
-          `&longitude=${area.centroid.lon}&minutely_15=precipitation&forecast_minutes=1440&timezone=UTC`,
-          { cache: 'no-cache' });
-        const d = await r.json();
-        const ts = d.minutely_15?.time || [];
-        const pr = d.minutely_15?.precipitation || [];
-        // Aggrega in cumulate 3h per matchare la granularità DPC
-        for (let i = 0; i + 12 <= ts.length; i += 12) {
-          const ms = new Date(ts[i] + 'Z').getTime();
-          const lbl = (typeof Timezone !== 'undefined')
-            ? Timezone.format(ms, { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
-            : ts[i].slice(0, 16).replace('T', ' ');
-          omLabels.push(lbl);
-          omData.push(pr.slice(i, i + 12).reduce((a, v) => a + (v || 0), 0));
-        }
+      const area = _areasConfig.areas.find(a => a.name === areaName);
+      if (area) fc = await _fetchOmBlocks(area);
+    } catch (e) { fcErr = e.message; console.warn('[archive] OpenMeteo non disponibile:', e.message); }
+    if (seq !== _cum3RenderSeq) return;   // nel frattempo è partito un render più recente
+
+    const fcTs = [...fc.keys()].filter(t => fc.get(t) != null).sort((a, b) => a - b);
+    const t0 = obsTs.length ? obsTs[0] : (fcTs[0] ?? null);
+    const tEnd = Math.max(obsTs.length ? obsTs[obsTs.length - 1] : -Infinity,
+                          fcTs.length ? fcTs[fcTs.length - 1] : -Infinity);
+    const labels = [], observed = [], forecast = [];
+    if (t0 != null && isFinite(tEnd)) {
+      for (let t = t0; t <= tEnd; t += SLOT_MS) {
+        labels.push((typeof Timezone !== 'undefined')
+          ? Timezone.format(t, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          : new Date(t).toISOString().slice(0, 16).replace('T', ' '));
+        observed.push(obs.has(t) ? obs.get(t) : null);
+        forecast.push(fc.has(t) ? fc.get(t) : null);
       }
-    } catch (e) { console.warn('OM fetch err', e); }
+    }
+    if (sumEl) {
+      const fcVals = fcTs.map(t => fc.get(t));
+      if (fcErr) sumEl.innerHTML += ' • previsione OpenMeteo non disponibile';
+      else if (fcVals.length) sumEl.innerHTML += ` • previsione OpenMeteo prossime 24h (stima modello): ` +
+        `${fcVals.reduce((a, v) => a + v, 0).toFixed(1)} mm su ${fcVals.length} blocchi 3h completi`;
+    }
 
-    // Unifica gli assi: append forecast in coda alle observed
-    const allLabels = labels.concat(omLabels);
-    const observedAligned = data.concat(omData.map(() => null));
-    const forecastAligned = labels.map(() => null).concat(omData);
-
+    const C = _chartColors();
     if (_chartCum3) _chartCum3.destroy();
     _chartCum3 = new Chart(ctx, {
       data: {
-        labels: allLabels,
+        labels,
         datasets: [
-          { type: 'line', label: 'DPC CUM3 osservato',
-            data: observedAligned, borderColor: CHART_COLORS.cum3,
-            backgroundColor: CHART_COLORS.cum3 + '33', fill: true, tension: 0.2, pointRadius: 2 },
-          { type: 'line', label: 'OpenMeteo forecast 3h cumulata',
-            data: forecastAligned, borderColor: '#82b1ff',
-            backgroundColor: '#82b1ff22', borderDash: [4, 3], fill: false, tension: 0.3, pointRadius: 1 },
+          { type: 'line', label: 'CUM3 osservato (pluviometri DPC interpolati)',
+            data: observed, borderColor: C.cum3, spanGaps: false,
+            backgroundColor: C.cum3 + '33', fill: true, tension: 0.2, pointRadius: 1.5 },
+          { type: 'line', label: 'OpenMeteo previsione prossime 24h (somma 3h, stima modello)',
+            data: forecast, borderColor: C.fc, spanGaps: false,
+            backgroundColor: C.fc + '22', borderDash: [4, 3], fill: false, tension: 0.3, pointRadius: 2 },
         ],
       },
       options: { ..._commonChartOpts('mm/3h'),
-        plugins: { legend: { display: true, labels: { color: '#aaa', font: { size: 10 } }, position: 'bottom' } },
+        plugins: { ..._commonChartOpts('mm/3h').plugins,
+          legend: { display: true, labels: { color: _cssVar('--text2', '#aaa'), font: { size: 10 } }, position: 'bottom' } },
       },
     });
   }
 
   function _commonChartOpts(yLabel) {
+    const txt  = _cssVar('--text2', '#aaa');
+    const grid = _isLight() ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)';
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -623,20 +774,22 @@ async function fetchData(path){
         tooltip: {
           backgroundColor: 'rgba(20,20,30,0.95)',
           titleColor: '#fff', bodyColor: '#ddd', borderColor: '#444', borderWidth: 1,
+          filter: item => item.parsed.y != null || item.datasetIndex === 0,
           callbacks: {
             label: item => {
-              if (item.parsed.y == null) return null;
+              // Osservato senza valore → "—" esplicito; previsione fuori orizzonte → riga omessa
+              if (item.parsed.y == null) return item.datasetIndex === 0 ? `${item.dataset.label}: — (nessun dato)` : null;
               return `${item.dataset.label}: ${item.parsed.y.toFixed(2)} mm`;
             },
           },
         },
       },
       scales: {
-        x: { ticks: { color: '#aaa', maxTicksLimit: 12, autoSkip: true },
-             grid:  { color: 'rgba(255,255,255,0.05)' } },
-        y: { title: { display: true, text: yLabel, color: '#aaa' },
-             ticks: { color: '#aaa' },
-             grid:  { color: 'rgba(255,255,255,0.05)' },
+        x: { ticks: { color: txt, maxTicksLimit: 12, autoSkip: true },
+             grid:  { color: grid } },
+        y: { title: { display: true, text: yLabel, color: txt },
+             ticks: { color: txt },
+             grid:  { color: grid },
              beginAtZero: true },
       },
     };
