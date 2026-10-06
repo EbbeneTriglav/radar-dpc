@@ -1,0 +1,59 @@
+name: MeteoSwiss radar — Probe / Backfill
+
+# Manuale. 'probe' = stampa struttura di un file RZC recente e le statistiche per area
+# (solo log, non scrive nulla): da fare UNA volta per verificare la lettura.
+# 'backfill' = archivia tutti i file ancora nel STAC MeteoSwiss (ultimi 14 giorni,
+# ~4000 file, ~40'), in <area>_mch_backfill.csv. La raccolta continua è in arpa-collect.
+# Open data MeteoSwiss, CC BY 4.0 — "Fonte: MeteoSwiss".
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Modalità'
+        default: 'probe'
+        type: choice
+        options: ['probe', 'backfill']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mch-radar
+  cancel-in-progress: false
+
+jobs:
+  mch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'archive/scripts/requirements.txt'
+      - run: pip install -r archive/scripts/requirements.txt
+      - name: MeteoSwiss ${{ inputs.mode }}
+        env:
+          MCH_MAX_FILES: '5000'
+        run: |
+          if [ "${{ inputs.mode }}" = "probe" ]; then
+            python archive/scripts/mch_collect.py --probe
+          else
+            python archive/scripts/mch_collect.py --backfill
+          fi
+      - name: Commit
+        if: inputs.mode == 'backfill'
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/data/*_mch_backfill.csv 2>/dev/null || true
+          if git diff --cached --quiet; then echo "Nessun file nuovo."; else
+            git commit -m "mch-backfill: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            for i in 1 2 3 4 5; do
+              if git push; then break; fi
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
+          fi

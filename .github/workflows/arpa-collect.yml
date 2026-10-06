@@ -22,7 +22,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -48,12 +48,20 @@ jobs:
         timeout-minutes: 4
         run: python archive/scripts/sri_collect.py
 
+      # Radar MeteoSwiss PRECIP (RZC 5') — terzo radar di STUDIO, nessuna allerta.
+      # Open data CC BY 4.0, "Fonte: MeteoSwiss". Un errore qui non blocca ARPA.
+      - name: Run mch_collect (radar MeteoSwiss)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python archive/scripts/mch_collect.py
+
       - name: Commit ARPA CSVs
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add archive/data/*_arpa.csv archive/data/*_sri.csv archive/data/radar_arpa/ 2>/dev/null || true
           git add archive/data/*_sri_ring.csv 2>/dev/null || true
+          git add archive/data/*_mch.csv 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No ARPA data changes."
           else

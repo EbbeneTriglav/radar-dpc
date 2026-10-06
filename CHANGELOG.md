@@ -1,5 +1,16 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 — Radar MeteoSwiss in archivio (studio)
+
+- 🆕 `mch_collect.py` — radar MeteoSwiss PRECIP (RZC, mm/h ogni 5', open data CC BY 4.0 "Fonte: MeteoSwiss")
+  dagli item STAC giornalieri `ch.meteoschweiz.ogd-radar-precip`. Per area: max/media nel poligono,
+  max e % sopra 5 mm/h nell'anello 10 km, **% pixel senza dato** (bordo copertura dichiarato, mai zeri inventati).
+  Georeferenziazione letta dal file (projdef + angolo UL). Nessuna allerta lo legge.
+- ⚙️ `arpa-collect.yml` — nuovo passo (continue-on-error) → `<area>_mch.csv` ogni 10'; timeout job 8→12'.
+- 🆕 `mch-radar.yml` (manuale): `probe` (struttura file + stats, solo log) e `backfill` (14 giorni del STAC
+  → `<area>_mch_backfill.csv`). `requirements.txt` + h5py.
+- 📌 Da fare: confronto coi pluviometri Cornalita e Oga dopo 3–4 settimane (ipotesi: a Cepina vede meglio di DPC/ARPA).
+
 ## Sessione 2026-10-06 — Backfill che si riavvia da solo
 
 - ⚙️ `sri-backfill.yml` — il titolo del run porta i parametri (`mode= round= retry= zero= frames= auto=`).
