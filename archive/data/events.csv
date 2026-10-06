@@ -423,3 +423,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-06T13:10:56Z,panna,nowcast_warning,10,1.16,14.30,SRI,2026-10-06T13:00:00Z,,true,true,nowcast buffer=5km moto=NE/13.9kmh prob=4%
 2026-10-06T13:31:07Z,ruspino,nowcast_warning,10,1.03,12.18,SRI,2026-10-06T13:20:00Z,,true,true,nowcast buffer=10km moto=SE/10.3kmh prob=2%
 2026-10-06T13:50:56Z,ruspino,nowcast_alarm,15,1.33,15.41,SRI,2026-10-06T13:40:00Z,,skipped,true,nowcast buffer=10km moto=W/4.5kmh prob=31%
+2026-10-06T14:31:16Z,panna,nowcast_emergency,25,0.28,31.64,SRI,2026-10-06T14:20:00Z,,skipped,true,nowcast buffer=10km moto=SW/58.1kmh prob=2%
