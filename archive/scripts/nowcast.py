@@ -244,6 +244,69 @@ def estimate_motion(tiff_now, tiff_prev, geom_tm, dt_minutes):
             'compass': _compass(bearing)}
 
 
+def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
+    """
+    Moto della CELLA per la pre-allerta: cross-correlazione tra il frame più recente e
+    quello di `lag_frames` passi prima (default 3 → 15'), in una finestra ~96 km
+    CENTRATA SULLA CELLA (pixel massimo). Sostituisce, per la pre-allerta, il baricentro
+    nell'anello di estimate_motion(): con una cella che ENTRA nell'anello il baricentro
+    si sposta verso il bordo d'ingresso e la direzione può risultare opposta (test sintetico
+    ott-2026: cella verso NE stimata SW). Ritorna dict come estimate_motion o None.
+    """
+    if not frames or len(frames) < 2 or not xy_tm:
+        return None
+    j = min(lag_frames, len(frames) - 1)
+    (t0, b0), (t1, b1) = frames[0], frames[j]
+    dt_min = abs(t0 - t1) / 60000
+    if dt_min <= 0:
+        return None
+    with rasterio.open(io.BytesIO(b0)) as s0:
+        a0 = s0.read(1).astype('float64'); tr = s0.transform
+        nd0 = s0.nodata if s0.nodata is not None else -9999
+        r, c = s0.index(*xy_tm)
+    with rasterio.open(io.BytesIO(b1)) as s1:
+        a1 = s1.read(1).astype('float64')
+        nd1 = s1.nodata if s1.nodata is not None else -9999
+    if a0.shape != a1.shape:
+        return None
+    for a, nd in ((a0, nd0), (a1, nd1)):
+        a[(a == nd) | ~np.isfinite(a) | (a < 0.5) | (a > 10000)] = 0.0   # pioggia debole = rumore
+    h = win_px // 2
+    r0, r1 = max(0, r - h), min(a0.shape[0], r + h)
+    c0, c1 = max(0, c - h), min(a0.shape[1], c + h)
+    if r1 - r0 < 24 or c1 - c0 < 24:
+        return None
+    w0, w1 = a0[r0:r1, c0:c1], a1[r0:r1, c0:c1]
+    if w0.sum() <= 0 or w1.sum() <= 0:
+        return None
+    w0 = w0 - w0.mean(); w1 = w1 - w1.mean()
+    sh = (2 * w0.shape[0], 2 * w0.shape[1])
+    cc = np.fft.irfft2(np.fft.rfft2(w0, sh) * np.conj(np.fft.rfft2(w1, sh)), sh)
+    cc = np.fft.fftshift(cc)
+    cy, cx = sh[0] // 2, sh[1] // 2
+    sub = cc[cy - max_shift_px:cy + max_shift_px + 1, cx - max_shift_px:cx + max_shift_px + 1]
+    pr, pc = np.unravel_index(np.argmax(sub), sub.shape)
+    if sub[pr, pc] <= 0:
+        return None
+
+    def _par(m1, m0, p1):                       # vertice della parabola per 3 punti
+        den = m1 - 2 * m0 + p1
+        return 0.0 if den == 0 else 0.5 * (m1 - p1) / den
+    dr = pr - max_shift_px + (_par(sub[pr - 1, pc], sub[pr, pc], sub[pr + 1, pc]) if 0 < pr < sub.shape[0] - 1 else 0)
+    dc = pc - max_shift_px + (_par(sub[pr, pc - 1], sub[pr, pc], sub[pr, pc + 1]) if 0 < pc < sub.shape[1] - 1 else 0)
+    dx_m = dc * tr.a                            # colonne → Est
+    dy_m = -dr * abs(tr.e)                      # righe crescono verso Sud
+    dist_m = float(np.hypot(dx_m, dy_m))
+    if dist_m < 500:
+        return {'bearing_deg': None, 'speed_kmh': 0.0, 'compass': 'stazionaria', 'method': 'tracking'}
+    speed = dist_m / 1000 / (dt_min / 60)
+    if speed > 130:                             # implausibile: meglio nessuna freccia
+        return None
+    bearing = float(np.degrees(np.arctan2(dx_m, dy_m)) % 360)
+    return {'bearing_deg': bearing, 'speed_kmh': round(speed, 1), 'compass': _compass(bearing),
+            'method': 'tracking', 'dt_min': round(dt_min)}
+
+
 def _compass(deg):
     if deg is None:
         return '?'
@@ -302,6 +365,59 @@ def send_email(subject, text, html=None, to=None):
         return 'true'
     except Exception as e:
         log.warning(f'  email fail: {e}'); return 'false'
+
+
+def send_telegram_photo(jpeg, caption, chat_ids=None):
+    """Foto su Telegram (sendPhoto, multipart). Didascalia testo semplice, max 1024 caratteri."""
+    tok = os.environ.get('TELEGRAM_TOKEN')
+    if chat_ids:
+        if isinstance(chat_ids, str):
+            chat_ids = [c.strip() for c in chat_ids.split(',') if c.strip()]
+    else:
+        d = os.environ.get('TELEGRAM_CHAT_ID')
+        chat_ids = [d] if d else []
+    if not (tok and chat_ids and jpeg):
+        return 'skipped'
+    n_ok = 0
+    for chat in chat_ids:
+        try:
+            r = _http('POST', f'https://api.telegram.org/bot{tok}/sendPhoto',
+                      data={'chat_id': chat, 'caption': caption[:1024]},
+                      files={'photo': ('mappa_radar.jpg', jpeg, 'image/jpeg')})
+            if r and r.ok:
+                n_ok += 1
+            else:
+                log.warning(f'  telegram foto: HTTP {r.status_code if r else "None"}')
+        except Exception as e:
+            log.warning(f'  telegram foto fallita: {e}')
+    return 'true' if n_ok else 'false'
+
+
+def _send_prealert_map(area, product, hit, signal, motion, frames, buf_km, rcpt_tg):
+    """Genera e invia la mappa della pre-allerta. Mai eccezioni verso il chiamante."""
+    if not PREALERT_MAP:
+        return 'off'
+    try:
+        if not frames:
+            return 'no-frame'
+        import alert_map
+        mot = motion
+        if mot is None and len(frames) >= 2:      # SRT1: il moto non era stato stimato
+            mot = track_cell_motion(frames, signal.get('max_xy_tm'))
+        ts_frame = datetime.fromtimestamp(frames[0][0] / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
+        unit = 'mm/h' if product == 'SRI' else 'mm/1h'
+        title = f"{area['label']} · cella entro {buf_km} km · {signal['max']:.0f} {unit}"
+        jpeg = alert_map.render_alert_map(area, frames[0][1], ts_label=_ts_local(ts_frame),
+                                          signal=signal, motion=mot, buffers_km=BUFFERS_KM, title=title)
+        cap = (f"Mappa radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. "
+               "Cerchio = pixel più intenso nell'anello; freccia = spostamento stimato in 30' "
+               "(tracciamento della cella sugli ultimi 15' di radar, indicativo).")
+        res = send_telegram_photo(jpeg, cap, chat_ids=rcpt_tg)
+        log.info(f'  mappa pre-allerta: {len(jpeg) / 1024:.0f} KB, telegram={res}')
+        return res
+    except Exception as e:
+        log.warning(f'  mappa pre-allerta non generata: {e}')
+        return 'error'
 
 
 def send_telegram(md, chat_ids=None):
@@ -795,7 +911,7 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
 
                 was_triggered = _eval_product(area, 'SRT1', SRT1_THRESHOLDS, srt1_stat, geom, buf_km,
                               None, centroid, state, now_iso, channels, writer,
-                              rcpt_email=rcpt_email, rcpt_tg=rcpt_tg)
+                              rcpt_email=rcpt_email, rcpt_tg=rcpt_tg, map_frames=sri_frames)
                 if was_triggered:
                     triggered = True
 
@@ -848,12 +964,15 @@ NOWCAST_REARM_H = float(os.environ.get('NOWCAST_REARM_H', '3'))
 # Si interseca con i canali dell'area: se un'area non ha Telegram, non parte nulla.
 # "Cella su area" e soglie DPC restano su email + Telegram come prima.
 PREALERT_CHANNELS = set(os.environ.get('NOWCAST_PREALERT_CHANNELS', 'telegram').split(','))
+# Mappa radar allegata alla pre-allerta Telegram (alert_map.py). Extra: se non si genera
+# o non parte, il messaggio di testo è già stato inviato e resta valido. NOWCAST_PREALERT_MAP=0 la spegne.
+PREALERT_MAP = os.environ.get('NOWCAST_PREALERT_MAP', '1') != '0'
 _LEVEL_RANK = {'warning': 1, 'alarm': 2, 'emergency': 3}
 
 
 def _eval_product(area, product, thresholds, signal, geom, buf_km,
                   sri_frames, centroid, state, now_iso, channels, writer,
-                  rcpt_email=None, rcpt_tg=None):
+                  rcpt_email=None, rcpt_tg=None, map_frames=None):
     """Valuta soglie. Ritorna True se ha triggerato, False altrimenti."""
     now_ms = _iso_ms(now_iso) or int(datetime.now(timezone.utc).timestamp() * 1000)
     rearm_ms = NOWCAST_REARM_H * 3600_000
@@ -893,8 +1012,13 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
     # moto + probabilità (solo per SRI che ha 2 frame)
     motion, prob = None, None
     if sri_frames and len(sri_frames) >= 2:
-        dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
-        motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], geom, dt_min)
+        try:
+            motion = track_cell_motion(sri_frames, signal.get('max_xy_tm'))
+        except Exception as e:
+            log.warning(f'  tracking cella fallito: {e}')
+        if motion is None:                      # ripiego: metodo precedente (baricentro nell'anello)
+            dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
+            motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], geom, dt_min)
         if motion and signal.get('max_xy_tm'):
             prob = arrival_probability(signal['max_xy_tm'], motion, centroid, buf_km)
 
@@ -902,6 +1026,8 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
     pch = set(channels) & PREALERT_CHANNELS
     em = send_email(subject, text, to=rcpt_email) if 'email' in pch else 'skipped'
     tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in pch else 'skipped'
+    if tg == 'true':
+        _send_prealert_map(area, product, hit, signal, motion, sri_frames or map_frames, buf_km, rcpt_tg)
 
     writer.writerow({
         'event_timestamp_utc': now_iso, 'area_name': area['name'],

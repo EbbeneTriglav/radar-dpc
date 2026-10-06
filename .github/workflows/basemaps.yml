@@ -1,0 +1,43 @@
+name: Sfondi mappe pre-allerta (una tantum)
+
+# Manuale. Genera lo sfondo (OpenStreetMap schiarito, ~60x60 km) di ogni area in
+# archive/data/basemaps/, usato da alert_map.py per la mappa allegata alla
+# pre-allerta Telegram. Da rilanciare solo se cambiano le aree in areas.json.
+# Scarica ~10 tile OSM per area una sola volta (uso leggero, con attribuzione).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  basemaps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'archive/scripts/requirements.txt'
+      - run: pip install -r archive/scripts/requirements.txt
+      - name: Genera sfondi
+        run: python archive/scripts/alert_map.py --basemaps
+      - name: Anteprima senza pioggia (solo log)
+        run: |
+          for a in ruspino cepina panna; do python archive/scripts/alert_map.py --demo $a /tmp/demo_$a.jpg; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anteprime-mappe
+          path: /tmp/demo_*.jpg
+      - name: Commit
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/data/basemaps/
+          if git diff --cached --quiet; then echo "Nessuna variazione."; else
+            git commit -m "basemaps: sfondi mappe pre-allerta"
+            for i in 1 2 3; do git push && break; git pull --rebase --autostash || true; sleep $((i*5)); done
+          fi

@@ -1,5 +1,14 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-06 (d) — Mappa radar nella pre-allerta Telegram
+- Nuovo `alert_map.py`: dopo il messaggio "cella in avvicinamento" arriva su Telegram una mappa (640 px, ~40–80 KB):
+  radar DPC SRI, area, anelli 5/10 km, cella più intensa, freccia di spostamento stimato in 30', scala, legenda.
+- Sfondo OpenStreetMap schiarito generato una volta per area (`basemaps.yml`, manuale) in `archive/data/basemaps/`.
+- Moto della cella: nuovo tracciamento per cross-correlazione sugli ultimi 15' (`track_cell_motion`). Il metodo
+  precedente sbagliava direzione proprio con celle in arrivo (test sintetico: NE stimato N/W). Cambia la riga
+  "Movimento" e la probabilità di arrivo nel testo; il trigger NON cambia.
+- Robustezza: se la mappa non si genera o non parte, il testo resta inviato (log "mappa pre-allerta non generata").
+
 ## 2026-10-06 (c) — Pluviometri ARPA: workflow dedicato
 - In Previsioni Socrata risponde **HTTP 429** (Too Many Requests) alle chiamate dal browser: il dato live non è affidabile.
 - `ground_daily.py` spostato da forecast-verify (2×/giorno) a un workflow dedicato `ground-daily.yml` ogni 3 ore.
