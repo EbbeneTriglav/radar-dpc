@@ -1,0 +1,12 @@
+{
+ "bounds_3857": [
+  1216863.688548334,
+  5435529.51745614,
+  1300381.2624264383,
+  5519047.091334244
+ ],
+ "zoom": 10,
+ "size_px": 640,
+ "half_ground_km": 30,
+ "source": "OpenStreetMap tiles (\u00a9 OpenStreetMap contributors, ODbL)"
+}
