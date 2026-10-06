@@ -1,5 +1,10 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-06 (c) — Pluviometri ARPA: workflow dedicato
+- In Previsioni Socrata risponde **HTTP 429** (Too Many Requests) alle chiamate dal browser: il dato live non è affidabile.
+- `ground_daily.py` spostato da forecast-verify (2×/giorno) a un workflow dedicato `ground-daily.yml` ogni 3 ore.
+- La pagina chiama Socrata live solo se l'archivio ha giorni mancanti o parziali; messaggi d'errore più chiari.
+
 ## Sessione 2026-10-06 (b) — Pluviometro in Previsioni + MeteoSwiss ICON-CH1 nelle allerte
 
 ### Previsioni: pluviometro a terra sempre "n.d."

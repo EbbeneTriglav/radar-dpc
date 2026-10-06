@@ -200,7 +200,7 @@
     che si ferma a ~2 giorni, resta nel massimo col valore raggiunto.
     Un modello che non copre un giorno (MeteoSwiss oltre +5 giorni, AROME oltre ~2 giorni) viene escluso da quel giorno, non contato come zero.
     <b>CUM3 DPC</b> = pluviometri a terra interpolati (non radar), media sull'area. <b>Radar ARPA</b> = intensità massima sull'area integrata nel tempo (solo Lombardia).
-    Pluviometri: Cornalita (Ruspino) e Oga S.Colombano (Cepina) da ARPA Lombardia, totali archiviati due volte al giorno e integrati dal dato live quando raggiungibile; Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente). “Parziale” = mancano misure nel giorno: il totale è un minimo.
+    Pluviometri: Cornalita (Ruspino) e Oga S.Colombano (Cepina) da ARPA Lombardia, totali archiviati ogni 3 ore e integrati dal dato live quando serve e quando ARPA risponde; Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente). “Parziale” = mancano misure nel giorno: il totale è un minimo.
     YR oltre ~2,5 giorni arriva a blocchi di 6 ore.
   </div>
 </div>
@@ -330,8 +330,12 @@ async function fetchGroundDaily(area){
       const rows = parseCSV(await getText(RAW+'ground_daily.csv?_='+Date.now())).filter(r=>r.area_name===area);
       for(const r of rows){ const n=+r.n_obs; if(n>0 && r.mm!=='') put(r.date_utc, +r.mm, n, +r.expected_obs); }
       if(rows.length) meta.src.push('archivio');
-    }catch(e){ meta.err.push('archivio: '+e.message); }
-    try{
+    }catch(e){ meta.err.push(/404/.test(e.message) ? 'archivio non ancora creato' : 'archivio: '+e.message); }
+    // Live solo se l'archivio non copre per intero i 7 giorni passati: meno chiamate anonime a
+    // Socrata, che risponde 429 (Too Many Requests) quando le riceve troppo spesso.
+    const pastKeys = Array.from({length:7}, (_,i)=>dayKey(Date.now() - (i+1)*DAY));
+    const needLive = pastKeys.some(k => obs[k]==null || meta.partial.has(k));
+    if(needLive) try{
       const now = Date.now();   // Socrata ARPA: campo 'data' in ORA SOLARE (UTC+1) senza fuso
       const start = new Date(now - 8*DAY + H).toISOString().slice(0,19);
       const end = new Date(now + DAY + H).toISOString().slice(0,19);
@@ -339,7 +343,7 @@ async function fetchGroundDaily(area){
       const ctl = new AbortController(); const tmo = setTimeout(()=>ctl.abort(), 12000);
       const r = await fetch(`${SOCRATA}?idsensore=${g.id}&$where=${encodeURIComponent(where)}&$order=data&$limit=5000`, {signal:ctl.signal});
       clearTimeout(tmo);
-      if(!r.ok) throw new Error('HTTP '+r.status);
+      if(!r.ok) throw new Error(r.status===429 ? 'ARPA limita le richieste dal browser (429)' : 'HTTP '+r.status);
       const live = {}, cnt = {};
       for(const row of await r.json()){
         const t = Date.parse(String(row.data).slice(0,19)+'+01:00'); const v = +row.valore;

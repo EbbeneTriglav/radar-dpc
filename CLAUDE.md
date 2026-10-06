@@ -160,9 +160,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   allerte forecast 6h (`monitor.py`) e 24h (`forecast_ensemble_alert.py`): OM/worst ≥ soglia E (MET o ICON-CH1 o
   media). Nella matrice (`forecast_matrix.py`) è solo mostrato (`meteoswiss_icon_seamless`, 72h), non cambia il
   livello. Decisione presa con pochi giorni di verifica: rivederla con `forecast_verification.csv` dopo 3–4 settimane.
-- **Pluviometri ARPA in Previsioni**: `ground_daily.py` (in forecast-verify, 2×/giorno) scrive `ground_daily.csv`
-  (totali giorno UTC + n_obs/expected_obs). La pagina usa quello e integra con Socrata live: dal browser Socrata
-  può fallire (rete/CORS) → prima tutti i giorni risultavano "n.d.".
+- **Pluviometri ARPA in Previsioni**: `ground_daily.py` (workflow `ground-daily.yml`, ogni 3h) scrive `ground_daily.csv`
+  (totali giorno UTC + n_obs/expected_obs). La pagina usa quello e chiama Socrata live solo se l'archivio ha buchi:
+  dal browser Socrata risponde spesso **HTTP 429** (chiamate anonime limitate) → prima tutti i giorni erano "n.d.".
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
   STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.

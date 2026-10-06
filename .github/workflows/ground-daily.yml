@@ -1,0 +1,47 @@
+name: Pluviometri ARPA - totali giornalieri
+
+# Totali giornalieri (UTC) di Cornalita (Ruspino) e Oga S.Colombano (Cepina) per la
+# pagina Previsioni. Il browser spesso non riesce a interrogare ARPA Socrata (HTTP 429
+# "Too Many Requests" sulle chiamate anonime, o rete aziendale): da GitHub Actions la
+# query funziona, il risultato va in archive/data/ground_daily.csv.
+# Ogni 3 ore: la giornata di oggi resta "parziale" finché non è finita.
+
+on:
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ground-daily
+  cancel-in-progress: false
+
+jobs:
+  ground:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Totali giornalieri pluviometri
+        run: python archive/scripts/ground_daily.py
+      - name: Commit
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add archive/data/ground_daily.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nessuna variazione."
+          else
+            git commit -m "ground-daily: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            for i in 1 2 3; do
+              if git push; then break; fi
+              echo "Push fallito, retry $i/3..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+            done
+          fi
