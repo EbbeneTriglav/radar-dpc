@@ -1,5 +1,24 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## Sessione 2026-10-06 (b) — Pluviometro in Previsioni + MeteoSwiss ICON-CH1 nelle allerte
+
+### Previsioni: pluviometro a terra sempre "n.d."
+- Causa: la pagina leggeva ARPA Socrata dal browser; se la chiamata fallisce (rete, CORS, lentezza) tutti i giorni
+  passati risultavano "n.d.", anche quelli asciutti (0 mm).
+- Nuovo `ground_daily.py` (step in `forecast-verify.yml`): totali giornalieri UTC di Cornalita e Oga S.Colombano in
+  `archive/data/ground_daily.csv`, con n. misure valide e attese. La pagina usa l'archivio e integra con Socrata live
+  (timeout 12 s); per ogni giorno vince la fonte con più misure. Giorno con misure mancanti = "parziale" (totale minimo),
+  mai zero inventato. La riga di stato dice da dove arriva il dato o perché manca.
+
+### MeteoSwiss ICON-CH1 nelle allerte forecast (richiesta utente)
+- `monitor.py` (6h): OpenMeteo ≥ soglia E (MET Norway **oppure** ICON-CH1 ≥ soglia). Prima: solo MET.
+- `forecast_ensemble_alert.py` (24h): worst-case ≥ soglia E (media **oppure** MET **oppure** ICON-CH1). ICON-CH1
+  pesato sui punti solo se tutti i punti hanno il dato; mai mediato nell'ensemble.
+- Messaggi: valore MeteoSwiss sempre mostrato + "confermato da …"; in `events.csv` nota con le fonti di conferma.
+- `forecast_matrix.py`: MeteoSwiss ICON (seamless, 72h) mostrato come terzo riferimento, **non** cambia il livello.
+- Effetto atteso: qualche allerta in più quando MET non conferma ma ICON-CH1 sì. Da verificare dopo 3–4 settimane.
+- Fix: titolo Telegram del forecast 24h diceva sempre "Panna".
+
 ## Sessione 2026-10-06 — Pagina Radar MeteoSwiss + revisione di tutte le pagine
 
 ### Nuova pagina 🛰 Radar MeteoSwiss (`mch.html`)

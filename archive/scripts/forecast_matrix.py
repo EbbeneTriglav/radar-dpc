@@ -27,6 +27,9 @@ re-invio nello stesso giorno SOLO se il livello peggiora (escalation).
 Limiti dichiarati (nessun numero inventato):
   · MET Norway fornisce dati orari (~60h) poi 6-orari: la validazione MET
     copre solo la parte oraria; la copertura effettiva è indicata in email.
+  · MeteoSwiss ICON (CH1 fino a 33h, poi CH2) è mostrato come terzo
+    riferimento indipendente: come MET Norway NON entra nell'ensemble e NON
+    cambia il livello (che resta sul worst-case). Copertura dichiarata in email.
   · Se un modello/punto non risponde, il calcolo prosegue con quelli
     disponibili e il conteggio n/5 modelli e punti OK è indicato in email.
 """
@@ -155,6 +158,46 @@ def fetch_metno_hourly(lat, lon):
     return out or None
 
 
+MCH_MODEL_72 = 'meteoswiss_icon_seamless'   # ICON-CH1 (33h) poi ICON-CH2 (fino a 120h)
+
+
+def fetch_mch_hourly(lat, lon):
+    """Serie oraria MeteoSwiss ICON. Si ferma al primo buco (fuori dominio o
+    oltre orizzonte): niente zeri inventati. → lista mm o None."""
+    try:
+        r = _http('GET', OPENMETEO_API, params={
+            'latitude': lat, 'longitude': lon, 'hourly': 'precipitation',
+            'forecast_hours': FORECAST_HOURS, 'models': MCH_MODEL_72, 'timezone': 'UTC'})
+        if not r or not r.ok:
+            return None
+        h = r.json().get('hourly', {})
+        out = []
+        for v in (h.get('precipitation') or h.get(f'precipitation_{MCH_MODEL_72}') or [])[:FORECAST_HOURS]:
+            if v is None:
+                break
+            out.append(v)
+        return out or None
+    except Exception as e:
+        log.warning(f'    MeteoSwiss fetch fallito: {e}')
+        return None
+
+
+def weighted_mch_series(points):
+    """Serie MeteoSwiss pesata sui punti. Solo se TUTTI i punti rispondono
+    (altrimenti il peso non sarebbe confrontabile). → (serie, copertura_h)."""
+    acc, wsum, cov = [0.0] * FORECAST_HOURS, 0.0, FORECAST_HOURS
+    for pt in points:
+        mc = fetch_mch_hourly(pt['lat'], pt['lon'])
+        if not mc:
+            log.info(f"    {pt['id']} MeteoSwiss N/D: riferimento omesso")
+            return None, 0
+        cov = min(cov, len(mc))
+        for i, v in enumerate(mc):
+            acc[i] += v * pt['weight']
+        wsum += pt['weight']
+    return [v / wsum for v in acc[:cov]], cov
+
+
 # ─── Aggregazione pesata (stessi ingredienti dashboard) ─────────────────────
 
 def weighted_series_by_model(points):
@@ -219,6 +262,7 @@ def compute_ruspino_matrix():
     series, metno, n_pts, metno_cov, _ = weighted_series_by_model(POINTS_RUSPINO)
     if not series:
         return None
+    mch, mch_cov = weighted_mch_series(POINTS_RUSPINO)
     n_models = len(series)
     # media ensemble oraria (solo modelli disponibili — MET.no MAI incluso)
     ens_mean = [sum(series[mk][i] for mk in series) / n_models
@@ -233,6 +277,7 @@ def compute_ruspino_matrix():
         worst_label = next(m['label'] for m in MODELS if m['key'] == worst_key)
         mean_v = max_rolling_sum(ens_mean, H)
         metno_v = max_rolling_sum(metno, H) if metno else None
+        mch_v = max_rolling_sum(mch, H) if mch else None
         thr = MATRIX2['thr'][hz['key']]
         level_idx = 1 if worst >= thr[1] else (0 if worst >= thr[0] else -1)
         # concordanza sulla soglia Attenzione (stesso criterio dashboard)
@@ -244,13 +289,14 @@ def compute_ruspino_matrix():
             prox = round((1 - worst / thr[next_idx]) * 100)
         rows.append({
             'hz': hz, 'thr': thr, 'worst': worst, 'worst_model': worst_label,
-            'mean': mean_v, 'metno': metno_v, 'level_idx': level_idx,
+            'mean': mean_v, 'metno': metno_v, 'mch': mch_v, 'level_idx': level_idx,
             'n_agree': n_agree, 'n_models': n_models, 'prox_pct': prox,
         })
     sp3 = any(r['level_idx'] >= MATRIX2['sp3_min_level'] for r in rows)
     max_level = max((r['level_idx'] for r in rows), default=-1)
     return {'rows': rows, 'sp3': sp3, 'max_level': max_level,
-            'n_points_ok': n_pts, 'n_models': n_models, 'metno_cov_h': metno_cov}
+            'n_points_ok': n_pts, 'n_models': n_models, 'metno_cov_h': metno_cov,
+            'mch_cov_h': mch_cov}
 
 
 # ─── Panna: cumulate giornaliere worst-case (criterio B dashboard) ──────────
@@ -261,6 +307,7 @@ def compute_days_worstcase(points):
     series, metno, n_pts, metno_cov, times = weighted_series_by_model(points)
     if not series or not times:
         return None
+    mch, mch_cov = weighted_mch_series(points)
     n_models = len(series)
     # Raggruppa le ore per giorno civile Europe/Rome
     day_keys, day_idx = [], {}
@@ -281,16 +328,18 @@ def compute_days_worstcase(points):
         worst_label = next(m['label'] for m in MODELS if m['key'] == worst_key)
         mean_v = round(sum(per_model.values()) / n_models, 1)
         metno_v = round(sum(metno[i] for i in idxs if i < len(metno)), 1) if metno else None
+        # MeteoSwiss solo se copre TUTTE le ore del giorno (mai giorno troncato spacciato per intero)
+        mch_v = round(sum(mch[i] for i in idxs), 1) if (mch and max(idxs) < len(mch)) else None
         thr = PANNA_DAY_THR
         level_idx = 2 if worst >= thr['ext'] else 1 if worst >= thr['crit'] else 0 if worst >= thr['att'] else -1
         n_agree = sum(1 for v in per_model.values() if v >= thr['att'])
         n_hours = len(idxs)
         days.append({'date': k, 'worst': worst, 'worst_model': worst_label,
-                     'mean': mean_v, 'metno': metno_v, 'level_idx': level_idx,
+                     'mean': mean_v, 'metno': metno_v, 'mch': mch_v, 'level_idx': level_idx,
                      'n_agree': n_agree, 'n_models': n_models, 'n_hours': n_hours})
     max_level = max((d['level_idx'] for d in days), default=-1)
     return {'days': days, 'max_level': max_level, 'n_points_ok': n_pts,
-            'n_models': n_models, 'metno_cov_h': metno_cov}
+            'n_models': n_models, 'metno_cov_h': metno_cov, 'mch_cov_h': mch_cov}
 
 
 # ─── Email HTML (matrice nascosta: solo destinatari email) ──────────────────
@@ -323,8 +372,9 @@ def compose_email_ruspino(res, now_iso):
         prox = (f" · ⚠️ −{r['prox_pct']}% da {MATRIX2['levels'][r['level_idx']+1]}"
                 if r['prox_pct'] is not None else '')
         metno_s = f"{r['metno']:.0f} mm" if r['metno'] is not None else 'N/D'
+        mch_s = f"{r['mch']:.0f} mm" if r.get('mch') is not None else 'N/D'
         detail = (f"worst <b>{r['worst']:.0f} mm</b> ({r['worst_model']}) · "
-                  f"media ens. {r['mean']:.0f} mm · MET.no {metno_s} · "
+                  f"media ens. {r['mean']:.0f} mm · MET.no {metno_s} · MeteoSwiss {mch_s} · "
                   f"concordanza {r['n_agree']}/{r['n_models']} modelli{prox}")
         body_rows.append(
             f'<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600">'
@@ -332,7 +382,7 @@ def compose_email_ruspino(res, now_iso):
             f'{cells}<td style="padding:8px 12px;border:1px solid #e2e8f0;font-size:12px;color:#334155">{detail}</td></tr>')
         lvn = MATRIX2['levels'][r['level_idx']] if r['level_idx'] >= 0 else 'sotto soglia'
         text_rows.append(f"  {hz['label']} ({hz['sub']}): worst {r['worst']:.0f} mm ({r['worst_model']}) "
-                         f"→ {lvn} · media {r['mean']:.0f} · MET.no {metno_s} · "
+                         f"→ {lvn} · media {r['mean']:.0f} · MET.no {metno_s} · MeteoSwiss {mch_s} · "
                          f"concordanza {r['n_agree']}/{r['n_models']}{prox}")
 
     banner = ''
@@ -342,7 +392,9 @@ def compose_email_ruspino(res, now_iso):
                   '⛔ SCARICO PREVENTIVO consigliato — livello Critico (worst-case) raggiunto</div>')
 
     metno_note = (f"MET Norway: copertura oraria {res['metno_cov_h']}/{FORECAST_HOURS}h "
-                  "(validazione indipendente, mai mediato nell'ensemble)")
+                  "(validazione indipendente, mai mediato nell'ensemble) · "
+                  f"MeteoSwiss ICON: copertura {res.get('mch_cov_h', 0)}/{FORECAST_HOURS}h "
+                  "(terzo riferimento, non cambia il livello)")
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
 <h2 style="margin:0 0 4px">🚱 Matrice rischio scarico preventivo — Bacino Ruspino</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulate mobili 24/48/72h · worst-case = modello più piovoso ·
@@ -379,6 +431,7 @@ def compose_email_days(res, now_iso, label='Sorgenti Panna'):
         color = PANNA_COLORS[d['level_idx']] if d['level_idx'] >= 0 else '#94a3b8'
         lvn = PANNA_LEVELS[d['level_idx']] if d['level_idx'] >= 0 else 'sotto soglia'
         metno_s = f"{d['metno']:.1f}" if d['metno'] is not None else 'N/D'
+        mch_s = f"{d['mch']:.1f}" if d.get('mch') is not None else 'N/D'
         part = f" · copertura {d['n_hours']}/24h" if d['n_hours'] < 24 else ''
         rows_html.append(
             f'<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600">Giorno {i+1}<br>'
@@ -387,14 +440,16 @@ def compose_email_days(res, now_iso, label='Sorgenti Panna'):
             f'font-weight:700;color:{color}">{d["worst"]:.1f} mm/g</td>'
             f'<td style="padding:8px 12px;border:1px solid #e2e8f0;color:{color};font-weight:600">{lvn}</td>'
             f'<td style="padding:8px 12px;border:1px solid #e2e8f0;font-size:12px;color:#334155">'
-            f'{d["worst_model"]} · media ens. {d["mean"]:.1f} · MET.no {metno_s} · '
+            f'{d["worst_model"]} · media ens. {d["mean"]:.1f} · MET.no {metno_s} · MeteoSwiss {mch_s} · '
             f'concordanza {d["n_agree"]}/{d["n_models"]}{part}</td></tr>')
         rows_text.append(f"  Giorno {i+1} ({d['date']}): worst {d['worst']:.1f} mm/g ({d['worst_model']}) "
-                         f"→ {lvn} · media {d['mean']:.1f} · MET.no {metno_s} · "
+                         f"→ {lvn} · media {d['mean']:.1f} · MET.no {metno_s} · MeteoSwiss {mch_s} · "
                          f"concordanza {d['n_agree']}/{d['n_models']}{part}")
 
     metno_note = (f"MET Norway: copertura oraria {res['metno_cov_h']}/{FORECAST_HOURS}h "
-                  "(validazione indipendente, mai mediato)")
+                  "(validazione indipendente, mai mediato) · "
+                  f"MeteoSwiss ICON: copertura {res.get('mch_cov_h', 0)}/{FORECAST_HOURS}h "
+                  "(terzo riferimento, non cambia il livello)")
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
 <h2 style="margin:0 0 4px">🌧️ Forecast soglie — {label}</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulata giornaliera worst-case (criterio B, dashboard v6.6):
@@ -517,7 +572,8 @@ def compose_telegram_matrix(res, label, now_iso):
         for i, d in enumerate(res['days']):
             lvn = levels[d['level_idx']] if d['level_idx'] >= 0 else 'sotto soglia'
             val = f"*{d['worst']:.1f} mm/g*" if d['level_idx'] >= 0 else f"{d['worst']:.1f} mm/g"
-            lines.append(f"G{i+1} {d['date'][5:]}: {val} \u2014 {lvn}")
+            mch = f" (MeteoSwiss {d['mch']:.1f})" if d.get('mch') is not None else ''
+            lines.append(f"G{i+1} {d['date'][5:]}: {val} \u2014 {lvn}{mch}")
     else:
         levels = MATRIX2['levels']
         lvl_name = levels[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
@@ -527,10 +583,11 @@ def compose_telegram_matrix(res, label, now_iso):
         for r in res['rows']:
             lvn = levels[r['level_idx']] if r['level_idx'] >= 0 else 'sotto soglia'
             val = f"*{r['worst']:.0f} mm*" if r['level_idx'] >= 0 else f"{r['worst']:.0f} mm"
-            lines.append(f"{r['hz']['label']}: {val} \u2014 {lvn}")
+            mch = f" (MeteoSwiss {r['mch']:.0f})" if r.get('mch') is not None else ''
+            lines.append(f"{r['hz']['label']}: {val} \u2014 {lvn}{mch}")
     lines.append("")
     lines.append(f"_Ensemble {res['n_models']}/5 modelli \u00b7 "
-                 f"{res['n_points_ok']}/11 punti \u00b7 MET Norway indip._")
+                 f"{res['n_points_ok']}/11 punti \u00b7 MET Norway e MeteoSwiss indip._")
     return "\n".join(lines)
 
 

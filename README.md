@@ -61,8 +61,9 @@ Soglie editabili dal Monitor (**Modifica soglie**); per attivarle sulle
 notifiche, esportarle e committarle in `areas.json`.
 
 ### 2. 🔮 Forecast 6h con doppia conferma (`monitor.py`)
-Confronta **OpenMeteo** e **MET Norway**. Alert solo se **ENTRAMBI** superano
-la soglia (1h→SRT1, 3h→CUM3): elimina i falsi positivi da singolo modello.
+Alert solo se **OpenMeteo** supera la soglia (1h→SRT1, 3h→CUM3) **e** almeno un
+modello indipendente la conferma: **MET Norway** oppure **MeteoSwiss ICON-CH1**
+(terza fonte dal 10/2026). Nessuno dei due è mediato con OpenMeteo.
 Se più livelli scattano insieme, notifica solo il **più alto**.
 
 ### 3. ⛈️ Nowcasting radar (`nowcast.py`) — ogni 60 min
@@ -177,7 +178,8 @@ forecast OpenMeteo+MET Norway, heartbeat nowcast).
 - **Bucket S3**: il nome può cambiare lato DPC; il Worker usa whitelist a
   pattern `*dpc-radar*.amazonaws.com`.
 - **Fonti**: radar/cumulate © Protezione Civile; forecast OpenMeteo (15-min) e
-  MET Norway (orario); ensemble 24h da OpenMeteo multi-model.
+  MET Norway (orario); MeteoSwiss ICON-CH1 via Open-Meteo; ensemble 24h da
+  OpenMeteo multi-model.
 
 ---
 

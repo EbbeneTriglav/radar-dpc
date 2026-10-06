@@ -311,7 +311,7 @@ function renderAccuracy(){
     const miss = g.reduce((s,r)=>s+(+r.missed_warning||0),0);
     const fa = g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
     const [src,hz] = k.split('·');
-    const label = ({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 (solo verifica)'}[src]||src)+' · '+hz;
+    const label = ({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1'}[src]||src)+' · '+hz;
     if (n < MIN_N) return `<div class="vf-card" style="opacity:.55" title="Meno di ${MIN_N} confronti: metriche non rappresentative">
       <div class="k">${label}</div>
       <div class="v" style="font-size:15px;color:var(--text3,#94a3b8)">campione insufficiente (n=${n})</div>

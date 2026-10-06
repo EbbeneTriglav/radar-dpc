@@ -4,11 +4,13 @@ forecast_ensemble_alert.py — Alert pioggia 24h ensemble pesato per Panna.
 
 Gira ogni 60 minuti (workflow). Per l’area Sorgenti Panna:
   1. Scarica forecast 24h da 5 modelli Open-Meteo per 11 punti di controllo
-  2. Scarica forecast 24h da MET Norway (validazione indipendente)
+  2. Scarica forecast 24h da MET Norway e MeteoSwiss ICON-CH1 (validazioni
+     indipendenti: MAI mediate nell'ensemble)
   3. Calcola cumulata 24h pesata (pesi idrogeologici per punto)
   4. Calcola media ensemble e worst-case
   5. Confronta con soglie: warning 10mm, alarm 15mm, emergency 20mm
   6. Trigger se worst-case supera soglia E almeno un altro segnale conferma
+     (media ensemble OPPURE MET Norway OPPURE MeteoSwiss ICON-CH1)
   7. Notifica email + Telegram, logga in events.csv
 
 Flags speciali:
@@ -36,6 +38,9 @@ import requests
 OPENMETEO_API = 'https://api.open-meteo.com/v1/forecast'
 METNO_API = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
 METNO_UA = 'radar-dpc-forecast/1.0 github.com/ebbenetriglav/radar-dpc'
+# MeteoSwiss ICON-CH1 (1 km, orizzonte 33h) via Open-Meteo: terza fonte di
+# conferma dal 10/2026. Come MET Norway resta FUORI dall'ensemble (no media).
+MCH_MODEL = 'meteoswiss_icon_ch1'
 HTTP_TIMEOUT = 30
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
@@ -194,6 +199,29 @@ def fetch_metno_24h(lat, lon):
         return None
 
 
+def fetch_meteoswiss_24h(lat, lon):
+    """Forecast MeteoSwiss ICON-CH1: cumulata prossime 24h orarie.
+    None se il punto è fuori dominio o mancano ore (mai buchi contati come zero)."""
+    try:
+        r = _http('GET', OPENMETEO_API, params={
+            'latitude': lat, 'longitude': lon,
+            'hourly': 'precipitation',
+            'forecast_hours': 24,
+            'models': MCH_MODEL,
+            'timezone': 'UTC',
+        })
+        if not r or not r.ok:
+            return None
+        h = r.json().get('hourly', {})
+        vals = (h.get('precipitation') or h.get(f'precipitation_{MCH_MODEL}') or [])[:24]
+        if len(vals) < 24 or any(v is None for v in vals):
+            return None
+        return round(sum(vals), 2)
+    except Exception as e:
+        log.warning(f'  MeteoSwiss ICON-CH1 fetch fallito: {e}')
+        return None
+
+
 def compute_weighted_ensemble(points=None):
     if points is None:
         points = CONTROL_POINTS
@@ -203,6 +231,8 @@ def compute_weighted_ensemble(points=None):
     weighted_worst = 0.0
     weighted_metno = 0.0
     metno_ok = True
+    weighted_mch = 0.0
+    mch_ok = True
     points_details = []
 
     for pt in points:
@@ -226,11 +256,17 @@ def compute_weighted_ensemble(points=None):
         else:
             metno_ok = False
 
-        log.info(f'    OM mean={pt_mean:.1f} worst={pt_worst:.1f} MET.no={metno_val}')
+        mch_val = fetch_meteoswiss_24h(pt['lat'], pt['lon'])
+        if mch_val is not None:
+            weighted_mch += mch_val * w
+        else:
+            mch_ok = False
+
+        log.info(f'    OM mean={pt_mean:.1f} worst={pt_worst:.1f} MET.no={metno_val} MCH={mch_val}')
         points_details.append({
             'id': pt['id'], 'name': pt['name'],
             'om_models': om, 'om_mean': round(pt_mean, 2),
-            'om_worst': round(pt_worst, 2), 'metno': metno_val,
+            'om_worst': round(pt_worst, 2), 'metno': metno_val, 'mch': mch_val,
         })
         time.sleep(0.3)
 
@@ -238,6 +274,8 @@ def compute_weighted_ensemble(points=None):
         'mean_ensemble': round(weighted_mean, 2),
         'worst_case': round(weighted_worst, 2),
         'metno_weighted': round(weighted_metno, 2) if metno_ok else None,
+        # pesata solo se TUTTI i punti hanno il dato (come MET Norway)
+        'mch_weighted': round(weighted_mch, 2) if (mch_ok and points_details) else None,
         'points': points_details,
         'n_points': len(points_details),
         'n_models': len(MODELS),
@@ -249,13 +287,15 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
     if thresholds is None:
         thresholds = THRESHOLDS_24H
     """
-    Trigger se worst_case >= soglia E (mean >= soglia OPPURE metno >= soglia).
+    Trigger se worst_case >= soglia E (mean OPPURE MET Norway OPPURE
+    MeteoSwiss ICON-CH1 >= soglia).
     Anti-spam: non ri-notifica finche lo stato e attivo.
     """
     triggers = []
     mean_val = ensemble['mean_ensemble']
     worst_val = ensemble['worst_case']
     metno_val = ensemble.get('metno_weighted')
+    mch_val = ensemble.get('mch_weighted')
 
     for th in sorted(thresholds, key=lambda x: x['value_mm']):
         mm = th['value_mm']
@@ -265,13 +305,17 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
         worst_ok = worst_val >= mm
         mean_ok = mean_val >= mm
         metno_ok = (metno_val is not None and metno_val >= mm)
-        confirmed = worst_ok and (mean_ok or metno_ok)
+        mch_ok = (mch_val is not None and mch_val >= mm)
+        confirmed = worst_ok and (mean_ok or metno_ok or mch_ok)
 
         if confirmed:
             if not st.get('active'):
                 state[key] = {'active': True, 'last_trigger_utc': now_iso}
+                by = [n for n, ok in (('media ensemble', mean_ok), ('MET Norway', metno_ok),
+                                      ('MeteoSwiss', mch_ok)) if ok]
                 triggers.append({**th,
-                    'mean_val': mean_val, 'worst_val': worst_val, 'metno_val': metno_val})
+                    'mean_val': mean_val, 'worst_val': worst_val, 'metno_val': metno_val,
+                    'mch_val': mch_val, 'confirmed_by': by})
         else:
             if worst_val < mm * 0.5:
                 state[key] = {'active': False}
@@ -386,7 +430,7 @@ def _panna_recipients():
 
 
 def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm,
-                area_label='Sorgenti Panna'):
+                area_label='Sorgenti Panna', mch_str='N/D', by_str=''):
     """Build HTML email body for forecast 24h alert."""
     return (
         '<div style="font-family:Arial,sans-serif;max-width:600px">'
@@ -400,8 +444,10 @@ def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_m
         '<li>Media ensemble: <b>' + f'{mean_v:.1f}' + ' mm</b> (soglia ' + str(mm) + ')</li>'
         '<li>Worst-case: <b>' + f'{worst_v:.1f}' + ' mm</b></li>'
         '<li>MET Norway: <b>' + metno_str + '</b></li>'
+        '<li>MeteoSwiss ICON-CH1: <b>' + mch_str + '</b></li>'
         '</ul>'
-        '<p style="font-size:11px;color:#888">Open-Meteo + MET Norway \u2022 prossime 24 ore</p>'
+        + ('<p>Confermato da: <b>' + by_str + '</b></p>' if by_str else '') +
+        '<p style="font-size:11px;color:#888">Open-Meteo + MET Norway + MeteoSwiss \u2022 prossime 24 ore</p>'
         '</div></div>'
     )
 
@@ -414,6 +460,9 @@ def compose_24h(trigger, ensemble, prefix="", area_label='Sorgenti Panna'):
     worst_v = trigger['worst_val']
     metno_v = trigger.get('metno_val')
     metno_str = f'{metno_v:.1f} mm' if metno_v is not None else 'N/D'
+    mch_v = trigger.get('mch_val')
+    mch_str = f'{mch_v:.1f} mm' if mch_v is not None else 'N/D'
+    by_str = ' + '.join(trigger.get('confirmed_by') or [])
     n_pts = ensemble['n_points']
     n_mod = ensemble['n_models']
 
@@ -429,24 +478,28 @@ def compose_24h(trigger, ensemble, prefix="", area_label='Sorgenti Panna'):
         f'Ensemble pesato su {n_pts} punti \u00d7 {n_mod} modelli:\n'
         f'  \u2022 Media ensemble: {mean_v:.1f} mm (soglia {mm} mm)\n'
         f'  \u2022 Worst-case:     {worst_v:.1f} mm\n'
-        f'  \u2022 MET Norway:      {metno_str}\n\n'
+        f'  \u2022 MET Norway:      {metno_str}\n'
+        f'  \u2022 MeteoSwiss:      {mch_str}\n'
+        + (f'Confermato da: {by_str}\n' if by_str else '') + '\n' +
         f'Dettaglio modelli (punto {pt0.get("name", "?")}):\n'
         f'{models_str}\n'
         f'Soglia superata: {mm} mm/24h\n'
     )
 
     md = (
-        f'{prefix}{icon} *PREVISIONE 24H \u2014 Panna*\n'
+        f'{prefix}{icon} *PREVISIONE 24H \u2014 {area_label}*\n'
         f'Livello: *{lvl.upper()}* (soglia {mm} mm)\n\n'
         f'Media ensemble: *{mean_v:.1f} mm*\n'
         f'Worst-case: *{worst_v:.1f} mm*\n'
-        f'MET Norway: *{metno_str}*\n\n'
+        f'MET Norway: *{metno_str}*\n'
+        f'MeteoSwiss: *{mch_str}*\n\n'
+        + (f'Confermato da: {by_str}\n' if by_str else '') +
         f'_{n_pts} punti \u00d7 {n_mod} modelli_'
     )
 
     color = {"warning": "#e0a800", "alarm": "#e85e2c", "emergency": "#c41e3a"}.get(lvl, "#888")
     html = _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm,
-                       area_label=area_label)
+                       area_label=area_label, mch_str=mch_str, by_str=by_str)
 
     subject = f'{prefix}{icon} {area_label} \u2014 FORECAST 24H {lvl.upper()} ({worst_v:.1f} mm worst-case)'
     return subject, text, html, md
@@ -476,6 +529,7 @@ def update_observations(file, ensemble, now_iso, area_name='panna'):
         'mean_ensemble': ensemble['mean_ensemble'],
         'worst_case': ensemble['worst_case'],
         'metno_weighted': ensemble.get('metno_weighted'),
+        'mch_weighted': ensemble.get('mch_weighted'),
         'n_points': ensemble['n_points'],
         'n_models': ensemble['n_models'],
         'updated_at_utc': now_iso,
@@ -494,10 +548,11 @@ def run_test_alert(area='panna'):
     log.info(f'=== TEST ALERT FORECAST 24H — area={area} ===')
     fake_trigger = {
         'level': 'warning', 'value_mm': 10, 'icon': '🌧️',
-        'mean_val': 12.5, 'worst_val': 18.3, 'metno_val': 11.8,
+        'mean_val': 12.5, 'worst_val': 18.3, 'metno_val': 11.8, 'mch_val': 10.4,
+        'confirmed_by': ['media ensemble', 'MET Norway', 'MeteoSwiss'],
     }
     fake_ensemble = {
-        'mean_ensemble': 12.5, 'worst_case': 18.3, 'metno_weighted': 11.8,
+        'mean_ensemble': 12.5, 'worst_case': 18.3, 'metno_weighted': 11.8, 'mch_weighted': 10.4,
         'n_points': 11, 'n_models': 5,
         'points': [{'id': 'P1', 'name': 'Crinale Nord (TEST)',
             'om_models': {'icon_seamless': 15.2, 'ecmwf_ifs025': 11.3,
@@ -607,14 +662,14 @@ def main():
             except Exception as e:
                 log.warning(f'[{label}] punti non disponibili: {e}'); continue
 
-            log.info(f'[{label}] ensemble {len(points)} punti \u00d7 5 modelli + MET Norway...')
+            log.info(f'[{label}] ensemble {len(points)} punti \u00d7 5 modelli + MET Norway + MeteoSwiss...')
             try:
                 ensemble = compute_weighted_ensemble(points)
             except Exception as e:
                 log.warning(f'[{label}] ensemble fallito: {e}'); continue
 
             log.info(f'  mean={ensemble["mean_ensemble"]:.1f} worst={ensemble["worst_case"]:.1f} '
-                     f'metno={ensemble.get("metno_weighted","N/D")} punti_ok={ensemble["n_points"]}/{len(points)}')
+                     f'metno={ensemble.get("metno_weighted","N/D")} mch={ensemble.get("mch_weighted","N/D")} punti_ok={ensemble["n_points"]}/{len(points)}')
 
             update_observations(obs_file, ensemble, now_iso, area_name=area_name)
 
@@ -642,7 +697,9 @@ def main():
                     'forecast_max_6h_mm': f"{ensemble['worst_case']:.2f}",
                     'notified_email': em,
                     'notified_telegram': tg,
-                    'note': f"mean={ensemble['mean_ensemble']:.1f} worst={ensemble['worst_case']:.1f} metno={ensemble.get('metno_weighted','N/D')}",
+                    'note': (f"mean={ensemble['mean_ensemble']:.1f} worst={ensemble['worst_case']:.1f} "
+                             f"metno={ensemble.get('metno_weighted','N/D')} mch={ensemble.get('mch_weighted','N/D')} "
+                             f"conferma={'+'.join(tr.get('confirmed_by') or [])}"),
                 })
                 log.info(f"  \u2713 trigger {tr['level']}: email={em} tg={tg}")
 

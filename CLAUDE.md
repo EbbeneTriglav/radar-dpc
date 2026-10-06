@@ -37,8 +37,9 @@ prima del commit.
 4. **Trend non significativi vanno smorzati.** Non estrapolare trend a basso R²
    su orizzonti lunghi (gonfia il segnale).
 5. **Un solo modello → falsi positivi.** Gli alert forecast richiedono doppia
-   conferma (OpenMeteo + MET Norway). **MET Norway non va MAI mediato**
-   nell'ensemble: resta validazione indipendente.
+   conferma: OpenMeteo + (MET Norway **oppure** MeteoSwiss ICON-CH1, dal 10/2026).
+   **MET Norway e ICON-CH1 non vanno MAI mediati** nell'ensemble: restano
+   validazioni indipendenti.
 
 ---
 
@@ -154,8 +155,14 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Panna: niente ARPA.
 - **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
   latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
-- **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni): dal 10/2026
-  archiviato e verificato come terza fonte, ma **non** vota nelle allerte finché la verifica non lo giustifica.
+- **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni, copre anche Panna):
+  archiviato e verificato dal 10/2026; per scelta dell'utente (06/10/2026) è **terza fonte di conferma** nelle
+  allerte forecast 6h (`monitor.py`) e 24h (`forecast_ensemble_alert.py`): OM/worst ≥ soglia E (MET o ICON-CH1 o
+  media). Nella matrice (`forecast_matrix.py`) è solo mostrato (`meteoswiss_icon_seamless`, 72h), non cambia il
+  livello. Decisione presa con pochi giorni di verifica: rivederla con `forecast_verification.csv` dopo 3–4 settimane.
+- **Pluviometri ARPA in Previsioni**: `ground_daily.py` (in forecast-verify, 2×/giorno) scrive `ground_daily.csv`
+  (totali giorno UTC + n_obs/expected_obs). La pagina usa quello e integra con Socrata live: dal browser Socrata
+  può fallire (rete/CORS) → prima tutti i giorni risultavano "n.d.".
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
   STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.

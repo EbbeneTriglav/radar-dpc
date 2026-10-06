@@ -439,8 +439,8 @@ def fetch_forecast_metno(lat, lon, hours=6):
 def fetch_forecast_meteoswiss(lat, lon, hours=6):
     """
     Forecast MeteoSwiss ICON-CH1 (1 km, run ogni 3h) via Open-Meteo. Oraria.
-    SOLO OSSERVAZIONE/VERIFICA: salvato in last_observations e forecast_history,
-    NON entra nella doppia conferma finché la verifica non ne misura l'affidabilità.
+    Salvato in last_observations e forecast_history. Dal 10/2026 è la TERZA fonte
+    della conferma forecast: OpenMeteo ≥ soglia E (MET Norway OPPURE ICON-CH1 ≥ soglia).
     Fuori dal dominio del modello (Alpi e dintorni) Open-Meteo restituisce null → None.
     """
     try:
@@ -643,10 +643,12 @@ def update_storm_observation(file, area_name, summary):
 
 
 # ─── Forecast trigger: confronta forecast 1h/3h con le soglie SRT1/CUM3 ──────
-def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam_min, rearm_pct):
+def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam_min, rearm_pct,
+                                 forecast_mch=None):
     """
-    DOPPIA CONFERMA: il trigger forecast parte solo se SIA OpenMeteo SIA MET Norway
-    superano la soglia. Riduce drasticamente i falsi positivi.
+    DOPPIA CONFERMA: il trigger forecast parte solo se OpenMeteo supera la soglia
+    E almeno un modello indipendente la conferma (MET Norway OPPURE MeteoSwiss
+    ICON-CH1, dal 10/2026). Nessuno dei due è mai mediato con OpenMeteo.
     State key: '<area>:forecast:<product>:<level>'.
     """
     if not forecast:
@@ -654,19 +656,22 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
 
     triggers = []
     pairs = [
-        ('SRT1', forecast.get('max_1h_next'), (forecast_metno or {}).get('max_1h_next'), '1h prossime 6h'),
-        ('CUM3', forecast.get('max_3h_next'), (forecast_metno or {}).get('max_3h_next'), '3h prossime 6h'),
+        ('SRT1', forecast.get('max_1h_next'), (forecast_metno or {}).get('max_1h_next'),
+         (forecast_mch or {}).get('max_1h_next'), '1h prossime 6h'),
+        ('CUM3', forecast.get('max_3h_next'), (forecast_metno or {}).get('max_3h_next'),
+         (forecast_mch or {}).get('max_3h_next'), '3h prossime 6h'),
     ]
-    for product, fc_om, fc_metno, horizon in pairs:
+    for product, fc_om, fc_metno, fc_mch, horizon in pairs:
         if fc_om is None or product not in products_cfg:
             continue
         ths = sorted(products_cfg[product]['thresholds'], key=lambda x: x['value_mm'])
-        # Livello più alto superato da ENTRAMBI i modelli (doppia conferma)
-        highest = None
+        # Livello più alto superato da OpenMeteo E confermato da MET Norway o ICON-CH1
+        highest, highest_by = None, []
         for th in ths:
-            both = (fc_om >= th['value_mm']) and (fc_metno is not None and fc_metno >= th['value_mm'])
-            if both:
-                highest = th
+            v = th['value_mm']
+            by = [n for n, x in (('MET Norway', fc_metno), ('MeteoSwiss', fc_mch)) if x is not None and x >= v]
+            if fc_om >= v and by:
+                highest, highest_by = th, by
         # Gestione stato per ciascun livello (riarmo) ma trigger SOLO per il più alto
         for th in ths:
             key = f"{area['name']}:forecast:{product}:{th['level']}"
@@ -681,7 +686,8 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
                     st['last_below_utc'] = None
                     triggers.append({**th, 'forecast': True, 'product': product,
                                      'horizon': horizon, 'forecast_value': fc_om,
-                                     'forecast_metno': fc_metno})
+                                     'forecast_metno': fc_metno, 'forecast_mch': fc_mch,
+                                     'confirmed_by': highest_by})
             else:
                 # livelli non-massimi: gestisci solo il riarmo, niente trigger
                 if fc_om < rearm_value and st['active']:
@@ -765,13 +771,17 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
     unit_label = 'mm/1h' if product == 'SRT1' else 'mm/3h'
 
     metno_val = trigger.get('forecast_metno')
-    metno_line = f"Conferma MET Norway: {metno_val:.1f} {unit_label}\n" if metno_val is not None else ""
+    mch_val = trigger.get('forecast_mch')
+    by = trigger.get('confirmed_by') or ['MET Norway']
+    by_str = ' + '.join(['OpenMeteo'] + by)
+    fmt = lambda v: f"{v:.1f} {unit_label}" if v is not None else "N/D"
     text = (
         f"🔮 PREVISIONE PIOGGIA — {label} — livello {lvl.upper()}\n"
-        f"(confermata da 2 modelli: OpenMeteo + MET Norway)\n\n"
+        f"(confermata da {len(by) + 1} modelli: {by_str})\n\n"
         f"OpenMeteo prevede picco cumulata {horizon}:\n"
         f"  • Stima OpenMeteo: {fc_val:.1f} {unit_label}\n"
-        f"  • {metno_line}"
+        f"  • MET Norway: {fmt(metno_val)}\n"
+        f"  • MeteoSwiss ICON-CH1: {fmt(mch_val)}\n"
         f"  • Soglia: {val_mm} {unit_label}\n\n"
         f"Forecast finestra {forecast['horizon_hours']}h totali:\n"
         f"  • Max 1h: {forecast['max_1h_next']:.1f} mm\n"
@@ -784,9 +794,10 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
         f"Livello: *{lvl.upper()}* ({product} prevista)\n"
         f"Soglia: {val_mm} {unit_label}\n"
         f"OpenMeteo: *{fc_val:.1f}* {unit_label}"
-        + (f" • MET Norway: *{metno_val:.1f}*" if metno_val is not None else "") + "\n"
+        + (f" • MET Norway: *{metno_val:.1f}*" if metno_val is not None else "")
+        + (f" • MeteoSwiss: *{mch_val:.1f}*" if mch_val is not None else "") + "\n"
         f"Orizzonte: {horizon}\n"
-        f"_2 modelli concordi_"
+        f"_{len(by) + 1} modelli concordi: {by_str}_"
     )
     color = {'warning': '#e0a800', 'alarm': '#e85e2c', 'emergency': '#c41e3a'}.get(lvl, '#888')
     html = f"""
@@ -798,7 +809,8 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
         <p>OpenMeteo prevede picco cumulata <b>{horizon}</b>:</p>
         <ul>
           <li>Stima: <b>{fc_val:.1f} {unit_label}</b></li>
-          <li>Soglia: <b>{val_mm} {unit_label}</b></li>
+          <li>MET Norway: <b>{fmt(metno_val)}</b> · MeteoSwiss ICON-CH1: <b>{fmt(mch_val)}</b></li>
+          <li>Soglia: <b>{val_mm} {unit_label}</b> · confermata da {by_str}</li>
         </ul>
         <p style="background:#f4f4f4;padding:8px;border-radius:4px;font-size:12px">
           Finestra {forecast['horizon_hours']}h — max 1h: {forecast['max_1h_next']:.1f} mm •
@@ -1061,20 +1073,21 @@ def process_area(area, archive_dir, events_writer):
                                   hours=mon['forecast'].get('lookahead_hours', 6))
         forecast_done = True
 
-    # MeteoSwiss ICON-CH1: solo archiviato per la verifica (NON entra nelle allerte)
+    # MeteoSwiss ICON-CH1: archiviato per la verifica + terza fonte di conferma forecast
     forecast_mch = None
     if mon.get('forecast', {}).get('enabled'):
         forecast_mch = fetch_forecast_meteoswiss(area['centroid']['lat'], area['centroid']['lon'],
                                                  hours=mon['forecast'].get('lookahead_hours', 6))
         if forecast_mch:
-            log.info(f'  forecast MeteoSwiss ICON-CH1 (solo verifica): 1h={forecast_mch["max_1h_next"]:.1f} 3h={forecast_mch["max_3h_next"]:.1f} mm')
+            log.info(f'  forecast MeteoSwiss ICON-CH1: 1h={forecast_mch["max_1h_next"]:.1f} 3h={forecast_mch["max_3h_next"]:.1f} mm')
 
     # Salva i forecast (OpenMeteo + MET Norway + MeteoSwiss) in last_observations per il frontend
     if forecast or forecast_metno:
         update_forecast_observation(last_obs_file, area['name'], forecast, forecast_metno, now_iso, forecast_mch)
 
     if forecast:
-        fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct)
+        fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct,
+                                                   forecast_mch=forecast_mch)
         for tr in fc_triggers:
             subject, text, html, md = compose_messages_forecast(area, tr, forecast, forecast_metno)
             email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
@@ -1091,7 +1104,7 @@ def process_area(area, archive_dir, events_writer):
                 'forecast_max_6h_mm':        f"{tr['forecast_value']:.2f}",
                 'notified_email':            email_status,
                 'notified_telegram':         tg_status,
-                'note':                      f"forecast {tr['horizon']}",
+                'note':                      f"forecast {tr['horizon']} conferma {'+'.join(tr.get('confirmed_by') or [])}",
             })
             log.info(f"  ✓ forecast trigger {tr['product']}/{tr['level']}: email={email_status} telegram={tg_status}")
 

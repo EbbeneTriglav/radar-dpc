@@ -380,7 +380,7 @@ function renderTec(S,R){
       const bias=-g.reduce((s,r)=>s+(+r.bias_mm||0),0)/n;   // bias_mm nel CSV = osservato − previsto
       const hit=g.reduce((s,r)=>s+(+r.hit_warning||0),0), miss=g.reduce((s,r)=>s+(+r.missed_warning||0),0), fa=g.reduce((s,r)=>s+(+r.false_alarm_warning||0),0);
       const few=n<30;   // campione insufficiente: metriche solo indicative (come in Verifica)
-      return `<tr${few?' class="dim" title="Meno di 30 confronti: metriche non rappresentative"':''}><td>${({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1 <span class="dim">(solo verifica)</span>'})[src]||src}${few?' <span class="dim">· campione insufficiente</span>':''}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
+      return `<tr${few?' class="dim" title="Meno di 30 confronti: metriche non rappresentative"':''}><td>${({openmeteo:'OpenMeteo',metno:'MET Norway',meteoswiss:'MeteoSwiss ICON-CH1'})[src]||src}${few?' <span class="dim">· campione insufficiente</span>':''}</td><td class="n">${n}</td><td class="n">${mae.toFixed(2)} mm</td>
         <td class="n">${bias>=0?'+':''}${bias.toFixed(2)} mm</td><td class="n">${hit}</td><td class="n ${miss?'bad':''}">${miss}</td><td class="n">${fa}</td></tr>`; }).join('')+`</tbody></table>`
     :'<p class="dim">Nessuna verifica previsionale nel periodo.</p>')+
     `<div class="rp-caveat">L'osservato di confronto è la CUM3 DPC (pluviometri interpolati, blocchi di 3 h): per questo si mostra solo l'orizzonte 3 h.

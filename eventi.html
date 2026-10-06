@@ -320,7 +320,7 @@ function renderVerify() {
     if (!groups[key]) groups[key] = [];
     groups[key].push(v);
   }
-  const SRC_LABEL = { openmeteo: 'OpenMeteo', metno: 'MET Norway', meteoswiss: 'MeteoSwiss ICON-CH1 (solo verifica)' };
+  const SRC_LABEL = { openmeteo: 'OpenMeteo', metno: 'MET Norway', meteoswiss: 'MeteoSwiss ICON-CH1' };
   const MIN_N = 30;
   const order = k => { const [s, h] = k.split('|'); return (Object.keys(SRC_LABEL).indexOf(s) + 1 || 99) * 100 + parseInt(h, 10); };
   const cards = Object.entries(groups).sort(([a], [b]) => order(a) - order(b)).map(([key, rows]) => {
