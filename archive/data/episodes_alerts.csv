@@ -1,4 +1,10 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+cepina_20261006T1140,2026-10-06T14:51:00Z,cepina,nowcast,nowcast_alarm,SRI,20.68,nowcast buffer=5km moto=NE/3.4kmh prob=4%
+cepina_20261006T1140,2026-10-06T14:51:00Z,cepina,storm,storm_on_area,SRI,7.78,cella su area
+panna_20261006T1145,2026-10-06T14:31:16Z,panna,nowcast,nowcast_emergency,SRI,31.64,nowcast buffer=10km moto=SW/58.1kmh prob=2%
+ruspino_20261006T1355,2026-10-06T13:50:56Z,ruspino,nowcast,nowcast_alarm,SRI,15.41,nowcast buffer=10km moto=W/4.5kmh prob=31%
+ruspino_20261006T1355,2026-10-06T13:31:07Z,ruspino,nowcast,nowcast_warning,SRI,12.18,nowcast buffer=10km moto=SE/10.3kmh prob=2%
+panna_20261006T1145,2026-10-06T13:10:56Z,panna,nowcast,nowcast_warning,SRI,14.30,nowcast buffer=5km moto=NE/13.9kmh prob=4%
 cepina_20261005T0530,2026-10-05T06:46:03Z,cepina,storm,storm_on_area,SRI,8.65,cella su area
 cepina_20260918T1105,2026-09-18T13:02:14Z,cepina,storm,storm_on_area,SRI,10.00,cella su area dwell~166min
 panna_20260917T0750,2026-09-17T10:51:31Z,panna,storm,storm_on_area,SRI,5.61,cella su area
