@@ -48,13 +48,23 @@ async function tick(env) {
       const runs = (await r.json()).workflow_runs || [];
       const ageMin = runs.length ? (Date.now() - new Date(runs[0].created_at)) / 60000 : 99999;
       if (ageMin < job.every - 2) { log.push(`${job.file}: ok (${Math.round(ageMin)} min)`); continue; }
-      const d = await gh(`/repos/${REPO}/actions/workflows/${job.file}/dispatches`, env, {
-        method: "POST",
-        body: JSON.stringify({ ref: BRANCH }),
-      });
-      if (!d.ok) problems.push(`${job.file}: avvio FALLITO (${d.status})`);
-      else if (ageMin > job.critical) problems.push(`${job.file}: fermo da ${Math.round(ageMin)} min, riavviato`);
-      log.push(`${job.file}: riavviato (fermo da ${Math.round(ageMin)} min) → HTTP ${d.status}`);
+      // GitHub a volte risponde 5xx al dispatch (errore temporaneo lato GitHub): fino a 3 tentativi.
+      let d = null;
+      for (let k = 0; k < 3; k++) {
+        d = await gh(`/repos/${REPO}/actions/workflows/${job.file}/dispatches`, env, {
+          method: "POST",
+          body: JSON.stringify({ ref: BRANCH }),
+        });
+        if (d.ok || d.status < 500) break;
+        await new Promise(res => setTimeout(res, 3000 * (k + 1)));
+      }
+      // Telegram solo se serve davvero: workflow in ritardo oltre 2 intervalli, oppure errore 4xx
+      // (token o configurazione, non si risolve da solo). Un 500 isolato mentre il cron GitHub
+      // gira lo stesso non è un problema: lo scheduler riprova tra 5'.
+      const late = ageMin > 2 * job.every + 5;
+      if (!d.ok && (late || d.status < 500)) problems.push(`${job.file}: avvio FALLITO (${d.status}), fermo da ${Math.round(ageMin)} min`);
+      else if (d.ok && ageMin > job.critical) problems.push(`${job.file}: fermo da ${Math.round(ageMin)} min, riavviato`);
+      log.push(`${job.file}: ${d.ok ? "riavviato" : "avvio fallito " + d.status} (fermo da ${Math.round(ageMin)} min)`);
     } catch (e) {
       problems.push(`${job.file}: ${e.message}`);
     }

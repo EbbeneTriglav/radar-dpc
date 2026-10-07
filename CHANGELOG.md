@@ -1,5 +1,11 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-07 (c) — Scheduler Cloudflare: meno falsi allarmi
+- Il 07/10 GitHub ha risposto più volte HTTP 500 al riavvio dei workflow ("avvio FALLITO (500)"), mentre i workflow
+  giravano regolarmente col cron (nessun buco > 30 min nei commit). Ora `worker-scheduler.js` ritenta fino a 3 volte
+  sui 5xx e manda il Telegram solo se il workflow è davvero in ritardo (> 2 intervalli) o se l'errore è 4xx
+  (token/configurazione). Va ricopiato a mano nel Worker su Cloudflare.
+
 ## 2026-10-07 (b) — Mappa pre-allerta: moto cella affidabile, MeteoSwiss, sfondo più leggibile
 - **Moto della cella**: la mappa di Panna del 07/10 indicava "cella → SE 128 km/h" con la perturbazione da W a 28 km/h:
   il tracciamento era saltato su un'altra cella. Ora il moto della cella si usa solo se plausibile (correlazione ≥ 0,5,
