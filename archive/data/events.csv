@@ -430,3 +430,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-07T03:45:45Z,panna,forecast24h_warning,10,5.66,13.96,ensemble_24h,,13.96,true,true,mean=5.7 worst=14.0 metno=6.94 mch=23.41 conferma=MeteoSwiss
 2026-10-07T05:45:42Z,panna,forecast24h_alarm,15,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
 2026-10-07T05:45:42Z,panna,forecast24h_emergency,20,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+2026-10-07T11:10:43Z,ruspino,forecast24h_warning,30,30.89,47.15,ensemble_24h,,47.15,true,true,mean=30.9 worst=47.1 metno=29.3 mch=26.17 conferma=media ensemble
