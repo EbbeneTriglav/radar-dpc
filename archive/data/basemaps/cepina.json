@@ -5,8 +5,9 @@
   1192826.6331674876,
   5895126.260788068
  ],
- "zoom": 10,
- "size_px": 640,
+ "zoom": 11,
+ "size_px": 1024,
  "half_ground_km": 30,
- "source": "OpenStreetMap tiles (\u00a9 OpenStreetMap contributors, ODbL)"
+ "style": "topo",
+ "attrib": "\u00a9 OpenStreetMap contributors, SRTM \u00b7 stile \u00a9 OpenTopoMap (CC-BY-SA)"
 }
