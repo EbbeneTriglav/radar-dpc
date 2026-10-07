@@ -1,5 +1,12 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-07 (d) — Pre-allerta: niente picchi persi tra un run e l'altro
+- Ruspino 07/10 sera: pioggia debole-moderata sull'area (max 3,5 mm/h SRI, 6 ARPA, 4,6 MeteoSwiss: sotto le soglie,
+  nessuna allerta "cella sull'area" corretta), ma nell'anello 10 km il radar DPC ha toccato 10,7 mm/h (20:45 UTC) e
+  11,6 (21:15) in frame che il nowcast non ha mai valutato: girava ogni ~20' e guardava solo l'ultimo frame.
+- Ora la pre-allerta valuta il massimo di tutti i frame arrivati dall'ultimo run (fino a 30'); il messaggio riporta
+  l'ora del frame del picco. Soglie e canali invariati (solo Telegram).
+
 ## 2026-10-07 (c) — Scheduler Cloudflare: meno falsi allarmi
 - Il 07/10 GitHub ha risposto più volte HTTP 500 al riavvio dei workflow ("avvio FALLITO (500)"), mentre i workflow
   giravano regolarmente col cron (nessun buco > 30 min nei commit). Ora `worker-scheduler.js` ritenta fino a 3 volte

@@ -153,6 +153,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Ruolo ARPA per area** (`ARPA_ROLE` in nowcast.py): Ruspino `'or'` (ARPA affidabile, r≈0.7);
   Cepina `'backup'` (ARPA quasi cieco, r 0.1–0.3: decide l'SRI DPC, ARPA solo se SRI assente o più
   vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Panna: niente ARPA.
+- **Pre-allerta su tutti i frame nuovi**: per gli anelli 5/10 km il nowcast valuta il MASSIMO tra tutti i frame SRI
+  arrivati dall'ultimo run (stato `<area>:nowcast:ring_last_ms:<km>`), non solo l'ultimo; testo e mappa usano l'ora
+  di quel frame. Motivo: Ruspino 07/10/2026, anello a 10,7 e 11,6 mm/h in frame mai visti (run ogni ~20').
 - **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
   latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
 - **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni, copre anche Panna):

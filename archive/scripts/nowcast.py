@@ -1030,6 +1030,25 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
         # SRI (istantaneo)
         sri_now_ts, sri_now_tiff = sri_frames[0]
         sri_stat = stats_in_geom_tm(sri_now_tiff, geom)
+        # Pre-allerta: valuta TUTTI i frame arrivati dall'ultimo run, non solo l'ultimo. Con run ogni
+        # 10–20' i picchi di 5' tra un run e l'altro andavano persi (Ruspino 07/10/2026: anello 10 km
+        # a 10,7 mm/h alle 20:45 e 11,6 alle 21:15 UTC, mai visti dal nowcast). Si usa il frame col
+        # massimo; testo e mappa riportano l'ora di QUEL frame.
+        ring_key = f"{area['name']}:nowcast:ring_last_ms:{buf_km}"
+        last_ms = (state.get(ring_key) or {}).get('ms')
+        cand = [(i, t) for i, (t, _) in enumerate(sri_frames) if last_ms is None or t > last_ms]
+        if last_ms is None:
+            cand = cand[:2]                       # primo run: solo gli ultimi 10'
+        best_i, best_stat = 0, sri_stat
+        for i, t in cand:
+            st_i = sri_stat if i == 0 else stats_in_geom_tm(sri_frames[i][1], geom)
+            if st_i and (best_stat is None or st_i['max'] > best_stat['max']):
+                best_i, best_stat = i, st_i
+        state[ring_key] = {'ms': sri_now_ts}
+        if best_i > 0:
+            log.info(f"    buf {buf_km}km: picco su frame precedente "
+                     f"{datetime.fromtimestamp(sri_frames[best_i][0]/1000, tz=timezone.utc):%H:%M} "
+                     f"({best_stat['max']:.1f} mm/h) > ultimo ({(sri_stat or {}).get('max', 0):.1f})")
         # CUM3 nel buffer (per il segnale mm/3h)
         cum3_stat = stats_in_geom_tm(cum3_tiff, geom) if cum3_tiff else None
 
@@ -1046,8 +1065,14 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
             if cum3_stat:
                 buf_obs['cum3_max'] = round(cum3_stat['max'], 2)
 
-            was_triggered = _eval_product(area, 'SRI', SRI_THRESHOLDS, sri_stat, geom, buf_km,
-                          sri_frames, centroid, state, now_iso, channels, writer,
+            sig = sri_stat
+            if best_i > 0 and best_stat:
+                sig = dict(best_stat)
+                sig['ts_iso'] = datetime.fromtimestamp(sri_frames[best_i][0]/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
+                if cum3_stat:
+                    sig['cum3_max'] = cum3_stat['max']
+            was_triggered = _eval_product(area, 'SRI', SRI_THRESHOLDS, sig, geom, buf_km,
+                          sri_frames[best_i:], centroid, state, now_iso, channels, writer,
                           rcpt_email=rcpt_email, rcpt_tg=rcpt_tg)
             if was_triggered:
                 triggered = True
