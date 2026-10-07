@@ -156,6 +156,14 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Pre-allerta su tutti i frame nuovi**: per gli anelli 5/10 km il nowcast valuta il MASSIMO tra tutti i frame SRI
   arrivati dall'ultimo run (stato `<area>:nowcast:ring_last_ms:<km>`), non solo l'ultimo; testo e mappa usano l'ora
   di quel frame. Motivo: Ruspino 07/10/2026, anello a 10,7 e 11,6 mm/h in frame mai visti (run ogni ~20').
+- **Soglia "cella sull'area"**: `cell_threshold()` = `monitoring.cell_on_area_mmh` in areas.json se presente,
+  altrimenti warning SRT1 dell'area. Ruspino 7 mm/h dal 07/10/2026 (prima 10; backtest ARPA giu–ott: +1 avviso/mese,
+  0 falsi, 14/14 episodi ≥20 mm). Cepina 7 e Panna 5 (da SRT1). La pre-allerta anelli resta a SRI 10/15/25.
+- **Pioggia persistente** (`_eval_persistent_rain`, dal 07/10/2026): cumulata MOBILE dell'SRI DPC media area
+  (`<area>_sri.csv` + frame del run) sulle ultime N ore, regole in `monitoring.persistent_rain` (Ruspino:
+  15 mm/3h warning, 30/6h alarm, 50/12h emergency; backtest CUM3 15/05–07/10: 3,7 / 1,2 / 0,8 al mese). Una
+  notifica per run (livello più alto nuovo), riarmo < 50% soglia; email+Telegram (canali dell'area). Con dati mancanti
+  la somma è un minimo: sopra soglia scatta comunque, sotto soglia non si valuta se copertura < 80%.
 - **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
   latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
 - **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni, copre anche Panna):

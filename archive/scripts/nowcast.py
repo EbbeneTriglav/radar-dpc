@@ -1000,6 +1000,116 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
 
 
 # ─── Elaborazione per area ───────────────────────────────────────────────────
+def cell_threshold(area):
+    """Soglia "cella sull'area" (mm/h): `monitoring.cell_on_area_mmh` se presente in areas.json,
+    altrimenti il warning SRT1 dell'area (comportamento storico), altrimenti 10."""
+    mon = area.get('monitoring', {}) or {}
+    try:
+        if mon.get('cell_on_area_mmh') is not None:
+            return float(mon['cell_on_area_mmh'])
+        ths = mon.get('products', {}).get('SRT1', {}).get('thresholds', [])
+        return next((float(t['value_mm']) for t in ths if t.get('level') == 'warning'), 10.0)
+    except Exception:
+        return 10.0
+
+
+# ─── Pioggia persistente: cumulata mobile radar sull'area ───────────────────
+PERSIST_MIN_COVERAGE = 0.8          # sotto l'80% di frame nella finestra non si valuta (mai buchi = zero)
+
+
+def _area_sri_series(area, sri_frames, archive_dir):
+    """{epoch_ms: mean_mmh} dell'SRI DPC sull'area: archivio <area>_sri.csv (sri_collect, ogni 10')
+    + frame del run corrente non ancora archiviati."""
+    out = {}
+    for name in (f"{area['name']}_sri_backfill.csv", f"{area['name']}_sri.csv"):
+        p = archive_dir / 'data' / name
+        if not p.exists():
+            continue
+        with open(p, newline='', encoding='utf-8') as fh:
+            for r in csv.DictReader(fh):
+                if r.get('status') != 'ok':
+                    continue
+                t = _iso_ms(r.get('timestamp_utc'))
+                try:
+                    if t is not None:
+                        out[t] = float(r['mean_mmh'])
+                except (TypeError, ValueError):
+                    continue
+    geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)
+    for t, tiff in sri_frames or []:
+        if t not in out:
+            st = stats_in_geom_tm(tiff, geom_area)
+            if st:
+                out[t] = st['mean']
+    return out
+
+
+def _eval_persistent_rain(area, sri_frames, archive_dir, state, now_iso, channels, writer,
+                          rcpt_email=None, rcpt_tg=None):
+    """Allerta "pioggia persistente": cumulata MOBILE dell'SRI (media sull'area) sulle ultime N ore
+    ≥ soglia (regole in areas.json → monitoring.persistent_rain). Coglie la pioggia debole ma lunga
+    che le soglie d'intensità (mm/h) non vedono: 6 mm/h per 12 h = 72 mm senza mai superare 10 mm/h.
+    Una sola notifica per run (il livello più alto nuovo); riarmo quando la cumulata scende sotto
+    il 50% della soglia. Stima radar: dichiarata nel messaggio."""
+    rules = (area.get('monitoring', {}) or {}).get('persistent_rain') or []
+    if not rules or not sri_frames:
+        return False
+    series = _area_sri_series(area, sri_frames, archive_dir)
+    t_end = sri_frames[0][0]
+    rank = {'warning': 1, 'alarm': 2, 'emergency': 3}
+    best, sums = None, {}
+    for rule in sorted(rules, key=lambda r: rank.get(r['level'], 0)):
+        h, thr, lvl = float(rule['hours']), float(rule['mm']), rule['level']
+        t0 = t_end - int(h * 3600_000)
+        vals = [v for t, v in series.items() if t0 < t <= t_end]
+        cov = len(vals) / (h * 12)
+        key = f"{area['name']}:persistent:{lvl}"
+        st = state.get(key, {'active': False})
+        mm = sum(vals) * 5 / 60                 # con frame mancanti è un MINIMO (buchi mai riempiti)
+        if mm < thr and cov < PERSIST_MIN_COVERAGE:
+            log.info(f'  pioggia persistente {lvl} {h:g}h: {mm:.1f} mm ma copertura {cov:.0%} insufficiente, non valutata')
+            continue
+        sums[h] = mm
+        log.info(f'  pioggia persistente {lvl}: {mm:.1f} mm in {h:g}h (soglia {thr:g}, copertura {cov:.0%})')
+        if mm >= thr:                           # già sopra soglia: vale anche con copertura parziale
+            if not st.get('active'):
+                state[key] = {'active': True, 'last_trigger_utc': now_iso}
+                best = (rule, mm, cov)
+        elif st.get('active') and mm < 0.5 * thr:
+            state[key] = {'active': False, 'rearmed_utc': now_iso}
+    if not best:
+        return False
+    rule, mm, cov = best
+    lvl, h, thr = rule['level'], float(rule['hours']), float(rule['mm'])
+    label = area['label']
+    icon = {'warning': '🌧️', 'alarm': '⛈️', 'emergency': '🆘'}.get(lvl, '🌧️')
+    others = ' · '.join(f'{k:g}h: {v:.0f} mm' for k, v in sorted(sums.items()))
+    ts_local = _ts_local(datetime.fromtimestamp(t_end / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z'))
+    text = (f"{icon} PIOGGIA PERSISTENTE — {label} — {lvl.upper()}\n\n"
+            f"Cumulata radar DPC (media sull'area) nelle ultime {h:g} ore: {mm:.0f} mm (soglia {thr:g} mm)\n"
+            f"Cumulate mobili: {others}\n"
+            + (f"Dati radar presenti nella finestra: {cov:.0%} (la cumulata è un minimo).\n" if cov < 0.99 else "")
+            + ""
+            f"Stima radar, non pluviometro (a Ruspino la media SRI è circa 1,3× il pluviometro).\n"
+            f"\nAggiornato: {ts_local} (ora italiana)\n")
+    md = (f"{icon} *PIOGGIA PERSISTENTE — {label}*\n"
+          f"Livello: *{lvl.upper()}*\n"
+          f"Ultime {h:g} h: *{mm:.0f} mm* (soglia {thr:g})\n"
+          f"{others}\n_stima radar DPC · {ts_local}_")
+    subject = f"{icon} {label} — PIOGGIA PERSISTENTE {lvl.upper()}: {mm:.0f} mm in {h:g}h"
+    em = send_email(subject, text, to=rcpt_email) if 'email' in channels else 'skipped'
+    tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+    writer.writerow({
+        'event_timestamp_utc': now_iso, 'area_name': area['name'], 'level': f'persistent_{lvl}',
+        'threshold_mm': f'{thr:g}', 'observed_mm_mean': f'{mm:.2f}', 'observed_mm_max': '',
+        'product': f'SRI_{h:g}h', 'observation_timestamp_utc': datetime.fromtimestamp(t_end / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z'),
+        'forecast_max_6h_mm': '', 'notified_email': em, 'notified_telegram': tg,
+        'note': f'pioggia persistente: cumulata mobile SRI media area {h:g}h, copertura {cov:.0%}',
+    })
+    log.info(f'  ✓ pioggia persistente {lvl}: {mm:.1f} mm/{h:g}h email={em} tg={tg}')
+    return True
+
+
 def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tiff, cum3_tiff):
     """
     Valuta i buffer per un'area usando i tiff già scaricati (condivisi).
@@ -1099,13 +1209,8 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
         obs['buffers'][f'{buf_km}km'] = buf_obs
 
     # ── CELLA SULL'AREA: SRI dentro il poligono + permanenza + pioggia stimata ──
-    # Soglia = warning SRT1 dell'area (fallback 10 mm/h)
-    try:
-        _srt1_ths = (area.get('monitoring', {}).get('products', {})
-                         .get('SRT1', {}).get('thresholds', []))
-        _cell_thr = next((float(t['value_mm']) for t in _srt1_ths if t.get('level') == 'warning'), 10.0)
-    except Exception:
-        _cell_thr = 10.0
+    # Soglia = monitoring.cell_on_area_mmh, altrimenti warning SRT1 dell'area (fallback 10 mm/h)
+    _cell_thr = cell_threshold(area)
     try:
         was_on_area = _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff,
                                          state, now_iso, channels, writer,
@@ -1115,6 +1220,14 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
             triggered = True
     except Exception as e:
         log.warning(f'  cell_on_area errore: {e}')
+
+    # ── PIOGGIA PERSISTENTE: cumulata mobile radar sull'area (regole in areas.json) ──
+    try:
+        if _eval_persistent_rain(area, sri_frames, archive_dir, state, now_iso, channels, writer,
+                                 rcpt_email=rcpt_email, rcpt_tg=rcpt_tg):
+            triggered = True
+    except Exception as e:
+        log.warning(f'  pioggia persistente errore: {e}')
 
     # Stima moto (sul buffer esterno) — per le osservazioni
     if len(sri_frames) >= 2:
@@ -1231,12 +1344,7 @@ def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
     COVER_MARGIN_MS = 6 * 60_000  # ±1 frame di tolleranza sui bordi finestra
     for area in areas:
         name = area['name']
-        try:
-            _srt1_ths = (area.get('monitoring', {}).get('products', {})
-                             .get('SRT1', {}).get('thresholds', []))
-            thr = next((float(t['value_mm']) for t in _srt1_ths if t.get('level') == 'warning'), 10.0)
-        except Exception:
-            thr = 10.0
+        thr = cell_threshold(area)
         geom_area = ring_buffer_tm(area['polygon'], 0, 0.001)
         cum3_in = stats_in_geom_tm(cum3_tiff, geom_area) if cum3_tiff else None
 
@@ -1338,11 +1446,7 @@ def _arpa_only_cell_check(archive_dir, enabled):
             arpa_mmh, arpa_age = _arpa_max_mmh(name)
             if arpa_mmh is None:
                 continue
-            try:
-                ths = area.get('monitoring', {}).get('products', {}).get('SRT1', {}).get('thresholds', [])
-                thr = next((float(t['value_mm']) for t in ths if t.get('level') == 'warning'), 10.0)
-            except Exception:
-                thr = 10.0
+            thr = cell_threshold(area)
             key = f"{name}:nowcast:cell_on_area"
             st = state.get(key, {'active': False})
             log.info(f'  [{name}] ARPA di riserva: {arpa_mmh:.1f} mm/h ({arpa_age:.0f} min fa), soglia {thr}')

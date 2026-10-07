@@ -98,6 +98,14 @@
     }
    ],
    "monitoring": {
+    "cell_on_area_mmh": 7,
+    "_cell_on_area_comment": "Soglia cella sull'area (SRI/ARPA max mm/h). Senza questa chiave vale il warning SRT1. Ruspino 7 dal 07/10/2026 (backtest giu-ott: +1 avviso/mese, nessun episodio perso).",
+    "persistent_rain": [
+     {"level": "warning",   "hours": 3,  "mm": 15},
+     {"level": "alarm",     "hours": 6,  "mm": 30},
+     {"level": "emergency", "hours": 12, "mm": 50}
+    ],
+    "_persistent_rain_comment": "Pioggia persistente: cumulata MOBILE del radar DPC SRI (media area) sulle ultime N ore, valutata a ogni run del nowcast. Stima radar (SRI media ~1,3x il pluviometro a Ruspino).",
     "enabled": true,
     "metric": "mean",
     "channels": [

@@ -1,5 +1,13 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-07 (e) — Ruspino: soglia cella 7 mm/h + allerta pioggia persistente
+- **Cella sull'area a Ruspino: 10 → 7 mm/h** (`monitoring.cell_on_area_mmh` in areas.json; vale per SRI DPC e ARPA in
+  OR). Backtest ARPA 06/06–07/10: da 7,8 a 8,8 avvisi/mese, nessun falso in più, 14/14 episodi ≥ 20 mm presi.
+- **Nuova allerta "pioggia persistente"**: le soglie in mm/h non vedono la pioggia debole ma lunga (6 mm/h per 12 h =
+  72 mm senza mai superare 7–10 mm/h). Cumulata mobile del radar DPC sull'area, a ogni run del nowcast:
+  ≥ 15 mm/3h warning · ≥ 30 mm/6h alarm · ≥ 50 mm/12h emergency (configurabili in areas.json, per ora solo Ruspino).
+  Con 6 mm/h costanti: warning dopo ~2,5 h, alarm ~5 h, emergency ~8 h. Email + Telegram come le altre allerte.
+
 ## 2026-10-07 (d) — Pre-allerta: niente picchi persi tra un run e l'altro
 - Ruspino 07/10 sera: pioggia debole-moderata sull'area (max 3,5 mm/h SRI, 6 ARPA, 4,6 MeteoSwiss: sotto le soglie,
   nessuna allerta "cella sull'area" corretta), ma nell'anello 10 km il radar DPC ha toccato 10,7 mm/h (20:45 UTC) e
