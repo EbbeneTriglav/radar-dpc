@@ -150,6 +150,7 @@
         <option value="ground">Pluviometro</option>
         <option value="cum3">CUM3 DPC (pluviometri interpolati)</option>
         <option value="arpa">Radar ARPA</option>
+        <option value="radmch">Radar MeteoSwiss</option>
       </select>
     </label>
     <span class="pv-status" id="pv-status">Caricamento…</span>
@@ -200,6 +201,7 @@
     che si ferma a ~2 giorni, resta nel massimo col valore raggiunto.
     Un modello che non copre un giorno (MeteoSwiss oltre +5 giorni, AROME oltre ~2 giorni) viene escluso da quel giorno, non contato come zero.
     <b>CUM3 DPC</b> = pluviometri a terra interpolati (non radar), media sull'area. <b>Radar ARPA</b> = intensità massima sull'area integrata nel tempo (solo Lombardia).
+    <b>Radar MeteoSwiss</b> = intensità media sull'area integrata nel tempo (Ruspino e Cepina, archivio dal 22/09/2026; dato di studio, Fonte: MeteoSwiss).
     Pluviometri: Cornalita (Ruspino) e Oga S.Colombano (Cepina) da ARPA Lombardia, totali archiviati ogni 3 ore e integrati dal dato live quando serve e quando ARPA risponde; Monte di Fò (Panna, giorno idrologico 09→09 attribuito al giorno precedente). “Parziale” = mancano misure nel giorno: il totale è un minimo.
     YR oltre ~2,5 giorni arriva a blocchi di 6 ore.
   </div>
@@ -212,10 +214,10 @@ const OM_URL = 'https://api.open-meteo.com/v1/forecast';
 const YR_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 const SOCRATA = 'https://www.dati.lombardia.it/resource/647i-nhxk.json';
 const AREAS = {
-  ruspino: {lat:45.846446, lon:9.635256, label:'Ruspino', arpa:true, ground:{type:'arpa', id:2278, name:'Cornalita'}},
+  ruspino: {lat:45.846446, lon:9.635256, label:'Ruspino', arpa:true, radmch:true, ground:{type:'arpa', id:2278, name:'Cornalita'}},
   panna:   {lat:44.0765,   lon:11.306398,label:'Panna',   arpa:false,ground:{type:'sir', name:'Monte di Fò',
               url:'https://raw.githubusercontent.com/EbbeneTriglav/dati_idro/main/dati/MonteDiFo_precip_1992-2026.csv'}},
-  cepina:  {lat:46.442772, lon:10.32425, label:'Cepina',  arpa:true, ground:{type:'arpa', id:8010, name:'Oga S.Colombano'}},
+  cepina:  {lat:46.442772, lon:10.32425, label:'Cepina',  arpa:true, radmch:true, ground:{type:'arpa', id:8010, name:'Oga S.Colombano'}},
 };
 // Stessi modelli degli script di allerta (forecast_matrix / forecast_ensemble_alert)
 const OM_MODELS = [['icon_seamless','ICON'],['ecmwf_ifs025','ECMWF'],['gfs_seamless','GFS'],
@@ -314,6 +316,21 @@ async function fetchArpaDaily(area){
     return byDay;
   }catch(e){ return {}; }
 }
+// Radar MeteoSwiss: totali giornalieri (media sull'area) da mch_daily.py. Solo Ruspino e Cepina
+// (Panna fuori copertura), dati dal 22/09/2026. Giorno con frame mancanti = parziale, mai zero inventato.
+async function fetchMchDaily(area){
+  const byDay = {}, partial = new Set(), mx = {};
+  if(!AREAS[area].radmch) return {byDay, partial, mx};
+  try{
+    for(const r of parseCSV(await getText(RAW+'mch_daily.csv?_='+Date.now())).filter(r=>r.area_name===area)){
+      const n = +r.n_frames, exp = +r.expected_frames;
+      if(!(n>0) || r.mm_mean==='') continue;
+      byDay[r.date_utc] = +r.mm_mean; mx[r.date_utc] = +r.mm_max;
+      if(n < 0.9*exp) partial.add(r.date_utc);
+    }
+  }catch(e){ /* radar MeteoSwiss opzionale */ }
+  return {byDay, partial, mx};
+}
 // Pluviometro ARPA: 1) totali giornalieri archiviati nel repo da ground_daily.py (GitHub Actions
 // raggiunge sempre Socrata); 2) Socrata live dal browser solo per integrare i giorni recenti.
 // Per ogni giorno vince la fonte con più misure. Giorno con misure mancanti → 'parziale', mai zero inventato.
@@ -380,7 +397,8 @@ function sumYR(blocks, from, to){
   for(const b of blocks){ if(b.t0>=from && b.t1<=to){ s+=b.mm; cov+=b.t1-b.t0; } }
   return cov >= (to-from) ? s : null;
 }
-function build(area, models, mch, yr, cum3, arpa, ground){
+function build(area, models, mch, yr, cum3, arpa, ground, rmch){
+  rmch = rmch || {byDay:{}, partial:new Set(), mx:{}};
   const now = Date.now(), nowH = Math.floor(now/H)*H;
   const today = Math.floor(now/DAY)*DAY;
   const days = [];
@@ -406,6 +424,9 @@ function build(area, models, mch, yr, cum3, arpa, ground){
       arpa: off<0 && AREAS[area].arpa ? (arpa[k] ?? null) : null,
       ground: off<0 ? (ground[k] ?? null) : null,
       groundPartial: off<0 && ground._meta ? ground._meta.partial.has(k) : false,
+      radmch: off<0 && AREAS[area].radmch ? (rmch.byDay[k] ?? null) : null,
+      radmchMax: off<0 ? (rmch.mx[k] ?? null) : null,
+      radmchPartial: off<0 && rmch.partial.has(k),
     });
   }
   // Serie orarie future (da adesso) per cumulata e intensità
@@ -432,9 +453,10 @@ async function loadArea(area){
   try{
     if(!cache[area]){
       const a = AREAS[area];
-      const [models, mch, yr, c3, ar, gr] = await Promise.all([
-        fetchEnsemble(a), fetchMeteoSwiss(a), fetchYR(a), fetchCum3Daily(area), fetchArpaDaily(area), fetchGroundDaily(area)]);
-      cache[area] = build(area, models, mch, yr, c3, ar, gr);
+      const [models, mch, yr, c3, ar, gr, rm] = await Promise.all([
+        fetchEnsemble(a), fetchMeteoSwiss(a), fetchYR(a), fetchCum3Daily(area), fetchArpaDaily(area), fetchGroundDaily(area),
+        fetchMchDaily(area)]);
+      cache[area] = build(area, models, mch, yr, c3, ar, gr, rm);
     }
     const c = cache[area];
     const nM = Object.keys(c.models).length;
@@ -444,7 +466,8 @@ async function loadArea(area){
     const obsSel = document.getElementById('pv-obs');
     obsSel.querySelector('option[value="arpa"]').disabled = !AREAS[area].arpa;
     obsSel.querySelector('option[value="ground"]').textContent = 'Pluviometro ' + AREAS[area].ground.name;
-    if(state.obs==='arpa' && !AREAS[area].arpa){ state.obs='ground'; obsSel.value='ground'; }
+    obsSel.querySelector('option[value="radmch"]').disabled = !AREAS[area].radmch;
+    if((state.obs==='arpa' && !AREAS[area].arpa) || (state.obs==='radmch' && !AREAS[area].radmch)){ state.obs='ground'; obsSel.value='ground'; }
     renderAll();
   }catch(e){ setStatus('Errore: '+e.message); }
 }
@@ -461,7 +484,8 @@ function renderAll(){
 }
 const obsVal = d => d[state.obs];
 const obsLabel = () => state.obs==='ground' ? 'Pluviometro '+AREAS[state.area].ground.name
-                     : state.obs==='cum3' ? 'CUM3 DPC (pluviometri)' : 'Radar ARPA';
+                     : state.obs==='cum3' ? 'CUM3 DPC (pluviometri)'
+                     : state.obs==='radmch' ? 'Radar MeteoSwiss (media area)' : 'Radar ARPA';
 function primaryFut(d){ return state.src==='yr' ? d.yr : state.src==='mch' ? d.mch : d.ens; }
 function primaryColor(){ return cssv(state.src==='yr'?'--s-yr':state.src==='mch'?'--s-mch':'--s-ens'); }
 
@@ -477,7 +501,7 @@ function renderDays(c){
       <div class="dd">${d.isToday?'oggi':fmtDay(d.ms)}</div>
       <div class="dv">${v==null?'<small>n.d.</small>':fmtMM(v)+'<small> mm</small>'}</div>
       <div class="bar"><i style="width:${w}%;background:${col}"></i></div>
-      <div class="kind">${d.isPast?(state.obs==='ground'&&d.groundPartial&&v!=null?'osservato · parziale':'osservato'):d.isToday?'resto del giorno':'previsto'}</div></div>`;
+      <div class="kind">${d.isPast?(v!=null&&((state.obs==='ground'&&d.groundPartial)||(state.obs==='radmch'&&d.radmchPartial))?'osservato · parziale':'osservato'):d.isToday?'resto del giorno':'previsto'}</div></div>`;
   }).join('');
   box.querySelectorAll('.pv-day').forEach(el=>el.addEventListener('click',()=>{
     state.sel = +el.dataset.off; renderDays(c); renderTiles(c);
@@ -499,6 +523,8 @@ function renderTiles(c){
     t.push(tile(cssv('--s-obs'),'Pluviometro '+AREAS[state.area].ground.name, d.ground, d.groundPartial?'misura a terra · parziale (misure mancanti, non contate come zero)':'misura a terra','sq'));
     t.push(tile(cssv('--s-obs'),'CUM3 DPC', d.cum3, 'pluviometri interpolati, media area','sq'));
     if(AREAS[state.area].arpa) t.push(tile(cssv('--s-obs'),'Radar ARPA', d.arpa, 'max sull\'area','sq'));
+    if(AREAS[state.area].radmch) t.push(tile(cssv('--s-obs'),'Radar MeteoSwiss', d.radmch,
+      d.radmch==null ? 'nessun dato (archivio dal 22/09)' : `media area${d.radmchMax!=null?` · pixel max ${fmtMM(d.radmchMax)} mm`:''}${d.radmchPartial?' · parziale':''}`,'sq'));
     if(show('ens')) t.push(tile(cssv('--s-ens'),'Previsto · Ensemble', d.ens, d.ens!=null?`intervallo ${fmtMM(d.ensMin)}–${fmtMM(d.ensMax)} mm`:''));
     if(show('mch')) t.push(tile(cssv('--s-mch'),'Previsto · MeteoSwiss', d.mch));
     if(show('yr')) t.push(tile(cssv('--s-yr'),'Previsto · YR', null, 'nessuno storico (YR dà solo il futuro)'));
@@ -741,12 +767,13 @@ function renderTable(c){
   const cols = [['Giorno',d=>d.isToday?'oggi (resto)':fmtDay(d.ms)],
     ['Pluviometro',d=>d.ground==null?null:fmtMM(d.ground)+(d.groundPartial?' *':'')],['CUM3 DPC',d=>d.cum3]];
   if(a.arpa) cols.push(['Radar ARPA',d=>d.arpa]);
+  if(a.radmch) cols.push(['Radar MeteoSwiss',d=>d.radmch==null?null:fmtMM(d.radmch)+(d.radmchPartial?' *':'')]);
   cols.push(['Ensemble media',d=>d.ens],['Ens. min',d=>d.ensMin],['Ens. worst-case',d=>d.ensMax],['Più piovoso',d=>d.ensWorst],
             ['YR',d=>d.yr],['MeteoSwiss',d=>d.mch]);
   const cell = v => v==null ? '<td class="na">—</td>' : typeof v==='string' ? `<td>${v}</td>` : `<td>${fmtMM(v)}</td>`;
   document.getElementById('pv-tbl').innerHTML = `<table class="pt"><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`
     + c.days.map(d=>`<tr class="${d.isToday?'today':''}">${cols.map((col,i)=>i===0?`<td>${col[1](d)}</td>`:cell(col[1](d))).join('')}</tr>`).join('')
-    + `</tbody></table><p class="pv-notes" style="margin-top:8px">mm/giorno (UTC). “—” = dato non disponibile o fuori dall'orizzonte del modello, non zero. “*” = pluviometro con misure mancanti nel giorno.</p>`;
+    + `</tbody></table><p class="pv-notes" style="margin-top:8px">mm/giorno (UTC). “—” = dato non disponibile o fuori dall'orizzonte del modello, non zero. “*” = pluviometro o radar MeteoSwiss con dati mancanti nel giorno (totale minimo).</p>`;
 }
 
 // ── CONTROLLI ────────────────────────────────────────────────────────────

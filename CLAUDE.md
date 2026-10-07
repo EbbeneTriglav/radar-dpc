@@ -174,7 +174,12 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   pioggia ≥ 0.2 mm/h; scartato se correlazione < 0.3): freccia larga "Perturbazione da …" nella mappa e riga in
   didascalia. Entrambi i tracker usano `_xcorr_motion()` (cross-correlazione normalizzata per sovrapposizione).
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
-  STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte.
+  STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte. Solo Ruspino e Cepina
+  (Panna fuori copertura), archivio dal 22/09/2026. Confronti: `episodes.csv` colonne `mch_max_mm/mch_mean_mm/
+  mch_cov_pct` (non decidono episodi né fonte), `mch_daily.csv` (totali giorno UTC, `mch_daily.py` in ground-daily.yml)
+  → osservato "Radar MeteoSwiss" in Previsioni, colonne in Verifica, stime in Report.
+- **Allerte forecast 24h** (`forecast_ensemble_alert.py`): una sola notifica per run, il livello PIÙ ALTO confermato
+  (gli inferiori diventano attivi in silenzio), come `monitor.py`. Prima partivano ALARM+EMERGENCY insieme.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
 - **Ground sensors**: Cornalita (Ruspino) idsensore ARPA `2278`, Oga
   S.Colombano (Cepina) `8010`, endpoint `dati.lombardia.it/resource/647i-nhxk.json`.

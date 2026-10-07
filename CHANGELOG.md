@@ -1,5 +1,13 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-07 — Allerte 24h senza doppioni + radar MeteoSwiss nei confronti
+- **Forecast 24h**: con più soglie superate nello stesso run partivano due messaggi (Panna 07/10: ALARM + EMERGENCY con
+  gli stessi numeri). Ora parte solo il livello più alto, come per le allerte 6h; escalation e riarmo invariati.
+- **Radar MeteoSwiss come osservato** (Ruspino e Cepina, dal 22/09): nuova opzione in Previsioni (media area, pixel max
+  nella tessera, "parziale" se mancano frame); `mch_daily.py` → `mch_daily.csv` ogni 3 ore (workflow ground-daily).
+- **Verifica**: colonne "Radar MeteoSwiss" e "Δ MeteoSwiss" per episodio. **Report**: righe MeteoSwiss nella tabella
+  stime vs pluviometro, con avviso "campione piccolo" sotto 10 episodi. `episodes.csv`: colonne `mch_*` in coda.
+
 ## 2026-10-06 (e) — Mappa pre-allerta: freccia della perturbazione
 - Oltre alla cella più intensa, la mappa mostra il **moto d'insieme della perturbazione**: freccia larga blu che entra
   dal lato di provenienza e punta verso l'area ("Perturbazione da SW · 30 km/h"); la didascalia Telegram lo scrive.

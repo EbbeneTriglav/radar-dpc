@@ -216,6 +216,8 @@ const ESTIMATORS = [
   {key:'sri_max_mm',  cov:'sri_cov_pct',  label:'Radar DPC SRI · pixel max',  radar:true},
   {key:'arpa_mean_mm',cov:'arpa_cov_pct', label:'Radar ARPA · media area',    radar:true},
   {key:'arpa_max_mm', cov:'arpa_cov_pct', label:'Radar ARPA · pixel max',     radar:true},
+  {key:'mch_mean_mm', cov:'mch_cov_pct',  label:'Radar MeteoSwiss · media area (dal 22/09)', radar:true},
+  {key:'mch_max_mm',  cov:'mch_cov_pct',  label:'Radar MeteoSwiss · pixel max (dal 22/09)',  radar:true},
   {key:'cum3_mean_mm',cov:null,           label:'CUM3 pluviometri DPC · media (NON radar)', radar:false},
 ];
 
@@ -349,7 +351,7 @@ function renderTec(S,R){
     <table class="rp"><thead><tr><th>Stima</th><th class="n">Episodi</th><th class="n">r</th><th class="n">Bias (stima − pluvio)</th><th class="n">Errore medio</th><th class="n">Totale stima/pluvio</th><th class="n">Entro ±30%</th></tr></thead><tbody>`+
     ESTIMATORS.map(es=>{ const s=estStats(S.eps,es.key,es.cov);
       if(!s.n) return `<tr><td>${es.label}</td><td class="n dim" colspan="6">nessun episodio con dati e pluviometro</td></tr>`;
-      return `<tr${es.radar?'':' class="dim"'}><td>${es.label}</td><td class="n">${s.n}</td><td class="n">${s.r!=null?s.r.toFixed(2):'—'}</td>
+      return `<tr${es.radar?'':' class="dim"'}><td>${es.label}${s.n<10?' <span class="dim">· campione piccolo, solo indicativo</span>':''}</td><td class="n">${s.n}</td><td class="n">${s.r!=null?s.r.toFixed(2):'—'}</td>
         <td class="n">${s.bias>=0?'+':''}${s.bias.toFixed(1)} mm</td><td class="n">${s.mae.toFixed(1)} mm</td>
         <td class="n">${s.ratio!=null?s.ratio.toFixed(2)+'×':'—'}</td><td class="n">${s.within.toFixed(0)}%</td></tr>`; }).join('')+
     `</tbody></table>

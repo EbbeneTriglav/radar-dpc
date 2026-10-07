@@ -70,6 +70,9 @@ ALERT_MARGIN_H = 1.0 # allerte nowcast/monitor agganciate entro ±1h dalla fines
 FORECAST_LEAD_H = 24 # allerte forecast agganciate se emesse fino a 24h prima
 
 ARPA_AREAS = ('ruspino', 'cepina')
+# Radar MeteoSwiss (mch_collect.py, dal 22/09/2026): copre Ruspino e Cepina, NON Panna.
+# Solo DATO DI STUDIO: cumulate per episodio nelle colonne mch_*, non decide né episodi né fonte.
+MCH_AREAS = ('ruspino', 'cepina')
 # Aree dove il radar ARPA è affidabile (verifica ott-2026: Ruspino r≈0.8 col
 # pluviometro; Cepina r≈0.3, fascio probabilmente schermato dai rilievi).
 # Dove ARPA NON è affidabile, i suoi frame "asciutti" non possono smentire la
@@ -133,6 +136,33 @@ def load_sri(area):
             except ValueError:
                 continue
     return out                       # {t: (max_mmh, mean_mmh)}
+
+
+def load_mch(area):
+    """Radar MeteoSwiss (5') archiviato da mch_collect.py: raccolta continua + backfill.
+    Solo frame validi (status ok); 'nodata' = fuori copertura, mai contato come zero."""
+    out = {}
+    for name in (f'{area}_mch_backfill.csv', f'{area}_mch.csv'):
+        for r in read_csv(DATA / name):
+            if r.get('status') != 'ok':
+                continue
+            try:
+                out[ts(r['timestamp_utc'])] = (fnum(r['max_mmh']), fnum(r['mean_mmh']))
+            except ValueError:
+                continue
+    return out                       # {t: (max_mmh, mean_mmh)}
+
+
+def attach_mch(eps, mch):
+    """Cumulata MeteoSwiss nella finestra episodio (integrale mm/h x 5'). Vuota se nessun frame."""
+    for ep in eps:
+        s, e = ep['start'], ep['end']
+        fr = [v for t, v in mch.items() if s <= t < e]
+        if fr:
+            exp = max(1, int((e - s) / STEP))
+            ep['mch_max_mm'] = sum(v[0] for v in fr) * 5 / 60
+            ep['mch_mean_mm'] = sum(v[1] for v in fr) * 5 / 60
+            ep['mch_cov'] = min(100, round(100 * len(fr) / exp))
 
 
 def load_cum3(area):
@@ -380,7 +410,8 @@ COLS = ['episode_id', 'area_name', 'start_utc', 'end_utc', 'duration_h', 'source
         'cum3_max_mm', 'cum3_mean_mm', 'cum3_blocks',
         'gauge_name', 'gauge_mm', 'gauge_type',
         'n_alerts', 'n_storm', 'n_nowcast', 'n_monitor', 'n_forecast',
-        'first_alert_utc', 'alert_lead_min', 'forecast_lead_h', 'status']
+        'first_alert_utc', 'alert_lead_min', 'forecast_lead_h', 'status',
+        'mch_max_mm', 'mch_mean_mm', 'mch_cov_pct']
 
 
 def r1(v):
@@ -413,6 +444,8 @@ def ep_row(ep, now):
         'alert_lead_min': ep.get('lead_min', ''),
         'forecast_lead_h': ep.get('forecast_lead_h', ''),
         'status': 'in corso' if open_ else 'chiuso',
+        'mch_max_mm': r1(ep.get('mch_max_mm')), 'mch_mean_mm': r1(ep.get('mch_mean_mm')),
+        'mch_cov_pct': ep.get('mch_cov', '') or '',
     }
 
 
@@ -437,6 +470,8 @@ def run(sir_local=None, now=None):
         sri = load_sri(area)
         eps = build_episodes(area, arpa, cum3, sri=sri)
         attach_gauge(eps, area, gpts, gcover, sir)
+        if area in MCH_AREAS:
+            attach_mch(eps, load_mch(area))
         all_eps += eps
         print(f'  {area}: {len(eps)} episodi')
     links = attach_alerts(all_eps, events)
