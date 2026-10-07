@@ -433,3 +433,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-07T11:10:43Z,ruspino,forecast24h_warning,30,30.89,47.15,ensemble_24h,,47.15,true,true,mean=30.9 worst=47.1 metno=29.3 mch=26.17 conferma=media ensemble
 2026-10-07T12:46:03Z,panna,nowcast_emergency,25,0.06,25.64,SRI,2026-10-07T12:35:00Z,,skipped,true,nowcast buffer=10km moto=SE/128.3kmh prob=37%
 2026-10-07T19:40:51Z,panna,nowcast_alarm,15,1.93,21.36,SRI,2026-10-07T19:30:00Z,,skipped,true,nowcast buffer=10km
+2026-10-07T20:01:04Z,panna,storm_on_area,5.0,4.62,10.32,SRI,2026-10-07T19:50:00Z,,true,true,cella su area
