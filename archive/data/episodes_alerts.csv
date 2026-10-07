@@ -1,4 +1,13 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+panna_20261007T1905,2026-10-07T21:55:55Z,panna,monitor,warning,CUM3,12.305,
+ruspino_20261007T1235,2026-10-07T21:40:57Z,ruspino,nowcast,nowcast_warning,SRI,10.20,nowcast buffer=10km moto=NE/12.9kmh prob=2%
+panna_20261007T1905,2026-10-07T20:20:54Z,panna,nowcast,nowcast_emergency,SRI,37.63,nowcast buffer=5km moto=NE/51.8kmh prob=65%
+panna_20261007T1905,2026-10-07T20:01:04Z,panna,storm,storm_on_area,SRI,10.32,cella su area
+panna_20261007T1905,2026-10-07T19:40:51Z,panna,nowcast,nowcast_alarm,SRI,21.36,nowcast buffer=10km
+ruspino_20261007T1235,2026-10-07T11:10:43Z,ruspino,forecast,forecast24h_warning,ensemble_24h,47.15,mean=30.9 worst=47.1 metno=29.3 mch=26.17 conferma=media ensemble
+panna_20261007T1905,2026-10-07T05:45:42Z,panna,forecast,forecast24h_alarm,ensemble_24h,26.89,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+panna_20261007T1905,2026-10-07T05:45:42Z,panna,forecast,forecast24h_emergency,ensemble_24h,26.89,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+panna_20261007T1905,2026-10-07T03:45:45Z,panna,forecast,forecast24h_warning,ensemble_24h,13.96,mean=5.7 worst=14.0 metno=6.94 mch=23.41 conferma=MeteoSwiss
 cepina_20261006T1140,2026-10-06T14:51:00Z,cepina,nowcast,nowcast_alarm,SRI,20.68,nowcast buffer=5km moto=NE/3.4kmh prob=4%
 cepina_20261006T1140,2026-10-06T14:51:00Z,cepina,storm,storm_on_area,SRI,7.78,cella su area
 panna_20261006T1145,2026-10-06T14:31:16Z,panna,nowcast,nowcast_emergency,SRI,31.64,nowcast buffer=10km moto=SW/58.1kmh prob=2%
