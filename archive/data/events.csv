@@ -438,3 +438,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-07T21:20:52Z,panna,storm_cleared,5.0,0.14,0.93,SRI,2026-10-07T21:10:00Z,,true,true,"cella uscita dopo ~79min, caduti 17.274999618530273mm"
 2026-10-07T21:40:57Z,ruspino,nowcast_warning,10,1.48,10.20,SRI,2026-10-07T21:30:00Z,,skipped,true,nowcast buffer=10km moto=NE/12.9kmh prob=2%
 2026-10-07T21:55:55Z,panna,warning,10,11.465,12.305,CUM3,2026-10-07T21:30:00Z,1.10,true,true,
+2026-10-07T22:25:59Z,panna,forecast_alarm,10,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
+2026-10-07T22:25:59Z,panna,forecast_warning,10,,,CUM3,,12.20,true,true,forecast 3h prossime 6h conferma MeteoSwiss
