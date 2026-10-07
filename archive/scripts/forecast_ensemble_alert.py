@@ -288,7 +288,7 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
         thresholds = THRESHOLDS_24H
     """
     Trigger se worst_case >= soglia E (mean OPPURE MET Norway OPPURE
-    MeteoSwiss ICON-CH1 >= soglia).
+    MeteoSwiss ICON-CH1 >= soglia). Notifica SOLO il livello più alto confermato.
     Anti-spam: non ri-notifica finche lo stato e attivo.
     """
     triggers = []
@@ -297,6 +297,10 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
     metno_val = ensemble.get('metno_weighted')
     mch_val = ensemble.get('mch_weighted')
 
+    # Una sola notifica per run: il livello PIÙ ALTO confermato. I livelli inferiori
+    # confermati nello stesso run vengono marcati attivi in silenzio (niente raffica
+    # ALARM + EMERGENCY con gli stessi numeri). Stessa regola di monitor.py (6h).
+    highest = None
     for th in sorted(thresholds, key=lambda x: x['value_mm']):
         mm = th['value_mm']
         key = f"{area_name}:forecast_24h:{th['level']}"
@@ -309,17 +313,20 @@ def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
         confirmed = worst_ok and (mean_ok or metno_ok or mch_ok)
 
         if confirmed:
+            by = [n for n, ok in (('media ensemble', mean_ok), ('MET Norway', metno_ok),
+                                  ('MeteoSwiss', mch_ok)) if ok]
+            highest = (th, st.get('active'), by)
             if not st.get('active'):
                 state[key] = {'active': True, 'last_trigger_utc': now_iso}
-                by = [n for n, ok in (('media ensemble', mean_ok), ('MET Norway', metno_ok),
-                                      ('MeteoSwiss', mch_ok)) if ok]
-                triggers.append({**th,
-                    'mean_val': mean_val, 'worst_val': worst_val, 'metno_val': metno_val,
-                    'mch_val': mch_val, 'confirmed_by': by})
         else:
             if worst_val < mm * 0.5:
                 state[key] = {'active': False}
 
+    if highest and not highest[1]:          # il livello più alto non era già stato notificato
+        th, _, by = highest
+        triggers.append({**th,
+            'mean_val': mean_val, 'worst_val': worst_val, 'metno_val': metno_val,
+            'mch_val': mch_val, 'confirmed_by': by})
     return triggers
 
 
