@@ -428,3 +428,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-06T14:51:00Z,cepina,storm_on_area,7.0,1.95,7.78,SRI,2026-10-06T14:40:00Z,,true,true,cella su area
 2026-10-06T15:58:35Z,cepina,storm_cleared,7.0,0.43,1.45,SRI,2026-10-06T15:50:00Z,,true,true,"cella uscita dopo ~67min, caduti 4.894999980926514mm"
 2026-10-07T03:45:45Z,panna,forecast24h_warning,10,5.66,13.96,ensemble_24h,,13.96,true,true,mean=5.7 worst=14.0 metno=6.94 mch=23.41 conferma=MeteoSwiss
+2026-10-07T05:45:42Z,panna,forecast24h_alarm,15,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+2026-10-07T05:45:42Z,panna,forecast24h_emergency,20,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
