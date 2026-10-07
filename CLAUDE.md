@@ -164,15 +164,21 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   (totali giorno UTC + n_obs/expected_obs). La pagina usa quello e chiama Socrata live solo se l'archivio ha buchi:
   dal browser Socrata risponde spesso **HTTP 429** (chiamate anonime limitate) → prima tutti i giorni erano "n.d.".
 - **Mappa pre-allerta** (`alert_map.py`, dal 06/10/2026): dopo il testo Telegram della "cella in avvicinamento"
-  parte una foto JPEG 640 px (~40–80 KB): radar SRI sull'area ±30 km, poligono, anelli 5/10 km, freccia di moto.
-  Sfondo OSM pre-renderizzato in `archive/data/basemaps/` dal workflow manuale `basemaps.yml` (nessuna tile a
-  runtime). Se la mappa fallisce, il testo è già partito. Spegnibile con env `NOWCAST_PREALERT_MAP=0`.
+  parte la mappa JPEG 1024 px (~100–160 KB): radar sull'area ±30 km, poligono, anelli 5/10 km, frecce di moto.
+  Ruspino e Cepina: album di 2 foto, radar DPC + radar MeteoSwiss (ultimo frame STAC, max 25' di età; se manca
+  parte solo la DPC). Sfondo pre-renderizzato in `archive/data/basemaps/` dal workflow manuale `basemaps.yml`
+  (stile `osm` zoom 11 o `topo` OpenTopoMap; nessuna tile a runtime). Se la mappa fallisce il testo è già partito.
+  Spegnibile con env `NOWCAST_PREALERT_MAP=0`.
 - **Moto cella nella pre-allerta**: `track_cell_motion()` (cross-correlazione 15', finestra centrata sulla cella).
   Il vecchio `estimate_motion()` (baricentro nell'anello) con una cella che ENTRA nell'anello può dare la direzione
   opposta (test sintetico ott-2026): resta solo come ripiego. Il moto NON decide il trigger, solo testo/mappa/prob.
   `track_field_motion()` = moto della PERTURBAZIONE d'insieme (finestra ~200 km, blocchi 4 km, ultimi 25',
   pioggia ≥ 0.2 mm/h; scartato se correlazione < 0.3): freccia larga "Perturbazione da …" nella mappa e riga in
   didascalia. Entrambi i tracker usano `_xcorr_motion()` (cross-correlazione normalizzata per sovrapposizione).
+  Il moto della CELLA vale solo se corr ≥ 0.5, ≤ 90 km/h e coerente con la perturbazione (`cell_motion_reliable`:
+  scarto ≤ 90° e velocità ≤ max(2,5×, +40 km/h)); altrimenti testo e prob. usano il moto d'insieme ("perturbazione")
+  e la freccia sottile non si disegna. Caso reale Panna 07/10/2026: cella "SE 128 km/h" con perturbazione da W 28.
+  `prealert_motion()` calcola tutto una volta; `estimate_motion()` resta solo nei messaggi "cella sull'area".
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
   STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte. Solo Ruspino e Cepina
   (Panna fuori copertura), archivio dal 22/09/2026. Confronti: `episodes.csv` colonne `mch_max_mm/mch_mean_mm/

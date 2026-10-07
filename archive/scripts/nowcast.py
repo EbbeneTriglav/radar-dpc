@@ -29,7 +29,7 @@ import re
 import smtplib
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
@@ -321,19 +321,58 @@ def _xcorr_motion(frames, xy_tm, lag_frames, win_px, max_shift_px, min_rain, smo
             'corr': round(corr, 2), 'dt_min': round(dt_min)}
 
 
-def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=96, max_shift_px=30):
+def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=80, max_shift_px=22):
     """
     Moto della CELLA per la pre-allerta: cross-correlazione tra il frame più recente e
-    quello di `lag_frames` passi prima (default 3 → 15'), in una finestra ~96 km
+    quello di `lag_frames` passi prima (default 3 → 15'), in una finestra ~80 km
     CENTRATA SULLA CELLA (pixel massimo). Sostituisce, per la pre-allerta, il baricentro
     nell'anello di estimate_motion(): con una cella che ENTRA nell'anello il baricentro
     si sposta verso il bordo d'ingresso e la direzione può risultare opposta (test sintetico
     ott-2026: cella verso NE stimata SW). Ritorna dict come estimate_motion o None.
     """
     m = _xcorr_motion(frames, xy_tm, lag_frames, win_px, max_shift_px, min_rain=0.5)
-    if m:
-        m['method'] = 'tracking'
+    if not m or m.get('corr', 0) < 0.5:          # celle che nascono/muoiono: correlazione debole
+        return None
+    if m.get('speed_kmh', 0) > 90:               # oltre ~90 km/h per una cella: quasi certo artefatto
+        return None
+    m['method'] = 'tracking'
     return m
+
+
+def cell_motion_reliable(cell, field):
+    """La cella si muove in modo coerente con la perturbazione? Le celle possono deviare
+    (es. 30–40° a destra del flusso), ma non andare controcorrente né a velocità multiple.
+    Caso reale Panna 07/10/2026: perturbazione da W 28 km/h, cella stimata verso SE a
+    128 km/h = salto su un'altra cella, non moto. Senza moto d'insieme vale solo corr ≥ 0.6."""
+    if not cell or cell.get('bearing_deg') is None:
+        return cell is not None and cell.get('compass') == 'stazionaria'
+    if not field or field.get('bearing_deg') is None:
+        return cell.get('corr', 0) >= 0.6
+    diff = abs((cell['bearing_deg'] - field['bearing_deg'] + 180) % 360 - 180)
+    fs = field.get('speed_kmh') or 0
+    return diff <= 90 and cell['speed_kmh'] <= max(2.5 * fs, fs + 40)
+
+
+def prealert_motion(frames, area, xy_tm):
+    """(cella, perturbazione, moto_da_usare). La cella vale solo se coerente; altrimenti si usa
+    il moto d'insieme (marcato method='field'). Nessun ripiego sul baricentro nell'anello
+    (estimate_motion), che con celle in arrivo dà direzioni sbagliate."""
+    cell = field = None
+    if frames and len(frames) >= 2:
+        try:
+            field = track_field_motion(frames, area)
+        except Exception as e:
+            log.warning(f'  moto perturbazione non stimato: {e}')
+        try:
+            cell = track_cell_motion(frames, xy_tm)
+        except Exception as e:
+            log.warning(f'  tracking cella fallito: {e}')
+        if cell is not None and not cell_motion_reliable(cell, field):
+            log.info(f"  moto cella scartato (incoerente): {cell.get('compass')} {cell.get('speed_kmh')} km/h "
+                     f"vs perturbazione {field and field.get('compass')} {field and field.get('speed_kmh')} km/h")
+            cell = None
+    use = cell or field
+    return cell, field, use
 
 
 def track_field_motion(frames, area, lag_frames=5, win_px=200, max_shift_px=48):
@@ -439,28 +478,54 @@ def send_telegram_photo(jpeg, caption, chat_ids=None):
     return 'true' if n_ok else 'false'
 
 
-def _send_prealert_map(area, product, hit, signal, motion, frames, buf_km, rcpt_tg):
-    """Genera e invia la mappa della pre-allerta. Mai eccezioni verso il chiamante."""
+MCH_MAP_AREAS = ('ruspino', 'cepina')        # coperte dal radar MeteoSwiss (Panna no)
+MCH_MAP_MAX_AGE_MIN = 25
+
+
+def _latest_mch_grid(max_age_min=MCH_MAP_MAX_AGE_MIN):
+    """Ultimo frame radar MeteoSwiss dallo STAC (open data). None se non disponibile o vecchio."""
+    import mch_collect
+    now = datetime.now(timezone.utc)
+    files = mch_collect.list_rzc(since=now - timedelta(hours=1))
+    if not files:
+        return None
+    t = max(files)
+    if (now - t).total_seconds() > max_age_min * 60:
+        log.info(f'  MeteoSwiss per la mappa: ultimo frame {t:%H:%M} troppo vecchio')
+        return None
+    return mch_collect.read_grid(mch_collect.download(files[t])), t
+
+
+def _send_prealert_map(area, product, hit, signal, cell, field, frames, buf_km, rcpt_tg):
+    """Mappa della pre-allerta: radar DPC; per Ruspino/Cepina anche radar MeteoSwiss (album di
+    2 foto). Mai eccezioni verso il chiamante: il testo è già partito."""
     if not PREALERT_MAP:
         return 'off'
     try:
         if not frames:
             return 'no-frame'
         import alert_map
-        mot = motion
-        if mot is None and len(frames) >= 2:      # SRT1: il moto non era stato stimato
-            mot = track_cell_motion(frames, signal.get('max_xy_tm'))
-        try:
-            field = track_field_motion(frames, area)
-        except Exception as e:
-            log.warning(f'  moto perturbazione non stimato: {e}')
-            field = None
         ts_frame = datetime.fromtimestamp(frames[0][0] / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
         unit = 'mm/h' if product == 'SRI' else 'mm/1h'
-        title = f"{area['label']} · cella entro {buf_km} km · {signal['max']:.0f} {unit}"
-        jpeg = alert_map.render_alert_map(area, frames[0][1], ts_label=_ts_local(ts_frame),
-                                          signal=signal, motion=mot, buffers_km=BUFFERS_KM, title=title,
-                                          field_motion=field)
+        imgs = [alert_map.render_alert_map(
+            area, frames[0][1], ts_label=_ts_local(ts_frame), signal=signal, motion=cell,
+            buffers_km=BUFFERS_KM, field_motion=field, source='Radar DPC SRI · moti stimati',
+            title=f"{area['label']} · Radar DPC · cella entro {buf_km} km · {signal['max']:.0f} {unit}")]
+        mch_note = ''
+        if area['name'] in MCH_MAP_AREAS:
+            try:
+                got = _latest_mch_grid()
+                if got:
+                    g, t = got
+                    tsm = t.isoformat().replace('+00:00', 'Z')
+                    imgs.append(alert_map.render_alert_map(
+                        area, None, ts_label=_ts_local(tsm), signal=signal, motion=cell,
+                        buffers_km=BUFFERS_KM, field_motion=field, grid=(g['v'], g['tr'], g['crs'].to_wkt()),
+                        source='Fonte: MeteoSwiss · frecce e cerchio dal radar DPC',
+                        title=f"{area['label']} · Radar MeteoSwiss"))
+                    mch_note = f"2ª immagine: radar MeteoSwiss {_ts_local(tsm)}, stessi riferimenti. "
+            except Exception as e:
+                log.warning(f'  mappa MeteoSwiss non generata: {e}')
         if field and field.get('bearing_deg') is not None:
             fl = (f"Perturbazione: arriva da {_compass((field['bearing_deg'] + 180) % 360)}, "
                   f"si muove verso {field['compass']} a ~{field['speed_kmh']:.0f} km/h "
@@ -469,15 +534,45 @@ def _send_prealert_map(area, product, hit, signal, motion, frames, buf_km, rcpt_
             fl = "Perturbazione: quasi ferma negli ultimi minuti (stima). "
         else:
             fl = "Perturbazione: moto d'insieme non determinabile. "
-        cap = (f"Mappa radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. " + fl +
-               "Freccia larga = perturbazione; cerchio e freccia sottile = cella più intensa nell'anello, "
-               "spostamento stimato in 30'.")
-        res = send_telegram_photo(jpeg, cap, chat_ids=rcpt_tg)
-        log.info(f'  mappa pre-allerta: {len(jpeg) / 1024:.0f} KB, telegram={res}')
+        cl = "" if cell else "Moto della singola cella non affidabile: freccia sottile omessa. "
+        cap = (f"Radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. " + fl + cl +
+               mch_note + "Freccia larga = perturbazione; cerchio = cella più intensa nell'anello; "
+               "freccia sottile = suo spostamento stimato in 30'.")
+        res = (send_telegram_album(imgs, cap, chat_ids=rcpt_tg) if len(imgs) > 1
+               else send_telegram_photo(imgs[0], cap, chat_ids=rcpt_tg))
+        log.info(f"  mappa pre-allerta: {' + '.join(f'{len(j) / 1024:.0f} KB' for j in imgs)}, telegram={res}")
         return res
     except Exception as e:
         log.warning(f'  mappa pre-allerta non generata: {e}')
         return 'error'
+
+
+def send_telegram_album(jpegs, caption, chat_ids=None):
+    """Album di foto su Telegram (sendMediaGroup, 2–10 immagini). Didascalia sulla prima."""
+    tok = os.environ.get('TELEGRAM_TOKEN')
+    if chat_ids:
+        if isinstance(chat_ids, str):
+            chat_ids = [c.strip() for c in chat_ids.split(',') if c.strip()]
+    else:
+        d = os.environ.get('TELEGRAM_CHAT_ID')
+        chat_ids = [d] if d else []
+    if not (tok and chat_ids and jpegs):
+        return 'skipped'
+    media = [dict({'type': 'photo', 'media': f'attach://p{i}'}, **({'caption': caption[:1024]} if i == 0 else {}))
+             for i in range(len(jpegs))]
+    n_ok = 0
+    for chat in chat_ids:
+        try:
+            r = _http('POST', f'https://api.telegram.org/bot{tok}/sendMediaGroup',
+                      data={'chat_id': chat, 'media': json.dumps(media)},
+                      files={f'p{i}': (f'mappa_{i}.jpg', j, 'image/jpeg') for i, j in enumerate(jpegs)})
+            if r and r.ok:
+                n_ok += 1
+            else:
+                log.warning(f'  telegram album: HTTP {r.status_code if r else "None"}')
+        except Exception as e:
+            log.warning(f'  telegram album fallito: {e}')
+    return 'true' if n_ok else 'false'
 
 
 def send_telegram(md, chat_ids=None):
@@ -640,11 +735,12 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
     if signal.get('max_lat'):
         cell_pos = f"Cella max: {signal['max_lat']:.3f}, {signal['max_lon']:.3f}\n"
     mot = ''
+    who = 'perturbazione' if (motion or {}).get('method') == 'field' else 'cella'
     if motion:
         if motion.get('compass') == 'stazionaria':
-            mot = "Movimento: stazionaria\n"
+            mot = f"Movimento ({who}): quasi fermo\n"
         elif motion.get('bearing_deg') is not None:
-            mot = f"Movimento: verso {motion['compass']} a {motion['speed_kmh']} km/h\n"
+            mot = f"Movimento ({who}): verso {motion['compass']} a ~{motion['speed_kmh']:.0f} km/h (stima)\n"
     prob_str = f"Probabilità arrivo sul bacino: {prob}%\n" if prob is not None else ''
     cum3_str = f"Cumulata 3h attuale nel buffer: {signal.get('cum3_max', 0):.1f} mm\n" if 'cum3_max' in signal else ''
 
@@ -662,7 +758,7 @@ def compose(area, product, trigger, signal, motion, prob, buffer_km):
         f"Livello: *{lvl.upper()}* • entro *{buffer_km} km*\n"
         f"{product} max: *{val:.1f} {unit}* (soglia {thr})\n"
         + (f"Cumulata 3h: *{signal.get('cum3_max',0):.1f} mm*\n" if 'cum3_max' in signal else '')
-        + (f"Moto: {motion['compass']} {motion['speed_kmh']}km/h\n" if motion and motion.get('bearing_deg') is not None else '')
+        + (f"Moto ({who}): {motion['compass']} ~{motion['speed_kmh']:.0f} km/h\n" if motion and motion.get('bearing_deg') is not None else '')
         + (f"Prob. arrivo: *{prob}%*\n" if prob is not None else '')
         + (f"{_arpa}\n" if _arpa else '')
         + f"_{ts_local}_\n"
@@ -1071,23 +1167,17 @@ def _eval_product(area, product, thresholds, signal, geom, buf_km,
 
     # moto + probabilità (solo per SRI che ha 2 frame)
     motion, prob = None, None
-    if sri_frames and len(sri_frames) >= 2:
-        try:
-            motion = track_cell_motion(sri_frames, signal.get('max_xy_tm'))
-        except Exception as e:
-            log.warning(f'  tracking cella fallito: {e}')
-        if motion is None:                      # ripiego: metodo precedente (baricentro nell'anello)
-            dt_min = abs(sri_frames[0][0] - sri_frames[1][0]) / 60000
-            motion = estimate_motion(sri_frames[0][1], sri_frames[1][1], geom, dt_min)
-        if motion and signal.get('max_xy_tm'):
-            prob = arrival_probability(signal['max_xy_tm'], motion, centroid, buf_km)
+    frames = sri_frames or map_frames
+    cell_m, field_m, motion = prealert_motion(frames, area, signal.get('max_xy_tm'))
+    if motion and motion.get('bearing_deg') is not None and signal.get('max_xy_tm'):
+        prob = arrival_probability(signal['max_xy_tm'], motion, centroid, buf_km)
 
     subject, text, md = compose(area, product, hit, signal, motion, prob, buf_km)
     pch = set(channels) & PREALERT_CHANNELS
     em = send_email(subject, text, to=rcpt_email) if 'email' in pch else 'skipped'
     tg = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in pch else 'skipped'
     if tg == 'true':
-        _send_prealert_map(area, product, hit, signal, motion, sri_frames or map_frames, buf_km, rcpt_tg)
+        _send_prealert_map(area, product, hit, signal, cell_m, field_m, frames, buf_km, rcpt_tg)
 
     writer.writerow({
         'event_timestamp_utc': now_iso, 'area_name': area['name'],

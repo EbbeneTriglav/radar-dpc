@@ -3,10 +3,16 @@ name: Sfondi mappe pre-allerta (una tantum)
 # Manuale. Genera lo sfondo (OpenStreetMap schiarito, ~60x60 km) di ogni area in
 # archive/data/basemaps/, usato da alert_map.py per la mappa allegata alla
 # pre-allerta Telegram. Da rilanciare solo se cambiano le aree in areas.json.
-# Scarica ~10 tile OSM per area una sola volta (uso leggero, con attribuzione).
+# Scarica ~25 tile (zoom 11) per area una sola volta (uso leggero, con attribuzione).
 
 on:
   workflow_dispatch:
+    inputs:
+      style:
+        description: 'Stile sfondo: osm = OpenStreetMap (nomi/strade), topo = OpenTopoMap (rilievo)'
+        default: 'osm'
+        type: choice
+        options: ['osm', 'topo']
 
 permissions:
   contents: write
@@ -24,7 +30,7 @@ jobs:
           cache-dependency-path: 'archive/scripts/requirements.txt'
       - run: pip install -r archive/scripts/requirements.txt
       - name: Genera sfondi
-        run: python archive/scripts/alert_map.py --basemaps
+        run: python archive/scripts/alert_map.py --basemaps ${{ inputs.style }}
       - name: Anteprima senza pioggia (solo log)
         run: |
           for a in ruspino cepina panna; do python archive/scripts/alert_map.py --demo $a /tmp/demo_$a.jpg; done

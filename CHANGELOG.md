@@ -1,5 +1,15 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-07 (b) — Mappa pre-allerta: moto cella affidabile, MeteoSwiss, sfondo più leggibile
+- **Moto della cella**: la mappa di Panna del 07/10 indicava "cella → SE 128 km/h" con la perturbazione da W a 28 km/h:
+  il tracciamento era saltato su un'altra cella. Ora il moto della cella si usa solo se plausibile (correlazione ≥ 0,5,
+  ≤ 90 km/h) e coerente con la perturbazione; altrimenti freccia sottile omessa e testo/probabilità usano il moto
+  d'insieme ("Movimento (perturbazione)"). Tolto il ripiego sul baricentro nell'anello per la pre-allerta.
+- **Ruspino e Cepina: 2 immagini** (album Telegram): radar DPC + radar MeteoSwiss (ultimo frame, stessi riferimenti).
+  Se MeteoSwiss non risponde parte solo la mappa DPC.
+- **Sfondo più leggibile**: mappe a 1024 px, tile zoom 11 (nomi e strade nitidi), colori meno sbiaditi; nuovo stile
+  `topo` (OpenTopoMap, rilievo). Da rigenerare con l'action "Sfondi mappe pre-allerta" scegliendo lo stile.
+
 ## 2026-10-07 — Allerte 24h senza doppioni + radar MeteoSwiss nei confronti
 - **Forecast 24h**: con più soglie superate nello stesso run partivano due messaggi (Panna 07/10: ALARM + EMERGENCY con
   gli stessi numeri). Ora parte solo il livello più alto, come per le allerte 6h; escalation e riarmo invariati.
