@@ -688,6 +688,12 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
                                      'horizon': horizon, 'forecast_value': fc_om,
                                      'forecast_metno': fc_metno, 'forecast_mch': fc_mch,
                                      'confirmed_by': highest_by})
+            elif highest is not None and th['value_mm'] < highest['value_mm'] and fc_om >= th['value_mm']:
+                # livello inferiore al massimo e anch'esso superato: attivo in silenzio, così quando la
+                # previsione scende (es. da ALARM a fascia WARNING) non parte un secondo messaggio
+                # "WARNING" (Panna 08/10/2026: ALARM alle 00:25, poi WARNING alle 02:07 ora italiana).
+                st['active'] = True
+                st['last_below_utc'] = None
             else:
                 # livelli non-massimi: gestisci solo il riarmo, niente trigger
                 if fc_om < rearm_value and st['active']:
@@ -821,6 +827,57 @@ def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
     </div>
     """
     subject = f"🔮 {label} — PREVISIONE {lvl.upper()} {product} ({fc_val:.1f} {unit_label} attesi)"
+    return subject, text, html, md
+
+
+_FC_RANK = {'warning': 1, 'alarm': 2, 'emergency': 3}
+
+
+def compose_messages_forecast_multi(area, triggers, forecast):
+    """UN solo messaggio per tutti i trigger forecast dello stesso run (es. SRT1 1h e CUM3 3h
+    insieme): prima ne partivano due, uno per prodotto. Titolo = livello più alto."""
+    if len(triggers) == 1:
+        return compose_messages_forecast(area, triggers[0], forecast)
+    label = area['label']
+    trs = sorted(triggers, key=lambda t: (-_FC_RANK.get(t['level'], 0), t['product']))
+    top = trs[0]
+    lvl, icon = top['level'], top['icon']
+    unit = lambda p: 'mm/1h' if p == 'SRT1' else 'mm/3h'
+    f1 = lambda v: f"{v:.1f}" if v is not None else "N/D"
+    by = sorted({b for t in trs for b in (t.get('confirmed_by') or ['MET Norway'])})
+    by_str = ' + '.join(['OpenMeteo'] + by)
+    rows_txt, rows_md, rows_html = [], [], []
+    for t in trs:
+        u = unit(t['product'])
+        rows_txt.append(f"  • {t['product']} ({t['horizon']}): OpenMeteo {f1(t['forecast_value'])} · "
+                        f"MET Norway {f1(t.get('forecast_metno'))} · MeteoSwiss {f1(t.get('forecast_mch'))} {u} "
+                        f"→ {t['level'].upper()} (soglia {t['value_mm']} {u})")
+        rows_md.append(f"• {t['product']} {u}: OpenMeteo *{f1(t['forecast_value'])}* · MET {f1(t.get('forecast_metno'))}"
+                       f" · MeteoSwiss {f1(t.get('forecast_mch'))} → *{t['level'].upper()}* (soglia {t['value_mm']})")
+        rows_html.append(f"<li><b>{t['product']}</b> ({t['horizon']}): OpenMeteo <b>{f1(t['forecast_value'])}</b> · "
+                         f"MET Norway {f1(t.get('forecast_metno'))} · MeteoSwiss {f1(t.get('forecast_mch'))} {u} → "
+                         f"<b>{t['level'].upper()}</b> (soglia {t['value_mm']} {u})</li>")
+    text = (f"🔮 PREVISIONE PIOGGIA — {label} — livello {lvl.upper()}\n"
+            f"(confermata da: {by_str})\n\n" + "\n".join(rows_txt) + "\n\n"
+            f"Forecast finestra {forecast['horizon_hours']}h totali:\n"
+            f"  • Max 1h: {forecast['max_1h_next']:.1f} mm\n"
+            f"  • Max 3h: {forecast['max_3h_next']:.1f} mm\n"
+            f"  • Totale: {forecast['total_period']:.1f} mm\n")
+    md = (f"{icon} 🔮 *PREVISIONE — {label}*\n"
+          f"Livello: *{lvl.upper()}*\n" + "\n".join(rows_md) + "\n"
+          f"Orizzonte: prossime {forecast['horizon_hours']}h\n"
+          f"_Conferma: {by_str}_")
+    color = {'warning': '#e0a800', 'alarm': '#e85e2c', 'emergency': '#c41e3a'}.get(lvl, '#888')
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:600px">'
+            f'<div style="background:{color};color:white;padding:12px 18px;border-radius:6px 6px 0 0">'
+            f'<h2 style="margin:0">🔮 {label} — {lvl.upper()} <span style="font-size:14px;font-weight:normal">(previsione)</span></h2></div>'
+            f'<div style="border:1px solid #ddd;border-top:0;padding:18px;border-radius:0 0 6px 6px">'
+            f'<ul>{"".join(rows_html)}</ul><p>Confermata da: {by_str}</p>'
+            f'<p style="background:#f4f4f4;padding:8px;border-radius:4px;font-size:12px">Finestra {forecast["horizon_hours"]}h — '
+            f'max 1h: {forecast["max_1h_next"]:.1f} mm • max 3h: {forecast["max_3h_next"]:.1f} mm • totale: {forecast["total_period"]:.1f} mm</p>'
+            f'</div></div>')
+    subject = (f"🔮 {label} — PREVISIONE {lvl.upper()} "
+               + " + ".join(f"{t['product']} {t['forecast_value']:.1f} {unit(t['product'])}" for t in trs))
     return subject, text, html, md
 
 
@@ -1088,10 +1145,13 @@ def process_area(area, archive_dir, events_writer):
     if forecast:
         fc_triggers = evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, state, now_iso, anti_spam, rearm_pct,
                                                    forecast_mch=forecast_mch)
-        for tr in fc_triggers:
-            subject, text, html, md = compose_messages_forecast(area, tr, forecast, forecast_metno)
+        # Un SOLO messaggio per run anche se scattano più prodotti (SRT1 + CUM3); in events.csv
+        # resta una riga per prodotto, con lo stesso esito di invio.
+        if fc_triggers:
+            subject, text, html, md = compose_messages_forecast_multi(area, fc_triggers, forecast)
             email_status = send_email(subject, text, html, to=rcpt_email) if 'email' in channels else 'skipped'
             tg_status    = send_telegram(md, chat_ids=rcpt_tg) if 'telegram' in channels else 'skipped'
+        for tr in fc_triggers:
             events_writer.writerow({
                 'event_timestamp_utc':       now_iso,
                 'area_name':                 area['name'],
@@ -1104,7 +1164,8 @@ def process_area(area, archive_dir, events_writer):
                 'forecast_max_6h_mm':        f"{tr['forecast_value']:.2f}",
                 'notified_email':            email_status,
                 'notified_telegram':         tg_status,
-                'note':                      f"forecast {tr['horizon']} conferma {'+'.join(tr.get('confirmed_by') or [])}",
+                'note':                      (f"forecast {tr['horizon']} conferma {'+'.join(tr.get('confirmed_by') or [])}"
+                                              + (f" (messaggio unico con {len(fc_triggers)} prodotti)" if len(fc_triggers) > 1 else "")),
             })
             log.info(f"  ✓ forecast trigger {tr['product']}/{tr['level']}: email={email_status} telegram={tg_status}")
 

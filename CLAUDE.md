@@ -195,6 +195,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   (Panna fuori copertura), archivio dal 22/09/2026. Confronti: `episodes.csv` colonne `mch_max_mm/mch_mean_mm/
   mch_cov_pct` (non decidono episodi né fonte), `mch_daily.csv` (totali giorno UTC, `mch_daily.py` in ground-daily.yml)
   → osservato "Radar MeteoSwiss" in Previsioni, colonne in Verifica, stime in Report.
+- **Allerte forecast 6h** (`monitor.py`): un SOLO messaggio per run anche se scattano SRT1 e CUM3 insieme
+  (`compose_messages_forecast_multi`, titolo = livello più alto; in events.csv una riga per prodotto). Quando scatta un
+  livello, quelli inferiori superati diventano attivi in silenzio: niente "WARNING" dopo un "ALARM" in discesa.
 - **Allerte forecast 24h** (`forecast_ensemble_alert.py`): una sola notifica per run, il livello PIÙ ALTO confermato
   (gli inferiori diventano attivi in silenzio), come `monitor.py`. Prima partivano ALARM+EMERGENCY insieme.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.

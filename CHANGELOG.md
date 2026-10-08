@@ -1,5 +1,11 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-08 — Previsione 6h: un solo messaggio
+- Panna 08/10 00:25: due Telegram nello stesso minuto (SRT1 ALARM + CUM3 WARNING). La regola "solo il livello più alto"
+  valeva per prodotto, non per area. Ora un unico messaggio con entrambi i prodotti, titolo al livello più alto.
+- Stesso caso alle 02:07: un terzo messaggio "WARNING SRT1" mentre la previsione calava da ALARM. Ora, quando scatta
+  un livello, quelli inferiori già superati diventano attivi senza messaggio; le escalation successive partono come prima.
+
 ## 2026-10-07 (e) — Ruspino: soglia cella 7 mm/h + allerta pioggia persistente
 - **Cella sull'area a Ruspino: 10 → 7 mm/h** (`monitoring.cell_on_area_mmh` in areas.json; vale per SRI DPC e ARPA in
   OR). Backtest ARPA 06/06–07/10: da 7,8 a 8,8 avvisi/mese, nessun falso in più, 14/14 episodi ≥ 20 mm presi.
