@@ -13,7 +13,7 @@ COSA FA (solo lettura dei dati archiviati, nessuna chiamata di rete)
        - ARPA 5' (Ruspino, Cepina, da giugno 2026): frame bagnato se il
          pixel massimo d'area >= WET_MMH mm/h. Ogni frame copre 5 minuti.
        - DPC CUM3 (tutte le aree): usato SOLO dove ARPA manca (buchi di
-         acquisizione, Panna, periodo prima di ARPA). Blocco bagnato se il
+         acquisizione, Scarperia, periodo prima di ARPA). Blocco bagnato se il
          massimo d'area >= WET_CUM3_MM mm; il blocco @HH copre [HH-3h, HH].
      Un buco dati NON viene trattato come "asciutto": se ARPA manca, decide CUM3.
   2. Un episodio si chiude solo dopo MIT_H ore asciutte consecutive
@@ -21,7 +21,7 @@ COSA FA (solo lettura dei dati archiviati, nessuna chiamata di rete)
      mezzanotte resta UN episodio, e due celle separate da ore restano due.
   3. Per ogni episodio calcola sulla STESSA finestra [inizio, fine]:
        - cumulata ARPA (integrale mm/h x dt) max e media d'area + copertura %
-       - cumulata radar DPC SRI (idem, tutte le aree, Panna compresa) dai
+       - cumulata radar DPC SRI (idem, tutte le aree, Scarperia compresa) dai
          CSV di sri_collect.py — radar "puro", confrontabile col pluviometro
        - CUM3 DPC (somma blocchi 3h che intersecano la finestra). ATTENZIONE:
          la CUM3 DPC è ottenuta SOLO dai pluviometri a terra interpolati
@@ -29,7 +29,7 @@ COSA FA (solo lettura dei dati archiviati, nessuna chiamata di rete)
          verificare il radar (il suo accordo col pluviometro è in parte circolare).
        - pluviometro a terra (ground_rain.csv) SOLO se la finestra è coperta
          dall'archivio (ground_index.csv); altrimenti vuoto = "non disponibile".
-         Panna: totale giornaliero SIR Monte di Fò (dati_idro) dei giorni
+         Scarperia: totale giornaliero SIR Monte di Fò (dati_idro) dei giorni
          toccati dall'episodio, marcato come giornaliero.
        - allerte agganciate (events.csv): conteggi per tipo, prima allerta,
          anticipo rispetto al picco.
@@ -70,7 +70,7 @@ ALERT_MARGIN_H = 1.0 # allerte nowcast/monitor agganciate entro ±1h dalla fines
 FORECAST_LEAD_H = 24 # allerte forecast agganciate se emesse fino a 24h prima
 
 ARPA_AREAS = ('ruspino', 'cepina')
-# Radar MeteoSwiss (mch_collect.py, dal 22/09/2026): copre Ruspino e Cepina, NON Panna.
+# Radar MeteoSwiss (mch_collect.py, dal 22/09/2026): copre Ruspino e Cepina, NON Scarperia.
 # Solo DATO DI STUDIO: cumulate per episodio nelle colonne mch_*, non decide né episodi né fonte.
 MCH_AREAS = ('ruspino', 'cepina')
 # Aree dove il radar ARPA è affidabile (verifica ott-2026: Ruspino r≈0.8 col
@@ -78,7 +78,7 @@ MCH_AREAS = ('ruspino', 'cepina')
 # Dove ARPA NON è affidabile, i suoi frame "asciutti" non possono smentire la
 # CUM3 (pluviometri): altrimenti si perdono episodi reali (es. Cepina 21/08).
 ARPA_TRUSTED = ('ruspino',)
-AREAS = ('ruspino', 'cepina', 'panna')
+AREAS = ('ruspino', 'cepina', 'scarperia')
 GAUGES = {'ruspino': ('2278', 'Cornalita'), 'cepina': ('8010', 'Oga S.Colombano')}
 SIR_URL = ('https://raw.githubusercontent.com/EbbeneTriglav/dati_idro/main/'
            'dati/MonteDiFo_precip_1992-2026.csv')
@@ -325,7 +325,7 @@ def attach_gauge(eps, area, gpts, gcover, sir):
             if covered(gcover.get(area, []), s, e):
                 ep['gauge_mm'] = sum(mm for t, mm in gpts.get(sid, []) if s < t <= e)
                 ep['gauge_type'] = '10min'
-        elif area == 'panna' and sir:
+        elif area == 'scarperia' and sir:
             ep['gauge_name'] = SIR_NAME
             # Il SIR è giornaliero in GIORNO IDROLOGICO: il valore datato D copre
             # dalle 09:00 di D-1 alle 09:00 di D (verificato sui dati: r 0.34 ->
@@ -339,7 +339,7 @@ def attach_gauge(eps, area, gpts, gcover, sir):
             if all(x in sir for x in days):
                 ep['gauge_mm'] = sum(sir[x] for x in days)
                 ep['gauge_type'] = f'giornaliero 9→9 ({len(days)} g)'
-    # Panna: se più episodi toccano lo stesso giorno, il totale giornaliero è
+    # Scarperia: se più episodi toccano lo stesso giorno, il totale giornaliero è
     # CONDIVISO -> non confrontabile col singolo episodio. Lo dichiaro.
     day_eps = defaultdict(int)
     for ep in eps:

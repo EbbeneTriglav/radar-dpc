@@ -35,7 +35,7 @@ DATA = ROOT / 'data'
 EVENTS_CSV = DATA / 'events.csv'
 
 ARPA_AREAS = {'ruspino', 'cepina'}
-ALL_AREAS = ['ruspino', 'cepina', 'panna']
+ALL_AREAS = ['ruspino', 'cepina', 'scarperia']
 RECON_THRESHOLD_MMH = 10.0     # allineata alla soglia SRI warning del nowcast
 GAP_MIN = 90                   # gap che separa due eventi distinti (minuti)
 DEDUP_H = 3                    # tolleranza anti-duplicato con eventi esistenti (ore)
@@ -109,7 +109,7 @@ def area_series(area: str) -> tuple[list[tuple[float, float]], str]:
         if s:
             s.sort()
             return s, 'ARPA'
-    # fallback / Panna: CUM3 DPC max
+    # fallback / Scarperia: CUM3 DPC max
     rows = _read_csv(DATA / f'{area}_cum3.csv')
     s = []
     for r in rows:

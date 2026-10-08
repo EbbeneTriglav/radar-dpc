@@ -35,6 +35,8 @@ import smtplib
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+
+from area_private import apply_private, msg_label
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
@@ -311,7 +313,7 @@ def evaluate_storm_triggers(area, triggers, state, now_iso, anti_spam_min):
 
 def compose_messages_storm(area, trigger, summary, wind):
     """Compone messaggi per nowcasting radar (cella convettiva nei dintorni)."""
-    label = area['label']
+    label = msg_label(area)
     lvl   = trigger['level']
     icon  = trigger['icon']
     dbz   = trigger['observed_dbz']
@@ -691,7 +693,7 @@ def evaluate_forecast_thresholds(area, products_cfg, forecast, forecast_metno, s
             elif highest is not None and th['value_mm'] < highest['value_mm'] and fc_om >= th['value_mm']:
                 # livello inferiore al massimo e anch'esso superato: attivo in silenzio, così quando la
                 # previsione scende (es. da ALARM a fascia WARNING) non parte un secondo messaggio
-                # "WARNING" (Panna 08/10/2026: ALARM alle 00:25, poi WARNING alle 02:07 ora italiana).
+                # "WARNING" (Scarperia 08/10/2026: ALARM alle 00:25, poi WARNING alle 02:07 ora italiana).
                 st['active'] = True
                 st['last_below_utc'] = None
             else:
@@ -767,7 +769,7 @@ def evaluate_thresholds(area, product, thresholds, current_value, state, now_iso
 
 def compose_messages_forecast(area, trigger, forecast, forecast_metno=None):
     """Componi messaggi per un trigger predittivo (OpenMeteo)."""
-    label = area['label']
+    label = msg_label(area)
     lvl   = trigger['level']
     icon  = trigger['icon']
     val_mm = trigger['value_mm']
@@ -838,7 +840,7 @@ def compose_messages_forecast_multi(area, triggers, forecast):
     insieme): prima ne partivano due, uno per prodotto. Titolo = livello più alto."""
     if len(triggers) == 1:
         return compose_messages_forecast(area, triggers[0], forecast)
-    label = area['label']
+    label = msg_label(area)
     trs = sorted(triggers, key=lambda t: (-_FC_RANK.get(t['level'], 0), t['product']))
     top = trs[0]
     lvl, icon = top['level'], top['icon']
@@ -915,7 +917,7 @@ def arpa_confirmation(area_name, archive_dir=None, max_age_min=20):
 
 
 def compose_messages(area, product, threshold, stats, observation_ts_iso, forecast):
-    label = area['label']
+    label = msg_label(area)
     lvl   = threshold['level']
     icon  = threshold['icon']
     val_mm = threshold['value_mm']
@@ -1230,7 +1232,7 @@ def main():
 
     log.info(f'Loading areas from {areas_file}')
     config = json.loads(areas_file.read_text())
-    areas = config['areas']
+    areas = apply_private(config['areas'])
 
     enabled = [a for a in areas if a.get('monitoring', {}).get('enabled')]
     log.info(f'Aree monitorate: {[a["label"] for a in enabled]}')

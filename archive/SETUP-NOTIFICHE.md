@@ -93,7 +93,7 @@ manderà la notifica di test.
 ## D — Come funziona dopo il setup
 
 - Il workflow gira **ogni 15 minuti** in automatico (cron `*/15 * * * *`)
-- Scarica l'ultimo SRT1 da DPC, calcola media+max sull'area Panna
+- Scarica l'ultimo SRT1 da DPC, calcola media+max sull'area Scarperia
 - Se una soglia viene **attraversata** (passa da sotto a sopra), invia notifica
 - **Anti-spam**: la stessa soglia non rispara finché il valore non scende sotto il 50% per almeno 30 minuti consecutivi
 - Lo stato è salvato in `archive/state/monitor_state.json` (committato dal bot)
@@ -105,7 +105,7 @@ manderà la notifica di test.
 ## E — Aggiungere altre aree al monitoring
 
 Apri `archive/areas.json`, trova l'area (es. Ruspino) e copia il blocco
-`monitoring: {...}` da Panna, modifica le soglie come vuoi. Commit. Il
+`monitoring: {...}` da Scarperia, modifica le soglie come vuoi. Commit. Il
 prossimo run del workflow inizierà a monitorare anche quella.
 
 ---

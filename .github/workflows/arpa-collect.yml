@@ -40,7 +40,7 @@ jobs:
       - name: Run arpa_collect
         run: python archive/scripts/arpa_collect.py
 
-      # Radar DPC "puro" (SRI 5') per TUTTE le aree, Panna compresa: serve a
+      # Radar DPC "puro" (SRI 5') per TUTTE le aree, Scarperia compresa: serve a
       # ricalcolare le cumulate evento da radar (la CUM3 DPC è pluviometrica).
       # Solo raccolta dati, nessuna allerta: un errore qui non blocca ARPA.
       - name: Run sri_collect (radar DPC SRI)

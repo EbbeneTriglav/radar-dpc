@@ -42,6 +42,8 @@ from pyproj import Transformer
 from shapely.geometry import Polygon, Point, mapping
 from shapely.ops import transform as shp_transform
 
+from area_private import apply_private, msg_label
+
 # ─── Config ──────────────────────────────────────────────────────────────────
 DPC_API = 'https://radar-api.protezionecivile.it'
 UA = 'radar-dpc-nowcast/1.0'
@@ -342,7 +344,7 @@ def track_cell_motion(frames, xy_tm, lag_frames=3, win_px=80, max_shift_px=22):
 def cell_motion_reliable(cell, field):
     """La cella si muove in modo coerente con la perturbazione? Le celle possono deviare
     (es. 30–40° a destra del flusso), ma non andare controcorrente né a velocità multiple.
-    Caso reale Panna 07/10/2026: perturbazione da W 28 km/h, cella stimata verso SE a
+    Caso reale Scarperia 07/10/2026: perturbazione da W 28 km/h, cella stimata verso SE a
     128 km/h = salto su un'altra cella, non moto. Senza moto d'insieme vale solo corr ≥ 0.6."""
     if not cell or cell.get('bearing_deg') is None:
         return cell is not None and cell.get('compass') == 'stazionaria'
@@ -478,7 +480,7 @@ def send_telegram_photo(jpeg, caption, chat_ids=None):
     return 'true' if n_ok else 'false'
 
 
-MCH_MAP_AREAS = ('ruspino', 'cepina')        # coperte dal radar MeteoSwiss (Panna no)
+MCH_MAP_AREAS = ('ruspino', 'cepina')        # coperte dal radar MeteoSwiss (Scarperia no)
 MCH_MAP_MAX_AGE_MIN = 25
 
 
@@ -510,7 +512,7 @@ def _send_prealert_map(area, product, hit, signal, cell, field, frames, buf_km, 
         imgs = [alert_map.render_alert_map(
             area, frames[0][1], ts_label=_ts_local(ts_frame), signal=signal, motion=cell,
             buffers_km=BUFFERS_KM, field_motion=field, source='Radar DPC SRI · moti stimati',
-            title=f"{area['label']} · Radar DPC · cella entro {buf_km} km · {signal['max']:.0f} {unit}")]
+            title=f"{msg_label(area)} · Radar DPC · cella entro {buf_km} km · {signal['max']:.0f} {unit}")]
         mch_note = ''
         if area['name'] in MCH_MAP_AREAS:
             try:
@@ -522,7 +524,7 @@ def _send_prealert_map(area, product, hit, signal, cell, field, frames, buf_km, 
                         area, None, ts_label=_ts_local(tsm), signal=signal, motion=cell,
                         buffers_km=BUFFERS_KM, field_motion=field, grid=(g['v'], g['tr'], g['crs'].to_wkt()),
                         source='Fonte: MeteoSwiss · frecce e cerchio dal radar DPC',
-                        title=f"{area['label']} · Radar MeteoSwiss"))
+                        title=f"{msg_label(area)} · Radar MeteoSwiss"))
                     mch_note = f"2ª immagine: radar MeteoSwiss {_ts_local(tsm)}, stessi riferimenti. "
             except Exception as e:
                 log.warning(f'  mappa MeteoSwiss non generata: {e}')
@@ -535,7 +537,7 @@ def _send_prealert_map(area, product, hit, signal, cell, field, frames, buf_km, 
         else:
             fl = "Perturbazione: moto d'insieme non determinabile. "
         cl = "" if cell else "Moto della singola cella non affidabile: freccia sottile omessa. "
-        cap = (f"Radar DPC SRI {_ts_local(ts_frame)} — {area['label']}, livello {hit['level']}. " + fl + cl +
+        cap = (f"Radar DPC SRI {_ts_local(ts_frame)} — {msg_label(area)}, livello {hit['level']}. " + fl + cl +
                mch_note + "Freccia larga = perturbazione; cerchio = cella più intensa nell'anello; "
                "freccia sottile = suo spostamento stimato in 30'.")
         res = (send_telegram_album(imgs, cap, chat_ids=rcpt_tg) if len(imgs) > 1
@@ -637,7 +639,7 @@ def update_nowcast_obs(file, all_obs):
     for key, value in all_obs.items():
         if key.startswith('_'):
             continue  # skip metadati, già gestiti sopra
-        # key è il nome area (es. "ruspino", "panna", "cepina")
+        # key è il nome area (es. "ruspino", "scarperia", "cepina")
         if key not in existing:
             existing[key] = {}
         existing[key]['nowcast'] = value
@@ -727,7 +729,7 @@ def _iso_ms(iso):
 
 
 def compose(area, product, trigger, signal, motion, prob, buffer_km):
-    label, lvl, icon = area['label'], trigger['level'], trigger['icon']
+    label, lvl, icon = msg_label(area), trigger['level'], trigger['icon']
     thr, val = trigger['value'], signal['max']
     unit = 'mm/h' if product == 'SRI' else 'mm/1h'
     ts_local = _ts_local(signal['ts_iso'])
@@ -829,7 +831,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
         except Exception:
             pass
         cum_fallen = cum3_in['max'] if cum3_in else (srt1_in['max'] if srt1_in else None)
-        label = area['label']
+        label = msg_label(area)
         text = (
             f"🌤 CELLA TRANSITATA — {label}\n\n"
             f"La cella temporalesca ha lasciato l'area.\n"
@@ -888,7 +890,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
         # da comunicare come "caduto", separato dalla proiezione teorica.
         cum_fallen = cum3_in['max'] if cum3_in else None
 
-        label = area['label']
+        label = msg_label(area)
         dwell_str = (f"  • Permanenza stimata: ~{dwell_min} min\n" if dwell_min
                      else "  • Cella STAZIONARIA: permanenza prolungata possibile\n" if motion and motion.get('compass') == 'stazionaria'
                      else '')
@@ -963,7 +965,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
             crossed = max(to_alert)
             since_local = _ts_local(st.get('since', now_iso))
             text = (
-                f"🌧 EVENTO IN CORSO — {area['label']}\n\n"
+                f"🌧 EVENTO IN CORSO — {msg_label(area)}\n\n"
                 f"Cumulata sull'area ha superato {crossed} mm.\n"
                 f"  • Pioggia caduta finora (CUM3 3h max): {cum_now:.1f} mm\n"
                 f"  • SRI attuale: {sri_max:.1f} mm/h{arpa_note}\n"
@@ -971,7 +973,7 @@ def _eval_cell_on_area(area, sri_frames, srt1_tiff, cum3_tiff, state, now_iso,
                 f"Aggiornamento in diretta per contezza del volume caduto.\n"
             )
             md = (
-                f"🌧 *EVENTO IN CORSO — {area['label']}*\n"
+                f"🌧 *EVENTO IN CORSO — {msg_label(area)}*\n"
                 f"Cumulata > *{crossed} mm* (caduti ~{cum_now:.0f} mm, CUM3 3h)\n"
                 f"SRI attuale {sri_max:.1f} mm/h{arpa_note}\n"
                 f"_dall'inizio: {since_local}_"
@@ -1081,7 +1083,7 @@ def _eval_persistent_rain(area, sri_frames, archive_dir, state, now_iso, channel
         return False
     rule, mm, cov = best
     lvl, h, thr = rule['level'], float(rule['hours']), float(rule['mm'])
-    label = area['label']
+    label = msg_label(area)
     icon = {'warning': '🌧️', 'alarm': '⛈️', 'emergency': '🆘'}.get(lvl, '🌧️')
     others = ' · '.join(f'{k:g}h: {v:.0f} mm' for k, v in sorted(sums.items()))
     ts_local = _ts_local(datetime.fromtimestamp(t_end / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z'))
@@ -1383,7 +1385,7 @@ def _nowcast_catchup(areas, sri_frames, cum3_tiff, state, now_iso, writer):
                 ts_iso = datetime.fromtimestamp(ts_ms/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
                 late_min = int((now_ms - ts_ms) / 60000)
                 cum_fallen = cum3_in['max'] if cum3_in else None
-                label = area['label']
+                label = msg_label(area)
                 subject = f"⏰ [TARDIVO +{late_min}min] {label} — cella rilevata a posteriori"
                 text = (f"⏰ RILEVAMENTO TARDIVO (catch-up nowcast)\n\n"
                         f"Una cella temporalesca è transitata su {label} alle "
@@ -1455,7 +1457,7 @@ def _arpa_only_cell_check(archive_dir, enabled):
             mon = area.get('monitoring', {})
             channels = set(mon.get('channels', ['email', 'telegram']))
             rcpt = mon.get('recipients', {}) or {}
-            label = area['label']
+            label = msg_label(area)
             text = (f"⛈️ CELLA SULL'AREA — {label}\n\n"
                     f"Radar ARPA Lombardia (DI RISERVA: radar DPC non disponibile):\n"
                     f"  • max in area: {arpa_mmh:.1f} mm/h (soglia {thr}), {arpa_age:.0f} min fa\n"
@@ -1487,7 +1489,7 @@ def main():
 
     script_dir = Path(__file__).resolve().parent
     archive_dir = script_dir.parent
-    areas = json.loads((archive_dir / 'areas.json').read_text())['areas']
+    areas = apply_private(json.loads((archive_dir / 'areas.json').read_text())['areas'])
     enabled = [a for a in areas if a.get('monitoring', {}).get('enabled')]
     if not enabled:
         log.info('Nessuna area attiva.'); return 0

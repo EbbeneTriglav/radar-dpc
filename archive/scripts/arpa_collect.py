@@ -9,7 +9,7 @@ Sorgente: https://radarlive.arpalombardia.it/CMP
 - Nome file: CMPyymmddhhMM.MAX.tif.gz (UTC)
 
 Aree monitorate: ruspino (Bergamo) e cepina (Valtellina).
-Panna NON è coperto dai radar Lombardia (Toscana → resta solo DPC).
+Scarperia NON è coperto dai radar Lombardia (Toscana → resta solo DPC).
 
 Conversione dBZ → mm/h (Marshall-Palmer Z = 200·R^1.6):
   R [mm/h] = (10^(dBZ/10) / 200) ^ (1/1.6)

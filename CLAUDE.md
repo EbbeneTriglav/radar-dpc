@@ -10,9 +10,8 @@ descrive **come si lavora sul codice senza fare danni**.
 ## ⚠️ Perché questo progetto richiede cautela
 
 Non è un progetto software qualsiasi. Il sistema prende **decisioni operative
-reali sulla protezione di sorgenti di acqua minerale** (Nestlé Waters Italia):
-in base alle allerte, un operatore decide se mettere offline una sorgente prima
-di un evento intenso. Un'allerta mancata o una soglia sbagliata **non è un bug
+reali su piccoli bacini monitorati**: in base alle allerte, un operatore decide
+se attivare misure preventive prima di un evento intenso. Un'allerta mancata o una soglia sbagliata **non è un bug
 cosmetico** — è una decisione operativa che non parte.
 
 Conseguenza pratica: **gli errori spesso si vedono solo quando piove.** Non
@@ -115,14 +114,14 @@ Cloudflare **e** committato qui (i due devono coincidere).
 - `*_cum3.csv` — CUM3 DPC, blocchi 3h a ore fisse (00,03,06...21 UTC),
   **adiacenti e non sovrapposti → sommabili** per la cumulata evento.
 - `*_arpa.csv` — ARPA 5-min, `max_mmh`/`mean_mmh`. Copre **solo Ruspino e
-  Cepina** (Lombardia), NON Panna.
+  Cepina** (Lombardia), NON Scarperia.
 - `radar_mch/` — 12 PNG MeteoSwiss (Web Mercator, rotanti) + `index.json`, scritti da `mch_collect.py`.
 - `radar_arpa/` — 12 PNG live (rotanti) + `index.json`; `events/<id>/` archivio
   eventi per replay (creato al primo evento post-deploy).
 
 ### Aree monitorate
-`ruspino` (Bergamo), `cepina` (Levissima, Valtellina), `panna` (Mugello, FI).
-Panna è SIR Toscana: **niente ARPA**, il pluviometro (Monte di Fò) è un CSV
+`ruspino` (Bergamo), `cepina` (Valtellina), `scarperia` (Mugello, FI).
+Scarperia è SIR Toscana: **niente ARPA**, il pluviometro (Monte di Fò) è un CSV
 giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 
 ---
@@ -152,13 +151,13 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   `$limit` generico (con dati sub-orari copre solo ~14 giorni → eventi vecchi a 0).
 - **Ruolo ARPA per area** (`ARPA_ROLE` in nowcast.py): Ruspino `'or'` (ARPA affidabile, r≈0.7);
   Cepina `'backup'` (ARPA quasi cieco, r 0.1–0.3: decide l'SRI DPC, ARPA solo se SRI assente o più
-  vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Panna: niente ARPA.
+  vecchio di 20'). Coerente con `ARPA_TRUSTED` di episodes.py. Scarperia: niente ARPA.
 - **Pre-allerta su tutti i frame nuovi**: per gli anelli 5/10 km il nowcast valuta il MASSIMO tra tutti i frame SRI
   arrivati dall'ultimo run (stato `<area>:nowcast:ring_last_ms:<km>`), non solo l'ultimo; testo e mappa usano l'ora
   di quel frame. Motivo: Ruspino 07/10/2026, anello a 10,7 e 11,6 mm/h in frame mai visti (run ogni ~20').
 - **Soglia "cella sull'area"**: `cell_threshold()` = `monitoring.cell_on_area_mmh` in areas.json se presente,
   altrimenti warning SRT1 dell'area. Ruspino 7 mm/h dal 07/10/2026 (prima 10; backtest ARPA giu–ott: +1 avviso/mese,
-  0 falsi, 14/14 episodi ≥20 mm). Cepina 7 e Panna 5 (da SRT1). La pre-allerta anelli resta a SRI 10/15/25.
+  0 falsi, 14/14 episodi ≥20 mm). Cepina 7 e Scarperia 5 (da SRT1). La pre-allerta anelli resta a SRI 10/15/25.
 - **Pioggia persistente** (`_eval_persistent_rain`, dal 07/10/2026): cumulata MOBILE dell'SRI DPC media area
   (`<area>_sri.csv` + frame del run) sulle ultime N ore, regole in `monitoring.persistent_rain` (Ruspino:
   15 mm/3h warning, 30/6h alarm, 50/12h emergency; backtest CUM3 15/05–07/10: 3,7 / 1,2 / 0,8 al mese). Una
@@ -166,7 +165,7 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   la somma è un minimo: sopra soglia scatta comunque, sotto soglia non si valuta se copertura < 80%.
 - **Latenza allerte**: il backtest (ott-2026) mostra che il ritardo sul picco a Ruspino è soprattutto
   latenza (run + cron GitHub), non soglia. Non allungare l'intervallo del nowcast oltre 10'.
-- **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni, copre anche Panna):
+- **MeteoSwiss ICON-CH1** (Open-Meteo `meteoswiss_icon_ch1`, oraria, dominio Alpi e dintorni, copre anche Scarperia):
   archiviato e verificato dal 10/2026; per scelta dell'utente (06/10/2026) è **terza fonte di conferma** nelle
   allerte forecast 6h (`monitor.py`) e 24h (`forecast_ensemble_alert.py`): OM/worst ≥ soglia E (MET o ICON-CH1 o
   media). Nella matrice (`forecast_matrix.py`) è solo mostrato (`meteoswiss_icon_seamless`, 72h), non cambia il
@@ -188,11 +187,11 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   didascalia. Entrambi i tracker usano `_xcorr_motion()` (cross-correlazione normalizzata per sovrapposizione).
   Il moto della CELLA vale solo se corr ≥ 0.5, ≤ 90 km/h e coerente con la perturbazione (`cell_motion_reliable`:
   scarto ≤ 90° e velocità ≤ max(2,5×, +40 km/h)); altrimenti testo e prob. usano il moto d'insieme ("perturbazione")
-  e la freccia sottile non si disegna. Caso reale Panna 07/10/2026: cella "SE 128 km/h" con perturbazione da W 28.
+  e la freccia sottile non si disegna. Caso reale Scarperia 07/10/2026: cella "SE 128 km/h" con perturbazione da W 28.
   `prealert_motion()` calcola tutto una volta; `estimate_motion()` resta solo nei messaggi "cella sull'area".
 - **Radar MeteoSwiss** (`mch_collect.py`, `<area>_mch*.csv`): open data CC BY 4.0, citare "Fonte: MeteoSwiss";
   STAC libero solo 14 giorni → si archivia noi. Dati di STUDIO, non votano nelle allerte. Solo Ruspino e Cepina
-  (Panna fuori copertura), archivio dal 22/09/2026. Confronti: `episodes.csv` colonne `mch_max_mm/mch_mean_mm/
+  (Scarperia fuori copertura), archivio dal 22/09/2026. Confronti: `episodes.csv` colonne `mch_max_mm/mch_mean_mm/
   mch_cov_pct` (non decidono episodi né fonte), `mch_daily.csv` (totali giorno UTC, `mch_daily.py` in ground-daily.yml)
   → osservato "Radar MeteoSwiss" in Previsioni, colonne in Verifica, stime in Report.
 - **Allerte forecast 6h** (`monitor.py`): un SOLO messaggio per run anche se scattano SRT1 e CUM3 insieme
@@ -201,9 +200,19 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Allerte forecast 24h** (`forecast_ensemble_alert.py`): una sola notifica per run, il livello PIÙ ALTO confermato
   (gli inferiori diventano attivi in silenzio), come `monitor.py`. Prima partivano ALARM+EMERGENCY insieme.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
+- **Sito pubblico anonimo**: nessun nome di committente/marchio/uso finale in pagine, README, commenti. L'area
+  toscana si chiama `scarperia` ovunque nel repo (dati, file, stato). Il nome "interno" usato in email e Telegram
+  e TUTTI i destinatari stanno nel secret `AREAS_PRIVATE` (`archive/scripts/area_private.py`: `apply_private`,
+  `recipients`, `msg_label`). Mai mettere email/chat id in areas.json; i log delle Actions sono pubblici: usare
+  `area['label']` (pubblico) nei log, `msg_label(area)` solo nel testo dei messaggi.
+- **Livelli sulle pagine pubbliche**: solo "Liv. 1/2/3" con colori smorzati (`js/levels.js`). I codici
+  warning/alarm/emergency restano nei CSV e nei messaggi/report interni.
+- **Pagina Monitor rimossa** (10/2026): `monitor.py`, i workflow e i dati (`monitor_state.json`, events.csv) restano.
 - **Ground sensors**: Cornalita (Ruspino) idsensore ARPA `2278`, Oga
   S.Colombano (Cepina) `8010`, endpoint `dati.lombardia.it/resource/647i-nhxk.json`.
-  Dal datacenter il fetch dà 403 (funziona da browser).
+  Dal datacenter il fetch dà 403 (funziona da browser). Da Actions: HTTP 429 frequenti sulle chiamate anonime →
+  `_socrata_get` ritenta; secret opzionale `SOCRATA_APP_TOKEN`. Il dataset si riempie con ritardo: `ground_collect`
+  ricontrolla per 72 h le finestre con < 95% delle misure.
 - **jsdom**: le `let` top-level non sono su `dom.window`; per leggerle nei test
   esporre con `window.x = x` in coda agli script valutati.
 - **Mock Leaflet nei test**: includere `circleMarker`, `bindPopup`, `bindTooltip`,
@@ -213,7 +222,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 
 ## Secrets (già configurati, non stamparli mai)
 GitHub Actions: `SMTP_HOST/PORT/USER/PASS/TO`, `TELEGRAM_TOKEN`,
-`TELEGRAM_CHAT_ID`, `GITHUB_TOKEN` (automatico).
+`TELEGRAM_CHAT_ID`, `GITHUB_TOKEN` (automatico), `AREAS_PRIVATE` (destinatari e nomi per i
+messaggi, JSON per area), `SOCRATA_APP_TOKEN` (opzionale).
 Cloudflare Worker: `GH_TOKEN` (PAT fine-grained, repo radar-dpc, Actions RW),
 opzionali `TG_BOT_TOKEN` + `TG_CHAT_ID` per la notifica del watchdog.
 **Mai loggare, stampare o committare valori di secret.**

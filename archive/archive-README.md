@@ -15,7 +15,7 @@ archive/
     ├── ruspino_cum24.csv
     ├── ruspino_cum3.csv
     ├── ruspino.xlsx
-    ├── panna_cum24.csv
+    ├── scarperia_cum24.csv
     ├── ...
 ```
 
@@ -67,7 +67,7 @@ Long format, 1 riga per osservazione (area o vertice):
 ## Visualizzazione
 
 Nell'app principale, tab **Archivio** mostra:
-- selettore area (Ruspino/Panna/Cepina)
+- selettore area (Ruspino/Scarperia/Cepina)
 - mini-mappa con poligono + arealizzazione IDW dei 5 vertici (animabile sugli 8 frame CUM3 del giorno)
 - grafico CUM24 storico (mm/giorno)
 - grafico CUM3 storico (mm/3h)

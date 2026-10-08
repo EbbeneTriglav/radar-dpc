@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-forecast_ensemble_alert.py — Alert pioggia 24h ensemble pesato per Panna.
+forecast_ensemble_alert.py — Alert pioggia 24h ensemble pesato per Scarperia.
 
-Gira ogni 60 minuti (workflow). Per l’area Sorgenti Panna:
+Gira ogni 60 minuti (workflow). Per l’area Scarperia:
   1. Scarica forecast 24h da 5 modelli Open-Meteo per 11 punti di controllo
   2. Scarica forecast 24h da MET Norway e MeteoSwiss ICON-CH1 (validazioni
      indipendenti: MAI mediate nell'ensemble)
@@ -34,6 +34,9 @@ from pathlib import Path
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from area_private import recipients, msg_label  # noqa: E402
+
 # ─── Config ──────────────────────────────────────────────────────────────────
 OPENMETEO_API = 'https://api.open-meteo.com/v1/forecast'
 METNO_API = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
@@ -49,7 +52,7 @@ log = logging.getLogger('forecast_24h')
 _session = requests.Session()
 _session.headers.update({'User-Agent': 'radar-dpc-forecast/1.0', 'Accept': '*/*'})
 
-# ─── Punti di controllo Sorgenti Panna (11 punti, pesi idrogeologici) ───
+# ─── Punti di controllo Scarperia (11 punti, pesi idrogeologici) ───
 CONTROL_POINTS = [
     {'id': 'P1',  'name': 'Crinale Nord',      'lat': 44.092,  'lon': 11.283, 'elev': 1180, 'weight': 0.14},
     {'id': 'P2',  'name': 'Versante NW',       'lat': 44.084,  'lon': 11.272, 'elev': 1050, 'weight': 0.12},
@@ -79,10 +82,10 @@ THRESHOLDS_24H = [
 ]
 
 # ─── Config multi-area: soglie 24h per area ───
-# Panna: soglie storiche; Ruspino: matrice 3×3 dashboard, orizzonte 24h
+# Scarperia: soglie storiche; Ruspino: matrice 3×3 dashboard, orizzonte 24h
 # (Attenzione 30 / Critico 50 / Estremo 80); Cepina: come Ruspino (provvisorio).
 AREAS_24H = {
-    'panna':   {'thresholds': THRESHOLDS_24H, 'points': 'CONTROL_POINTS'},
+    'scarperia':   {'thresholds': THRESHOLDS_24H, 'points': 'CONTROL_POINTS'},
     'ruspino': {'thresholds': [
         {'level': 'warning',   'value_mm': 30, 'icon': '🌧️'},
         {'level': 'alarm',     'value_mm': 50, 'icon': '⛈️'},
@@ -97,7 +100,7 @@ AREAS_24H = {
 
 
 def _area_points(area_name):
-    """Punti di controllo: Panna usa gli 11 pesati; altre aree centroide+vertici
+    """Punti di controllo: Scarperia usa gli 11 pesati; altre aree centroide+vertici
     da areas.json con pesi uniformi."""
     if AREAS_24H[area_name]['points'] == 'CONTROL_POINTS':
         return CONTROL_POINTS
@@ -117,16 +120,12 @@ def _area_points(area_name):
 
 
 def _area_recipients(area_name):
-    """Recipients per-area da areas.json (fallback None → env default)."""
+    """Recipients per-area dal secret AREAS_PRIVATE (area_private.py).
+    (None, None) → fallback ai default dell'ambiente (SMTP_TO / TELEGRAM_CHAT_ID)."""
     try:
-        areas_file = Path(__file__).resolve().parents[1] / 'areas.json'
-        d = json.loads(areas_file.read_text())
-        for a in d['areas']:
-            if a['name'] == area_name:
-                rcpt = a.get('monitoring', {}).get('recipients', {}) or {}
-                return (rcpt.get('email') or None, rcpt.get('telegram_chat_ids') or None)
+        return recipients(area_name)
     except Exception as e:
-        log.warning(f'  {area_name} recipients lookup failed: {e}')
+        log.warning(f'  {area_name} recipients lookup failed: {type(e).__name__}')
     return (None, None)
 
 EVENT_HEADERS = [
@@ -283,7 +282,7 @@ def compute_weighted_ensemble(points=None):
 
 
 def evaluate_24h_thresholds(ensemble, state, now_iso, anti_spam_min=120,
-                            area_name='panna', thresholds=None):
+                            area_name='scarperia', thresholds=None):
     if thresholds is None:
         thresholds = THRESHOLDS_24H
     """
@@ -419,25 +418,13 @@ def send_telegram(md, chat_ids=None):
     return 'true' if n_ok else 'false'
 
 
-def _panna_recipients():
-    """Carica recipients di Panna da areas.json. Ritorna (email_list, tg_list)
-    o (None, None) se assenti → fallback a env defaults."""
-    try:
-        import json
-        from pathlib import Path
-        areas_file = Path(__file__).resolve().parents[1] / 'areas.json'
-        d = json.loads(areas_file.read_text())
-        for a in d['areas']:
-            if a['name'] == 'panna':
-                rcpt = a.get('monitoring', {}).get('recipients', {}) or {}
-                return (rcpt.get('email') or None, rcpt.get('telegram_chat_ids') or None)
-    except Exception as e:
-        log.warning(f'  panna recipients lookup failed: {e}')
-    return (None, None)
+def _scarperia_recipients():
+    """Destinatari dell'area scarperia (secret AREAS_PRIVATE)."""
+    return _area_recipients('scarperia')
 
 
 def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_mod, mm,
-                area_label='Sorgenti Panna', mch_str='N/D', by_str=''):
+                area_label='Scarperia', mch_str='N/D', by_str=''):
     """Build HTML email body for forecast 24h alert."""
     return (
         '<div style="font-family:Arial,sans-serif;max-width:600px">'
@@ -459,7 +446,7 @@ def _build_html(prefix, icon, lvl, color, mean_v, worst_v, metno_str, n_pts, n_m
     )
 
 
-def compose_24h(trigger, ensemble, prefix="", area_label='Sorgenti Panna'):
+def compose_24h(trigger, ensemble, prefix="", area_label='Scarperia'):
     lvl = trigger['level']
     icon = trigger['icon']
     mm = trigger['value_mm']
@@ -523,7 +510,7 @@ def save_state(f, st):
     f.write_text(json.dumps(st, indent=2, sort_keys=True))
 
 
-def update_observations(file, ensemble, now_iso, area_name='panna'):
+def update_observations(file, ensemble, now_iso, area_name='scarperia'):
     """Mergia forecast_24h in last_observations.json."""
     data = {}
     if file.exists():
@@ -546,10 +533,10 @@ def update_observations(file, ensemble, now_iso, area_name='panna'):
     log.info(f'  last_observations.json aggiornato (forecast_24h)')
 
 
-TEST_AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
+TEST_AREA_LABELS = {'scarperia': 'Scarperia', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
 
 
-def run_test_alert(area='panna'):
+def run_test_alert(area='scarperia'):
     """Invia notifica TEST forecast con dati finti sopra soglia,
     ai soli destinatari dell'area indicata (areas.json)."""
     log.info(f'=== TEST ALERT FORECAST 24H — area={area} ===')
@@ -568,7 +555,7 @@ def run_test_alert(area='panna'):
             'om_mean': 13.5, 'om_worst': 18.3, 'metno': 11.8}],
     }
     subject, text, html, md = compose_24h(fake_trigger, fake_ensemble, prefix='[TEST] ',
-                                          area_label=TEST_AREA_LABELS.get(area, area))
+                                          area_label=msg_label(area, TEST_AREA_LABELS.get(area, area)))
     rcpt_email, rcpt_tg = _area_recipients(area)
     log.info(f'  destinatari email: {len(rcpt_email) if rcpt_email else "SMTP_TO (default)"}')
     em = send_email(subject, text, html, to=rcpt_email)
@@ -581,9 +568,10 @@ def run_test_alert(area='panna'):
 def run_test_radar():
     """Invia notifica TEST simulando un alert radar DPC."""
     log.info('=== TEST ALERT RADAR DPC (NOWCAST) ===')
-    subject = "[TEST] ⛈️ Panna — CELLA RADAR WARNING (SIMULATA)"
+    lbl = msg_label('scarperia', 'Scarperia')
+    subject = f"[TEST] ⛈️ {lbl} — CELLA RADAR WARNING (SIMULATA)"
     text = (
-        '[TEST] ⛈️ CELLA RADAR IN AVVICINAMENTO — Panna — WARNING\n\n'
+        f'[TEST] ⛈️ CELLA RADAR IN AVVICINAMENTO — {lbl} — WARNING\n\n'
         'Questo è un TEST per verificare che le notifiche radar funzionino.\n\n'
         'Dati simulati (NON REALI):\n'
         '  • SRI max: 12.5 mm/h nel buffer 10km (soglia 10)\n'
@@ -593,7 +581,7 @@ def run_test_radar():
         'Se vedi questo messaggio, il sistema radar è configurato correttamente!\n'
     )
     md = (
-        '[TEST] ⛈️ *CELLA RADAR — Panna*\n'
+        f'[TEST] ⛈️ *CELLA RADAR — {lbl}*\n'
         'Livello: *WARNING* (TEST)\n\n'
         'SRI max: *12.5 mm/h* (buf 10km)\n'
         'Moto: NE a 15.2 km/h\n'
@@ -603,7 +591,7 @@ def run_test_radar():
     html = (
         '<div style="font-family:Arial,sans-serif;max-width:600px">'
         '<div style="background:#e0a800;color:white;padding:12px 18px;border-radius:6px 6px 0 0">'
-        '<h2 style="margin:0">[TEST] ⛈️ Panna — WARNING (radar simulato)</h2>'
+        f'<h2 style="margin:0">[TEST] ⛈️ {lbl} — WARNING (radar simulato)</h2>'
         '</div>'
         '<div style="border:1px solid #ddd;border-top:0;padding:18px;border-radius:0 0 6px 6px">'
         '<p><b>Questo è un TEST</b> per verificare le notifiche radar.</p>'
@@ -616,7 +604,7 @@ def run_test_radar():
         '<p style="font-size:11px;color:#888">Dati simulati — non reali</p>'
         '</div></div>'
     )
-    rcpt_email, rcpt_tg = _panna_recipients()
+    rcpt_email, rcpt_tg = _scarperia_recipients()
     em = send_email(subject, text, html, to=rcpt_email)
     tg = send_telegram(md, chat_ids=rcpt_tg)
     log.info(f'TEST radar inviato: email={em} telegram={tg}')
@@ -629,8 +617,8 @@ def main():
     ap.add_argument('--dry-run', action='store_true', help='No notifiche')
     ap.add_argument('--test-alert', action='store_true', help='Invia TEST forecast')
     ap.add_argument('--test-radar', action='store_true', help='Invia TEST radar DPC')
-    ap.add_argument('--area', default='panna', choices=['panna', 'ruspino', 'cepina'],
-                    help='Area destinatari per --test-alert (default panna)')
+    ap.add_argument('--area', default='scarperia', choices=['scarperia', 'ruspino', 'cepina'],
+                    help='Area destinatari per --test-alert (default scarperia)')
     args = ap.parse_args()
 
     if args.dry_run:
@@ -655,7 +643,7 @@ def main():
     state['_last_run_utc'] = now_iso
 
     # Labels per i messaggi
-    AREA_LABELS = {'panna': 'Sorgenti Panna', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
+    AREA_LABELS = {'scarperia': 'Scarperia', 'ruspino': 'Ruspino', 'cepina': 'Cepina'}
 
     write_header = not events_file.exists()
     with open(events_file, 'a', newline='', encoding='utf-8') as f:
@@ -689,7 +677,7 @@ def main():
 
             rcpt_email, rcpt_tg = _area_recipients(area_name)
             for tr in triggers:
-                subject, text, html, md = compose_24h(tr, ensemble, area_label=label)
+                subject, text, html, md = compose_24h(tr, ensemble, area_label=msg_label(area_name, label))
                 em = send_email(subject, text, html, to=rcpt_email)
                 tg = send_telegram(md, chat_ids=rcpt_tg)
                 writer.writerow({

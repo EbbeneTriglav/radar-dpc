@@ -101,9 +101,21 @@
     "cell_on_area_mmh": 7,
     "_cell_on_area_comment": "Soglia cella sull'area (SRI/ARPA max mm/h). Senza questa chiave vale il warning SRT1. Ruspino 7 dal 07/10/2026 (backtest giu-ott: +1 avviso/mese, nessun episodio perso).",
     "persistent_rain": [
-     {"level": "warning",   "hours": 3,  "mm": 15},
-     {"level": "alarm",     "hours": 6,  "mm": 30},
-     {"level": "emergency", "hours": 12, "mm": 50}
+     {
+      "level": "warning",
+      "hours": 3,
+      "mm": 15
+     },
+     {
+      "level": "alarm",
+      "hours": 6,
+      "mm": 30
+     },
+     {
+      "level": "emergency",
+      "hours": 12,
+      "mm": 50
+     }
     ],
     "_persistent_rain_comment": "Pioggia persistente: cumulata MOBILE del radar DPC SRI (media area) sulle ultime N ore, valutata a ogni run del nowcast. Stima radar (SRI media ~1,3x il pluviometro a Ruspino).",
     "enabled": true,
@@ -165,21 +177,12 @@
       ]
      }
     },
-    "recipients": {
-     "email": [
-      "riccardo.giusti@waters.nestle.com",
-      "stefano.tassis@waters.nestle.com",
-      "stefano.fioletti@waters.nestle.com"
-     ],
-     "telegram_chat_ids": [
-      "639113014"
-     ]
-    }
+    "_recipients_comment": "Destinatari e nomi per email/Telegram nel secret GitHub AREAS_PRIVATE (vedi archive/scripts/area_private.py)."
    }
   },
   {
-   "name": "panna",
-   "label": "Panna",
+   "name": "scarperia",
+   "label": "Scarperia",
    "centroid": {
     "lat": 44.0765,
     "lon": 11.306398
@@ -333,25 +336,12 @@
       ]
      }
     },
-    "recipients": {
-     "email": [
-      "riccardo.giusti@waters.nestle.com",
-      "melissa.brogi@waters.nestle.com",
-      "stefano.fioletti@waters.nestle.com",
-      "simone.gualtieri@waters.nestle.com",
-     "francesco.crescioli@waters.nestle.com",
-      "linda.geroni1@waters.nestle.com",
-      "mirko.calvanelli@waters.nestle.com",
-      "moreno.sozzi@gmail.com",
-      "giorgio.dellacroce@gmail.com"
-     ],
-     "telegram_chat_ids": []
-    }
+    "_recipients_comment": "Destinatari e nomi per email/Telegram nel secret GitHub AREAS_PRIVATE (vedi archive/scripts/area_private.py)."
    }
   },
   {
    "name": "cepina",
-   "label": "Cepina (Levissima)",
+   "label": "Cepina",
    "centroid": {
     "lat": 46.442772,
     "lon": 10.32425
@@ -501,15 +491,7 @@
       ]
      }
     },
-    "recipients": {
-     "email": [
-      "riccardo.giusti@waters.nestle.com",
-      "paolo.bracchi@waters.nestle.com",
-      "stefano.fioletti@waters.nestle.com",
-      "diletta.scapin1@waters.nestle.com"
-     ],
-     "telegram_chat_ids": []
-    }
+    "_recipients_comment": "Destinatari e nomi per email/Telegram nel secret GitHub AREAS_PRIVATE (vedi archive/scripts/area_private.py)."
    }
   }
  ]

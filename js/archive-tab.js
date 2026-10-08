@@ -5,7 +5,7 @@
  * archive/scripts/collect.py per le aree configurate.
  *
  * Funzionalità:
- *   - selettore area (Ruspino / Panna / Cepina)
+ *   - selettore area (Ruspino / Scarperia / Cepina)
  *   - statistiche aggregate (totale, max, giorni con pioggia, ecc.)
  *   - mini-mappa con poligono dell'area + arealizzazione IDW dei 5 vertici
  *     campione (animata sugli 8 timestamp CUM3 del giorno selezionato)

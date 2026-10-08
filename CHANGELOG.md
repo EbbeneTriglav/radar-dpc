@@ -1,7 +1,19 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-08 (b) — Sito pubblico anonimo, Cornalita
+- **Nomi**: l'area toscana diventa `scarperia` in tutto il repo (file dati, basemap, eventi, episodi, stato;
+  migrazione con `archive/scripts/migrate_rename_area.py`). Tolti i riferimenti a marchi e all'uso finale.
+- **Destinatari fuori dal repo**: email e chat Telegram passano dal secret `AREAS_PRIVATE`
+  (`area_private.py`), che contiene anche il nome usato nei messaggi privati. Senza secret le allerte vanno ai
+  destinatari di default (SMTP_TO / TELEGRAM_CHAT_ID).
+- **Pagina Monitor rimossa** dal sito; `monitor.py`, workflow e dati restano.
+- **Livelli neutri** sulle pagine (Eventi, Verifica, tab Allerte): "Liv. 1/2/3", colori smorzati (`js/levels.js`).
+- **Pluviometro Cornalita**: Socrata da Actions risponde spesso 429 → retry con attesa, token opzionale
+  `SOCRATA_APP_TOKEN`; le finestre evento archiviate con misure mancanti (ARPA pubblica in ritardo) vengono
+  ricontrollate per 72 h invece di restare sottostimate.
+
 ## 2026-10-08 — Previsione 6h: un solo messaggio
-- Panna 08/10 00:25: due Telegram nello stesso minuto (SRT1 ALARM + CUM3 WARNING). La regola "solo il livello più alto"
+- Scarperia 08/10 00:25: due Telegram nello stesso minuto (SRT1 ALARM + CUM3 WARNING). La regola "solo il livello più alto"
   valeva per prodotto, non per area. Ora un unico messaggio con entrambi i prodotti, titolo al livello più alto.
 - Stesso caso alle 02:07: un terzo messaggio "WARNING SRT1" mentre la previsione calava da ALARM. Ora, quando scatta
   un livello, quelli inferiori già superati diventano attivi senza messaggio; le escalation successive partono come prima.
@@ -28,7 +40,7 @@
   (token/configurazione). Va ricopiato a mano nel Worker su Cloudflare.
 
 ## 2026-10-07 (b) — Mappa pre-allerta: moto cella affidabile, MeteoSwiss, sfondo più leggibile
-- **Moto della cella**: la mappa di Panna del 07/10 indicava "cella → SE 128 km/h" con la perturbazione da W a 28 km/h:
+- **Moto della cella**: la mappa di Scarperia del 07/10 indicava "cella → SE 128 km/h" con la perturbazione da W a 28 km/h:
   il tracciamento era saltato su un'altra cella. Ora il moto della cella si usa solo se plausibile (correlazione ≥ 0,5,
   ≤ 90 km/h) e coerente con la perturbazione; altrimenti freccia sottile omessa e testo/probabilità usano il moto
   d'insieme ("Movimento (perturbazione)"). Tolto il ripiego sul baricentro nell'anello per la pre-allerta.
@@ -38,7 +50,7 @@
   `topo` (OpenTopoMap, rilievo). Da rigenerare con l'action "Sfondi mappe pre-allerta" scegliendo lo stile.
 
 ## 2026-10-07 — Allerte 24h senza doppioni + radar MeteoSwiss nei confronti
-- **Forecast 24h**: con più soglie superate nello stesso run partivano due messaggi (Panna 07/10: ALARM + EMERGENCY con
+- **Forecast 24h**: con più soglie superate nello stesso run partivano due messaggi (Scarperia 07/10: ALARM + EMERGENCY con
   gli stessi numeri). Ora parte solo il livello più alto, come per le allerte 6h; escalation e riarmo invariati.
 - **Radar MeteoSwiss come osservato** (Ruspino e Cepina, dal 22/09): nuova opzione in Previsioni (media area, pixel max
   nella tessera, "parziale" se mancano frame); `mch_daily.py` → `mch_daily.csv` ogni 3 ore (workflow ground-daily).
@@ -83,7 +95,7 @@
 - Messaggi: valore MeteoSwiss sempre mostrato + "confermato da …"; in `events.csv` nota con le fonti di conferma.
 - `forecast_matrix.py`: MeteoSwiss ICON (seamless, 72h) mostrato come terzo riferimento, **non** cambia il livello.
 - Effetto atteso: qualche allerta in più quando MET non conferma ma ICON-CH1 sì. Da verificare dopo 3–4 settimane.
-- Fix: titolo Telegram del forecast 24h diceva sempre "Panna".
+- Fix: titolo Telegram del forecast 24h diceva sempre "Scarperia".
 
 ## Sessione 2026-10-06 — Pagina Radar MeteoSwiss + revisione di tutte le pagine
 
@@ -99,14 +111,14 @@
   → stato osservato da soglie + nowcast + cella attiva; previsioni in un badge separato "PREVISTO". Valori evento con unità
   giuste (SRI/ARPA = max mm/h), "NaN" → "—", note con virgole lette bene. Grafico: finestra reale (3h = ±3h), tutto in mm/h,
   dati mancanti = vuoto. Riga "Nowcast: ultimo run …" (rossa se > 20'). CUM3/CUM24 ora si aggiornano davvero.
-- **Mappa Live**: id duplicati delle aree preimpostate (Cepina mostrava i dati di Panna); crash del grafico; stato verde
+- **Mappa Live**: id duplicati delle aree preimpostate (Cepina mostrava i dati di Scarperia); crash del grafico; stato verde
   "Aggiornato" anche con API DPC in errore; scheda Allerte con soglie inventate → soglie di `areas.json` + nota "indicativo".
 - **Storico**: CUM24 ora = giorno UTC esatto (prima un campione alle 12 UTC); CUM3/6/12 dichiarati "blocco che termina alle
   12 UTC"; tabella risultati che non compariva; giorno in più; CSV scaricato due volte; "pluviometri, non radar".
 - **Archivio**: barre CUM24 spostate di un giorno; 121 blocchi CUM3 mancanti dichiarati (totale "incompleto"); previsione
   allineata ai blocchi 3h; animazione sul giorno completo; mappa IDW etichettata come stima, scala fissa.
 - **Eventi**: note con virgole spezzate; conteggi senza le chiusure; filtri forecast24h/nowcast; unità mm vs mm/h.
-- **Verifica**: badge forecast allineato a quando il server invia davvero (dal primo livello); Panna/Cepina per giorno
+- **Verifica**: badge forecast allineato a quando il server invia davvero (dal primo livello); Scarperia/Cepina per giorno
   civile come il server; crash vista "Tutto"; CUM3 disegnata 3 h in ritardo; pluviometro mancante nel grafico evento;
   aggiunta serie SRI DPC (e MeteoSwiss, nascosta); unità per prodotto; fonti con < 30 confronti "campione insufficiente";
   bias = previsto − osservato su Verifica e Report.
@@ -127,7 +139,7 @@
 - ✏️ Anti-raffica: al massimo un messaggio "cella in avvicinamento" per area ogni 3 h tra anelli e prodotti,
   salvo salita di livello (warning → alarm → emergency). Soglie e canali invariati.
 - 🔎 Backtest anello continuo 07/07→06/10 (SRI ≥ 10 mm/h entro 10 km, riarmo 3 h): Ruspino ~9 avvisi/mese,
-  5 senza pioggia sull'area in 3 mesi, 10/12 episodi significativi presi; Cepina ~16/mese; Panna ~10/mese.
+  5 senza pioggia sull'area in 3 mesi, 10/12 episodi significativi presi; Cepina ~16/mese; Scarperia ~10/mese.
 
 ## Sessione 2026-10-06 — Radar MeteoSwiss in archivio (studio)
 
@@ -179,7 +191,7 @@
 - 🆕 `monitor.py` — `fetch_forecast_meteoswiss`: ICON-CH1 (1 km, run ogni 3h) via Open-Meteo
   (`models=meteoswiss_icon_ch1`), max 1h/3h nelle prossime 6h, salvato in `last_observations.json`
   come `forecast.meteoswiss`. **Solo verifica**: NON entra nella doppia conferma (OpenMeteo + MET Norway
-  invariata). Fuori dominio del modello (es. Panna se non coperta) → nessun valore.
+  invariata). Fuori dominio del modello (es. Scarperia se non coperta) → nessun valore.
 - ✏️ `forecast_history.py`, `forecast_verify.py` — terza fonte `meteoswiss` archiviata e verificata
   come le altre; `verifica.html` e `report.html` la mostrano come "MeteoSwiss ICON-CH1 (solo verifica)".
 - ⚙️ `sri-backfill.yml` — backfill **automatico**: con "continua" attivo (default) il workflow si
@@ -237,7 +249,7 @@
 - ✏️ `verifica.html` — etichetta bias corretta: `bias_mm` = osservato − previsto (negativo = sovrastima).
 
 ### Verifica dati (05/10 sera)
-- 🐞 Pluviometro SIR Monte di Fò (Panna) letto come giorno civile: è **giorno idrologico 09→09**
+- 🐞 Pluviometro SIR Monte di Fò (Scarperia) letto come giorno civile: è **giorno idrologico 09→09**
   (valore datato D = 09:00 di D-1 → 09:00 di D). Corretti `episodes.py`, `verifica.html`, `previsioni.html`.
   Effetto: sparisce il falso "pluviometro a 0 mm mentre radar e CUM3 vedono 15–30 mm" (20/08, 09/09).
 
@@ -247,10 +259,10 @@
   Etichette corrette ovunque ("CUM3 pluviometri"); il radar si giudica solo con ARPA e SRI.
 - 🐞 Orari pluviometri ARPA (Socrata) in **ora solare UTC+1**, letti come UTC → 1h di ritardo.
   Corretti `ground_collect.py`, lettura live in `verifica.html`/`previsioni.html` e i dati archiviati.
-- 🆕 `archive/scripts/sri_collect.py` — archivio radar DPC SRI (5') per tutte le aree, Panna compresa
+- 🆕 `archive/scripts/sri_collect.py` — archivio radar DPC SRI (5') per tutte le aree, Scarperia compresa
   (`<area>_sri.csv`), nel workflow `arpa-collect` ogni 10'. `--probe` verifica la profondità
   storica dell'API DPC; `.github/workflows/sri-backfill.yml` recupera i frame delle finestre episodio.
-- ✏️ `episodes.py` / `verifica.html` — colonne "Radar DPC SRI" e "Δ SRI"; per Panna l'SRI
+- ✏️ `episodes.py` / `verifica.html` — colonne "Radar DPC SRI" e "Δ SRI"; per Scarperia l'SRI
   definisce l'episodio a 5' (prima solo blocchi CUM3 3h).
 
 ### Episodi di pioggia (Verifica)
@@ -315,7 +327,7 @@
   - confronto fianco-a-fianco DPC CUM3 vs ARPA aggregato 3h
   - mappa Leaflet con poligoni delle aree + marker dei radar Desio (MB) e Flero (BS)
 - ⚠️ **Nessun alert** su dati ARPA in questa fase — solo raccolta parallela
-  per check sanity vs DPC. Panna esclusa (fuori copertura).
+  per check sanity vs DPC. Scarperia esclusa (fuori copertura).
 
 ### Note operative
 - **Mailing list**: per attivare destinatari specifici di un'area, vai su Monitor →

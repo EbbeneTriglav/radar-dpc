@@ -33,7 +33,7 @@ jobs:
         run: python archive/scripts/alert_map.py --basemaps ${{ inputs.style }}
       - name: Anteprima senza pioggia (solo log)
         run: |
-          for a in ruspino cepina panna; do python archive/scripts/alert_map.py --demo $a /tmp/demo_$a.jpg; done
+          for a in ruspino cepina scarperia; do python archive/scripts/alert_map.py --demo $a /tmp/demo_$a.jpg; done
       - uses: actions/upload-artifact@v4
         with:
           name: anteprime-mappe

@@ -43,6 +43,8 @@ jobs:
       # cosi' verifica.html non deve interrogare l'API riga per riga e il dato
       # resta anche quando ARPA lo rimuove dal dataset realtime.
       - name: Run ground_collect
+        env:
+          SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}   # opzionale: evita i 429 di ARPA
         run: python archive/scripts/ground_collect.py
 
       - name: Episodi di pioggia (con pluviometro)

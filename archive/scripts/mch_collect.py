@@ -11,7 +11,7 @@ PERCHE'
   tiene solo gli ultimi 14 giorni: per avere uno storico bisogna archiviare noi.
 
 DOMINIO
-  Composito svizzero: Cepina e Ruspino vicini al bordo della copertura radar, Panna
+  Composito svizzero: Cepina e Ruspino vicini al bordo della copertura radar, Scarperia
   probabilmente fuori portata. Fuori griglia → status=out_of_domain; pixel senza dato
   → nodata_pct (quanta parte dell'area/anello non è coperta): mai 0 inventati.
   ATTENZIONE: se il file marca "fuori portata" come undetect (=0) e non come nodata,

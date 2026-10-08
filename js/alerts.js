@@ -94,13 +94,14 @@ const AlertSystem = (() => {
         unit = CONFIG.PRODUCTS[productType]?.unit ?? 'mm';
         for (const t of op) if (v >= t.value) { levelLabel = t.level; thr = t.value; }
         if (levelLabel) level = _LEVEL_UI[levelLabel];
+        if (levelLabel) levelLabel = ({ warning: 'Liv. 1', alarm: 'Liv. 2', emergency: 'Liv. 3' })[levelLabel] || levelLabel;
       } else {
         if (!local.warn && !local.danger) continue;
         src = 'soglia indicativa locale';
         unit = local.unit;
         if (local.danger !== undefined && v >= local.danger) { level = 'danger'; thr = local.danger; }
         else if (local.warn !== undefined && v >= local.warn) { level = 'warn'; thr = local.warn; }
-        levelLabel = level === 'danger' ? 'pericolo' : 'attenzione';
+        levelLabel = level === 'danger' ? 'Liv. 2' : 'Liv. 1';
       }
 
       if (level) {
@@ -149,9 +150,8 @@ const AlertSystem = (() => {
 
   function _notifyBrowser(entry) {
     if (!_notifPermission) return;
-    const icon = entry.level === 'danger' ? '🚨' : '⚠️';
-    const title = `${icon} Radar DPC — ${entry.level === 'danger' ? 'PERICOLO' : 'Attenzione'}`;
-    const body  = `${entry.point}: ${entry.product} = ${entry.value.toFixed(1)} ${entry.unit} (${entry.levelLabel}, ${entry.src}) — indicativo, le allerte operative sono nella pagina Monitor`;
+    const title = `Radar DPC — ${entry.levelLabel || 'soglia'}`;
+    const body  = `${entry.point}: ${entry.product} = ${entry.value.toFixed(1)} ${entry.unit} (${entry.levelLabel}, ${entry.src}) — indicativo`;
     try {
       new Notification(title, { body, icon: 'icons/favicon-32x32.png' });
     } catch {}

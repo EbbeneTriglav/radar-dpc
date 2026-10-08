@@ -10,7 +10,7 @@ Replica ESATTAMENTE gli ingredienti delle dashboard:
       Attenzione [60, 80, 100] · Critico [80, 120, 140] (24/48/72h)
       Scarico preventivo al livello CRITICO in QUALSIASI orizzonte.
       Prossimità: warning se worst ≥ 85% della soglia successiva (proxFactor).
-  · Panna v6.6: 11 punti CONTROL_POINTS (già identici alla dashboard),
+  · Scarperia v6.6: 11 punti CONTROL_POINTS (già identici alla dashboard),
     criterio B su CUMULATA GIORNALIERA worst-case (giorni civili Europe/Rome):
       Attenzione 5 · Critico 10 · Estremo 15 mm/giorno.
     Orizzonti = Giorno 1 / 2 / 3.
@@ -49,6 +49,7 @@ from forecast_ensemble_alert import (  # noqa: E402
     CONTROL_POINTS, MODELS, METNO_API, METNO_UA, OPENMETEO_API,
     _http, send_email, send_telegram, _area_recipients,
 )
+from area_private import msg_label  # noqa: E402
 
 log = logging.getLogger('forecast_matrix')
 logging.basicConfig(level=logging.INFO,
@@ -73,20 +74,20 @@ POINTS_RUSPINO = [
     {'id': 'P11', 'name': 'Cornalita',     'lat': 45.8475, 'lon': 9.6637, 'elev':  650, 'weight': 0.07},
 ]
 
-# ── Punti di controllo Cepina — 7 sorgenti del bacino, estratte
-#    dalla dashboard analitica Sorgenti_Oga.html. Pesi UNIFORMI (1/7): non
+# ── Punti di controllo Cepina — 7 punti del bacino, estratti
+#    dalla dashboard analitica di bacino. Pesi UNIFORMI (1/7): non
 #    esiste ancora una pesatura idrogeologica validata per questo bacino (a
-#    differenza di Ruspino/Panna). Dichiarato, non inventato: quando avrai i
-#    pesi reali basta aggiornare 'weight'. Criterio soglie = giornaliero Panna
+#    differenza di Ruspino/Scarperia). Dichiarato, non inventato: quando avrai i
+#    pesi reali basta aggiornare 'weight'. Criterio soglie = giornaliero Scarperia
 #    (5/10/15 mm/g worst-case), provvisorio finché non tari soglie proprie.
 _CEPINA_PTS_RAW = [
-    ('Sorgente 1', 46.4393, 10.3344, 1780),
-    ('Sorgente 2', 46.4318, 10.3379, 1750),
-    ('Sorgente 3', 46.4330, 10.3455, 1550),
-    ('Sorgente 4', 46.4215, 10.3436, 1540),
-    ('Sorgente 5', 46.4378, 10.3480, 1400),
-    ('Sorgente 6', 46.4360, 10.3400, 1400),
-    ('Sorgente 7', 46.4300, 10.3440, 1350),
+    ('Punto 1', 46.4393, 10.3344, 1780),
+    ('Punto 2', 46.4318, 10.3379, 1750),
+    ('Punto 3', 46.4330, 10.3455, 1550),
+    ('Punto 4', 46.4215, 10.3436, 1540),
+    ('Punto 5', 46.4378, 10.3480, 1400),
+    ('Punto 6', 46.4360, 10.3400, 1400),
+    ('Punto 7', 46.4300, 10.3440, 1350),
 ]
 POINTS_CEPINA = [
     {'id': f'C{i+1}', 'name': n, 'lat': la, 'lon': lo, 'elev': el, 'weight': 1.0/len(_CEPINA_PTS_RAW)}
@@ -105,10 +106,10 @@ MATRIX2 = {
     'prox_factor': 0.85,     # prossimità: worst ≥ 85% soglia successiva
 }
 
-# ── Soglie giornaliere Panna — IDENTICHE alla dashboard v6.6 (thr) ──
-PANNA_DAY_THR = {'att': 5, 'crit': 10, 'ext': 15}   # mm/giorno, worst-case
-PANNA_LEVELS = ['Attenzione', 'Critico', 'Estremo']
-PANNA_COLORS = ['#f59e0b', '#ef4444', '#7c3aed']
+# ── Soglie giornaliere Scarperia — IDENTICHE alla dashboard v6.6 (thr) ──
+DAILY_THR = {'att': 5, 'crit': 10, 'ext': 15}   # mm/giorno, worst-case
+DAILY_LEVELS = ['Attenzione', 'Critico', 'Estremo']
+DAILY_COLORS = ['#f59e0b', '#ef4444', '#7c3aed']
 
 LEVEL_RANK = {'': 0, 'Attenzione': 1, 'Critico': 2, 'Estremo': 3}
 
@@ -299,11 +300,11 @@ def compute_ruspino_matrix():
             'mch_cov_h': mch_cov}
 
 
-# ─── Panna: cumulate giornaliere worst-case (criterio B dashboard) ──────────
+# ─── Scarperia: cumulate giornaliere worst-case (criterio B dashboard) ──────────
 
 def compute_days_worstcase(points):
-    """Cumulate giornaliere worst-case (criterio B dashboard Panna). Riusabile
-    per qualsiasi bacino con criterio giornaliero (Panna, Cepina)."""
+    """Cumulate giornaliere worst-case (criterio B dashboard Scarperia). Riusabile
+    per qualsiasi bacino con criterio giornaliero (Scarperia, Cepina)."""
     series, metno, n_pts, metno_cov, times = weighted_series_by_model(points)
     if not series or not times:
         return None
@@ -330,7 +331,7 @@ def compute_days_worstcase(points):
         metno_v = round(sum(metno[i] for i in idxs if i < len(metno)), 1) if metno else None
         # MeteoSwiss solo se copre TUTTE le ore del giorno (mai giorno troncato spacciato per intero)
         mch_v = round(sum(mch[i] for i in idxs), 1) if (mch and max(idxs) < len(mch)) else None
-        thr = PANNA_DAY_THR
+        thr = DAILY_THR
         level_idx = 2 if worst >= thr['ext'] else 1 if worst >= thr['crit'] else 0 if worst >= thr['att'] else -1
         n_agree = sum(1 for v in per_model.values() if v >= thr['att'])
         n_hours = len(idxs)
@@ -421,15 +422,15 @@ Cella evidenziata = livello del worst-case. Contenuto riservato ai destinatari e
     return subject, text, html
 
 
-def compose_email_days(res, now_iso, label='Sorgenti Panna'):
-    lvl_name = PANNA_LEVELS[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
+def compose_email_days(res, now_iso, label='Scarperia'):
+    lvl_name = DAILY_LEVELS[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
     icons = {0: '⚠️', 1: '⛔', 2: '⚡'}
     subject = f"{icons.get(res['max_level'], '✓')} Forecast soglie {label} — {lvl_name} (worst-case giornaliero)"
 
     rows_html, rows_text = [], []
     for i, d in enumerate(res['days']):
-        color = PANNA_COLORS[d['level_idx']] if d['level_idx'] >= 0 else '#94a3b8'
-        lvn = PANNA_LEVELS[d['level_idx']] if d['level_idx'] >= 0 else 'sotto soglia'
+        color = DAILY_COLORS[d['level_idx']] if d['level_idx'] >= 0 else '#94a3b8'
+        lvn = DAILY_LEVELS[d['level_idx']] if d['level_idx'] >= 0 else 'sotto soglia'
         metno_s = f"{d['metno']:.1f}" if d['metno'] is not None else 'N/D'
         mch_s = f"{d['mch']:.1f}" if d.get('mch') is not None else 'N/D'
         part = f" · copertura {d['n_hours']}/24h" if d['n_hours'] < 24 else ''
@@ -453,7 +454,7 @@ def compose_email_days(res, now_iso, label='Sorgenti Panna'):
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
 <h2 style="margin:0 0 4px">🌧️ Forecast soglie — {label}</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulata giornaliera worst-case (criterio B, dashboard v6.6):
-Attenzione ≥{PANNA_DAY_THR['att']} · Critico ≥{PANNA_DAY_THR['crit']} · Estremo ≥{PANNA_DAY_THR['ext']} mm/giorno · run {now_iso}</p>
+Attenzione ≥{DAILY_THR['att']} · Critico ≥{DAILY_THR['crit']} · Estremo ≥{DAILY_THR['ext']} mm/giorno · run {now_iso}</p>
 <table style="border-collapse:collapse">
 <tr><th style="padding:8px 12px;border:1px solid #e2e8f0"></th>
 <th style="padding:8px 12px;border:1px solid #e2e8f0;font-size:12px;color:#64748b">Worst-case</th>
@@ -465,9 +466,9 @@ Attenzione ≥{PANNA_DAY_THR['att']} · Critico ≥{PANNA_DAY_THR['crit']} · Es
 Ensemble: {res['n_models']}/5 modelli Open-Meteo, 11 punti pesati ({res['n_points_ok']}/11 OK) · {metno_note}.<br>
 Giorni civili Europe/Rome. Contenuto riservato ai destinatari email.</p>
 </body></html>"""
-    text = (f"FORECAST SOGLIE — SORGENTI PANNA ({now_iso})\n"
+    text = (f"FORECAST SOGLIE — {label.upper()} ({now_iso})\n"
             + '\n'.join(rows_text)
-            + f"\n\nSoglie = dashboard Panna v6.6 (5/10/15 mm/g worst-case, giorni civili Europe/Rome).\n"
+            + f"\n\nSoglie = dashboard v6.6 (5/10/15 mm/g worst-case, giorni civili Europe/Rome).\n"
             f"Ensemble {res['n_models']}/5 modelli, {res['n_points_ok']}/11 punti · {metno_note}\n"
             "Contenuto riservato ai destinatari email.")
     return subject, text, html
@@ -484,10 +485,10 @@ def load_state(f):
 
 def _worsts_by_horizon(res):
     """Estrae i worst-case per orizzonte da un risultato (matrice Ruspino o
-    giornaliero Panna/Cepina). Ritorna dict {chiave_orizzonte: mm}."""
+    giornaliero Scarperia/Cepina). Ritorna dict {chiave_orizzonte: mm}."""
     if 'rows' in res:      # Ruspino: cumulate mobili 24/48/72h
         return {r['hz']['sub']: r['worst'] for r in res['rows']}
-    if 'days' in res:      # Panna/Cepina: worst-case giornaliero (giorni 1..3)
+    if 'days' in res:      # Scarperia/Cepina: worst-case giornaliero (giorni 1..3)
         return {f'g{i+1}': d['worst'] for i, d in enumerate(res['days'])}
     return {}
 
@@ -560,12 +561,12 @@ def decide_send(state, area, rank, worsts, today, now_dt):
 
 def compose_telegram_matrix(res, label, now_iso):
     """Versione compatta per Telegram della matrice/soglie previsionali.
-    Gestisce sia il formato 'days' (Panna/Cepina, cumulata giornaliera) sia
+    Gestisce sia il formato 'days' (Scarperia/Cepina, cumulata giornaliera) sia
     'rows' (Ruspino, matrice 24/48/72h). Va agli stessi destinatari dell'email
     (telegram_chat_ids in areas.json, o chat di default). Markdown semplice;
     se dovesse fallire il parse, il sender robusto ripiega in testo semplice."""
     if 'days' in res:
-        levels = PANNA_LEVELS
+        levels = DAILY_LEVELS
         lvl_name = levels[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
         lines = [f"\U0001F327 *Forecast soglie \u2014 {label}*",
                  f"Livello: *{lvl_name.upper()}* (worst-case giornaliero)", ""]
@@ -598,7 +599,7 @@ def main():
     ap.add_argument('--resend', action='store_true',
                     help='Reinvia le allerte dei siti SOPRA soglia ignorando il cap '
                          'giornaliero anti-spam (test/verifica). I siti sotto soglia '
-                         'restano silenziati: nessun rumore al comitato.')
+                         'restano silenziati.')
     args = ap.parse_args()
 
     archive_dir = Path(__file__).resolve().parents[1]
@@ -609,12 +610,12 @@ def main():
 
     jobs = [
         ('ruspino', 'Ruspino', compute_ruspino_matrix, compose_email_ruspino),
-        ('panna',   'Sorgenti Panna',
+        ('scarperia',   'Scarperia',
          lambda: compute_days_worstcase(CONTROL_POINTS),
-         lambda res, ts: compose_email_days(res, ts, 'Sorgenti Panna')),
+         lambda res, ts: compose_email_days(res, ts, msg_label('scarperia', 'Scarperia'))),
         ('cepina',  'Cepina',
          lambda: compute_days_worstcase(POINTS_CEPINA),
-         lambda res, ts: compose_email_days(res, ts, 'Cepina')),
+         lambda res, ts: compose_email_days(res, ts, msg_label('cepina', 'Cepina'))),
     ]
 
     now_dt = datetime.now(tz=timezone.utc)
@@ -631,7 +632,7 @@ def main():
 
         rank = res['max_level'] + 1        # -1→0, 0→1, ...
         lvl = ('sotto soglia' if res['max_level'] < 0 else
-               (MATRIX2['levels'] if area == 'ruspino' else PANNA_LEVELS)[res['max_level']])
+               (MATRIX2['levels'] if area == 'ruspino' else DAILY_LEVELS)[res['max_level']])
         worsts = _worsts_by_horizon(res)
         log.info(f'[{label}] livello {lvl} (rank {rank}) · worst: '
                  + ' '.join(f'{k}={v:.0f}' for k, v in worsts.items()))
@@ -662,7 +663,7 @@ def main():
                         f'previsioni — {reason}</div>') + html
         log.info(f'[{label}] INVIO ({kind}): {reason}')
         if args.dry_run:
-            log.info(f'[{label}] DRY-RUN — subject: {subject}\n{text[:200]}')
+            log.info(f'[{label}] DRY-RUN — messaggio composto ({len(text)} caratteri, non inviato)')
             continue
 
         rcpt_email, rcpt_tg = _area_recipients(area)
@@ -670,7 +671,7 @@ def main():
         log.info(f'[{label}] email matrice: {status}')
         # Stesso contenuto, compatto, anche su Telegram. Stesso gate
         # anti-spam dell'email (decide_send): nessuna raffica in piu'.
-        tg_md = compose_telegram_matrix(res, label, now_iso)
+        tg_md = compose_telegram_matrix(res, msg_label(area, label), now_iso)
         if kind == 'jump':
             tg_md = f'\u26a1 *CAMBIO REPENTINO PREVISIONI* \u2014 {reason}\n\n' + tg_md
         tg_status = send_telegram(tg_md, chat_ids=rcpt_tg)

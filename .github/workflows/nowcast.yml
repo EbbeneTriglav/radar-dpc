@@ -44,6 +44,7 @@ jobs:
           SMTP_USER:        ${{ secrets.SMTP_USER }}
           SMTP_PASS:        ${{ secrets.SMTP_PASS }}
           SMTP_TO:          ${{ secrets.SMTP_TO }}
+          AREAS_PRIVATE:    ${{ secrets.AREAS_PRIVATE }}
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |

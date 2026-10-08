@@ -8,7 +8,7 @@ sull'area in mm/h) e scrive archive/data/mch_daily.csv (file DERIVATO, riscritto
   - mm = integrale mm/h x 5' dei soli frame validi (status ok). Frame mancanti o fuori
     copertura NON sono contati come zero: n_frames < expected_frames lo dichiara.
   - expected_frames = 288 per un giorno intero; per oggi solo fino all'ora del run.
-Usato da previsioni.html (osservato "Radar MeteoSwiss"). Panna è fuori copertura.
+Usato da previsioni.html (osservato "Radar MeteoSwiss"). Scarperia è fuori copertura.
 Dato di STUDIO (CC BY 4.0, "Fonte: MeteoSwiss"): non vota nelle allerte.
 """
 

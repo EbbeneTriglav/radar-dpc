@@ -5,7 +5,7 @@ sri_collect.py — archivio del radar DPC "puro" (SRI, mm/h ogni 5') per area.
 PERCHE'
   La CUM3 DPC NON è radar: è ottenuta solo dai pluviometri a terra interpolati.
   Per stimare la pioggia di un evento DA RADAR servono le intensità SRI (radar
-  nazionale, 5'), integrate nel tempo. ARPA copre solo la Lombardia: per Panna
+  nazionale, 5'), integrate nel tempo. ARPA copre solo la Lombardia: per Scarperia
   l'SRI è l'unica stima radar. Il nowcast scarica l'SRI ma non lo archivia.
 
 COSA FA
@@ -422,7 +422,7 @@ def run_backfill_ring_days():
     """Anello CONTINUO (tutti i frame 5') da SRI_RING_FROM a un'ora fa, per tutte le aree:
     serve a contare le celle passate vicino SENZA pioggia sull'area (falsi allarmi della
     pre-allerta), che le sole finestre episodio non possono vedere."""
-    want = {x.strip() for x in os.environ.get('SRI_RING_AREAS', 'ruspino,cepina,panna').split(',') if x.strip()}
+    want = {x.strip() for x in os.environ.get('SRI_RING_AREAS', 'ruspino,cepina,scarperia').split(',') if x.strip()}
     areas = [a for a in load_areas() if a['name'] in want]
     now = datetime.now(tz=UTC)
     t = floor5(parse_iso(os.environ.get('SRI_RING_FROM', '2026-05-15') + 'T00:00:00'))

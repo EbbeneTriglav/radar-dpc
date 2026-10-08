@@ -15,9 +15,9 @@ on:
         options: ['normal', 'dry-run', 'test-alert', 'test-radar', 'force-matrix']
       area:
         description: 'Area destinatari (solo test-alert)'
-        default: 'panna'
+        default: 'scarperia'
         type: choice
-        options: ['panna', 'ruspino', 'cepina']
+        options: ['scarperia', 'ruspino', 'cepina']
 
 permissions:
   contents: write
@@ -44,19 +44,20 @@ jobs:
           SMTP_USER:        ${{ secrets.SMTP_USER }}
           SMTP_PASS:        ${{ secrets.SMTP_PASS }}
           SMTP_TO:          ${{ secrets.SMTP_TO }}
+          AREAS_PRIVATE:    ${{ secrets.AREAS_PRIVATE }}
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ "$MODE" = "test-alert" ]; then
             AREA="${{ github.event.inputs.area }}"
-            python archive/scripts/forecast_ensemble_alert.py --test-alert --area "${AREA:-panna}"
+            python archive/scripts/forecast_ensemble_alert.py --test-alert --area "${AREA:-scarperia}"
           elif [ "$MODE" = "test-radar" ]; then
             python archive/scripts/forecast_ensemble_alert.py --test-radar
           elif [ "$MODE" = "dry-run" ]; then
             python archive/scripts/forecast_ensemble_alert.py --dry-run
           elif [ "$MODE" = "force-matrix" ]; then
-            echo "force-matrix: salto l'alert 24h Panna, reinvio solo la matrice sopra soglia."
+            echo "force-matrix: salto l'alert 24h Scarperia, reinvio solo la matrice sopra soglia."
           else
             python archive/scripts/forecast_ensemble_alert.py
           fi
@@ -73,6 +74,7 @@ jobs:
           SMTP_USER:        ${{ secrets.SMTP_USER }}
           SMTP_PASS:        ${{ secrets.SMTP_PASS }}
           SMTP_TO:          ${{ secrets.SMTP_TO }}
+          AREAS_PRIVATE:    ${{ secrets.AREAS_PRIVATE }}
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |

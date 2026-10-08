@@ -28,6 +28,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import time  # noqa: E402
 from ground_collect import DATA, SENSORS, fetch_socrata, log  # noqa: E402
 
 OUT = DATA / 'ground_daily.csv'
@@ -48,7 +49,9 @@ def main():
                 rows[(r['date_utc'], r['area_name'])] = r
 
     n_upd = 0
-    for area, sensor in SENSORS.items():
+    for k_s, (area, sensor) in enumerate(SENSORS.items()):
+        if k_s:
+            time.sleep(3)          # cortesia verso Socrata (limite anonimo)
         try:
             pts = fetch_socrata(sensor['id'], day0, now)
         except Exception as exc:

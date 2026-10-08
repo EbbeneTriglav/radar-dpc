@@ -158,8 +158,8 @@ def get_csv_max_age(filename: str, column: str = 'fetched_at_utc') -> float | No
 
 
 def get_archive_age() -> float | None:
-    """Età ultimo fetch in panna_cum3.csv (proxy archivio attivo)."""
-    return get_csv_max_age('panna_cum3.csv')
+    """Età ultimo fetch in scarperia_cum3.csv (proxy archivio attivo)."""
+    return get_csv_max_age('scarperia_cum3.csv')
 
 
 def get_arpa_age() -> float | None:

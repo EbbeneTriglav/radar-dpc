@@ -2,7 +2,7 @@
 
 Piattaforma web per la visualizzazione dei dati radar della Protezione Civile
 Italiana (DPC), l'archiviazione storica e l'allertamento automatico via
-**email + Telegram** per aree di studio specifiche (bacini sorgentiferi).
+**email + Telegram** per alcune aree di studio (piccoli bacini).
 
 🔗 **Live**: https://ebbenetriglav.github.io/radar-dpc/
 
@@ -28,7 +28,6 @@ schedulato) + un Cloudflare Worker (proxy CORS per i dati S3 del DPC).
 | 🗺 **Mappa Live** | `index.html` | Overlay radar, player temporale, grafici per punto, export CSV/XLSX. Le 3 aree pre-caricate come punti. |
 | 📊 **Storico** | `storico.html` | Visualizzazione storica dei prodotti radar. |
 | 🗄 **Archivio** | `archivio.html` | Grafici CUM24/CUM3 archiviati, mini-mappa con arealizzazione IDW, overlay forecast OpenMeteo. |
-| 🚨 **Monitor** | `monitor.html` | Stato real-time aree: ultima osservazione, soglie editabili, grafici DPC+OpenMeteo+MET Norway, eventi. |
 
 ---
 
@@ -37,8 +36,8 @@ schedulato) + un Cloudflare Worker (proxy CORS per i dati S3 del DPC).
 | Area | Località | Prodotti |
 |------|----------|----------|
 | **Ruspino** | Val Cavallina (BG), Lombardia | SRT1, CUM3 |
-| **Panna** | Mugello (FI), Toscana | SRT1, CUM3 + ensemble 24h |
-| **Cepina (Levissima)** | Valtellina (SO), Lombardia | SRT1, CUM3 |
+| **Scarperia** | Mugello (FI), Toscana | SRT1, CUM3 + ensemble 24h |
+| **Cepina** | Valtellina (SO), Lombardia | SRT1, CUM3 |
 
 Definite in `archive/areas.json` con poligono del bacino, 5 vertici campione e
 configurazione `monitoring`.
@@ -54,7 +53,7 @@ Allerta sulla pioggia **già caduta**.
 | Area | SRT1 (1h) warn/alarm/emerg | CUM3 (3h) warn/alarm/emerg |
 |------|-----------|-----------|
 | Ruspino | 10 / 20 / 30 | 15 / 30 / 50 |
-| Panna | 5 / 10 / 15 | 10 / 15 / 20 |
+| Scarperia | 5 / 10 / 15 | 10 / 15 / 20 |
 | Cepina | 5 / 15 / 30 | 10 / 15 / 40 |
 
 Soglie editabili dal Monitor (**Modifica soglie**); per attivarle sulle
@@ -76,7 +75,7 @@ in avvicinamento.
 - Riporta intensità mm/h e cumulata 3h nel buffer.
 
 ### 4. 📊 Ensemble forecast 24h pesato (`forecast_ensemble_alert.py`) — ogni 6h
-Specifico per **Panna**. Media pesata di **5 modelli** (ICON DWD, IFS ECMWF,
+Specifico per **Scarperia**. Media pesata di **5 modelli** (ICON DWD, IFS ECMWF,
 GFS NOAA, ARPEGE, AROME Météo-France) su **11 punti** con pesi per
 quota/esposizione. Allerta se la cumulata prevista **prossime 24h** supera
 10 / 15 / 20 mm.
@@ -91,7 +90,7 @@ inoltra. Gli script Python in Actions chiamano il DPC direttamente.
 
 ```
 radar-dpc/
-├── index.html, storico.html, archivio.html, monitor.html
+├── index.html, storico.html, archivio.html
 ├── css/style.css
 ├── js/                        # config, api, georaster-utils, colormap,
 │   └── ...                     #   player, location, chart-panel, alerts,
@@ -102,7 +101,7 @@ radar-dpc/
 │   │   ├── collect.py                  # archiviazione
 │   │   ├── monitor.py                  # osservato + forecast 6h
 │   │   ├── nowcast.py                  # nowcasting radar buffer
-│   │   ├── forecast_ensemble_alert.py  # ensemble 24h Panna
+│   │   ├── forecast_ensemble_alert.py  # ensemble 24h Scarperia
 │   │   └── requirements.txt
 │   ├── data/                  # CSV/XLSX + events.csv + last_observations.json
 │   └── state/                 # stati anti-spam
@@ -120,7 +119,7 @@ radar-dpc/
 | `archive-daily.yml` | ogni 6h | Archivia CUM24 + CUM3 |
 | `monitor.yml` | ogni 15 min | Osservato + forecast 6h doppia conferma |
 | `nowcast.yml` | ogni 60 min | Celle radar buffer 5/10km + moto + probabilità |
-| `forecast-alert.yml` | ogni 6h (xx:30) | Ensemble 24h pesato Panna |
+| `forecast-alert.yml` | ogni 6h (xx:30) | Ensemble 24h pesato Scarperia |
 
 Cron best-effort (possibili ritardi 5-15 min). Lanciabili a mano da
 **Actions → [workflow] → Run workflow** (molti hanno `dry_run`). I dati

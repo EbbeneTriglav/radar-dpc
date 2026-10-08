@@ -28,6 +28,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Totali giornalieri pluviometri
+        env:
+          SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}   # opzionale: evita i 429 di ARPA
         run: python archive/scripts/ground_daily.py
       - name: Radar MeteoSwiss - totali giornalieri
         continue-on-error: true

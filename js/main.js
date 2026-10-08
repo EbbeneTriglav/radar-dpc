@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   _loadSavedTheme();   // dopo initMap: BasemapPicker.applyTheme richiede la mappa
   _buildProductList();
   _bindTimezoneToggle();
-  // Pre-popola le 3 aree di studio come punti di interrogazione (Ruspino/Panna/Cepina)
+  // Pre-popola le 3 aree di studio come punti di interrogazione (Ruspino/Scarperia/Cepina)
   _loadDefaultAreas();
 
   Player.init({

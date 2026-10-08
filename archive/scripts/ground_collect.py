@@ -31,7 +31,7 @@ OUTPUT (entrambi append-only, mai riscritti)
 
 NOTE
   - Solo sensori ARPA Lombardia (Cornalita->ruspino, Oga S.Colombano->cepina).
-    Panna usa il CSV giornaliero SIR gia' archiviato nel repo dati_idro, che
+    Scarperia usa il CSV giornaliero SIR gia' archiviato nel repo dati_idro, che
     non ha problemi di ritenzione: resta gestito live dalla pagina.
   - Valori negativi (-999 = dato mancante in ARPA) scartati, non azzerati.
   - Un evento viene archiviato solo se la finestra e' interamente nel passato
@@ -45,6 +45,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -68,6 +69,15 @@ WINDOW_H = 13            # semi-ampiezza finestra archiviata (ore)
 MAX_EVENTS_PER_RUN = int(os.environ.get('GROUND_MAX_EVENTS', '250'))
 SLEEP_S = 0.4            # pausa tra chiamate Socrata (cortesia verso l'API)
 HTTP_TIMEOUT = 60
+# Il dataset ARPA "realtime" su Socrata si riempie con ritardo (ore, a volte
+# un giorno): una finestra archiviata subito dopo la chiusura puo' avere buchi
+# (es. 127 misure su 156) e il totale risulta sottostimato. Le finestre con
+# meno del 95% delle misure attese vengono ri-scaricate finche' non sono
+# passate REFRESH_H ore dalla fine della finestra; le misure gia' archiviate
+# restano, si aggiungono solo quelle mancanti.
+STEP_MIN = 10
+COMPLETE_FRAC = 0.95
+REFRESH_H = 72
 # Il campo 'data' di Socrata ARPA Lombardia è in ORA SOLARE (UTC+1) tutto
 # l'anno, senza fuso nella stringa. Verificato sui dati (ott-2026): radar DPC e
 # ARPA si allineano al pluviometro solo spostandolo di -1h. Fino al 05/10/2026
@@ -111,6 +121,40 @@ def ensure_header(path, fields):
             csv.DictWriter(fh, fieldnames=fields).writeheader()
 
 
+def _socrata_get(url, tries=5):
+    """GET JSON da Socrata con retry. Le chiamate anonime da GitHub Actions
+    ricevono spesso HTTP 429 (troppe richieste dallo stesso pool di IP): si
+    riprova con attesa crescente (rispettando Retry-After). Con il secret
+    opzionale SOCRATA_APP_TOKEN (registrazione gratuita su dati.lombardia.it)
+    il limite per IP non si applica. Il token non viene mai stampato."""
+    headers = {'User-Agent': 'radar-dpc-ground-collect', 'Accept': 'application/json'}
+    tok = (os.environ.get('SOCRATA_APP_TOKEN') or '').strip()
+    if tok:
+        headers['X-App-Token'] = tok
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            last = exc
+            if exc.code not in (429, 500, 502, 503, 504):
+                raise
+            try:
+                wait = float(exc.headers.get('Retry-After') or 0)
+            except (TypeError, ValueError):
+                wait = 0
+            wait = min(max(wait, 10 * (i + 1)), 60)
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            last = exc
+            wait = 10 * (i + 1)
+        if i < tries - 1:
+            log(f'  Socrata: {type(last).__name__} {getattr(last, "code", "")} - riprovo tra {wait:.0f}s ({i + 1}/{tries - 1})')
+            time.sleep(wait)
+    raise last
+
+
 def fetch_socrata(sensor_id, start, end):
     """Misure grezze del sensore nella finestra. Ritorna [(datetime, mm)].
     Solleva eccezione in caso di errore di rete/HTTP: l'evento non viene
@@ -125,11 +169,7 @@ def fetch_socrata(sensor_id, start, end):
         '$order': 'data',
         '$limit': 5000,
     })
-    req = urllib.request.Request(
-        f'{SOCRATA}?{qs}',
-        headers={'User-Agent': 'radar-dpc-ground-collect', 'Accept': 'application/json'})
-    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-        rows = json.load(resp)
+    rows = _socrata_get(f'{SOCRATA}?{qs}')
     out = []
     for row in rows:
         raw = (row.get('data') or '')[:19]
@@ -147,6 +187,74 @@ def fetch_socrata(sensor_id, start, end):
         out.append((ts, mm))
     out.sort(key=lambda p: p[0])
     return out
+
+
+def expected_points(win_start, win_end):
+    return int((win_end - win_start).total_seconds() // (STEP_MIN * 60))
+
+
+def refresh_incomplete(now, seen, max_refresh=40):
+    """Ri-scarica le finestre archiviate con misure mancanti (ritardo ARPA).
+    Aggiunge le sole misure nuove a ground_rain.csv e aggiorna la riga di
+    ground_index.csv (n_points mai in diminuzione). Ritorna quante finestre
+    sono state aggiornate."""
+    rows = read_csv(INDEX_FILE)
+    todo = []
+    for i, r in enumerate(rows):
+        s0, e0 = parse_ts(r.get('win_start_utc')), parse_ts(r.get('win_end_utc'))
+        col = parse_ts(r.get('collected_at_utc'))
+        if not (s0 and e0 and col) or r.get('area_name') not in SENSORS:
+            continue
+        try:
+            n = int(r.get('n_points') or 0)
+        except ValueError:
+            n = 0
+        if n >= COMPLETE_FRAC * expected_points(s0, e0):
+            continue
+        if col > e0 + timedelta(hours=REFRESH_H):
+            continue                     # gia' ricontrollata a ritardo esaurito: buco reale
+        todo.append((i, r, s0, e0, n))
+    if not todo:
+        return 0
+    todo = todo[:max_refresh]
+    log(f'Finestre incomplete da ricontrollare: {len(todo)}')
+    cache, n_upd = {}, 0
+    with RAIN_FILE.open('a', newline='', encoding='utf-8') as rain_fh:
+        rain_w = csv.DictWriter(rain_fh, fieldnames=RAIN_FIELDS)
+        for i, r, s0, e0, n_old in todo:
+            sid = SENSORS[r['area_name']]['id']
+            ck = (sid, s0, e0)
+            try:
+                pts = cache[ck] if ck in cache else fetch_socrata(sid, s0, e0)
+            except Exception as exc:
+                log(f'  ERRORE refresh {r["area_name"]} {r["event_ts_utc"]}: {exc}')
+                continue
+            cache[ck] = pts
+            new = 0
+            for pts_ts, mm in pts:
+                if mm <= 0:
+                    continue
+                key = (sid, iso_z(pts_ts))
+                if key in seen:
+                    continue
+                seen.add(key)
+                rain_w.writerow({'sensor_id': sid, 'ts_utc': key[1], 'mm': f'{mm:.2f}'})
+                new += 1
+            total = sum(mm for _, mm in pts)
+            if len(pts) >= n_old:
+                r['n_points'] = len(pts)
+                r['total_mm'] = f'{max(total, float(r.get("total_mm") or 0)):.2f}'
+            r['collected_at_utc'] = iso_z(now)
+            n_upd += 1
+            log(f'  refresh {r["area_name"]} {r["event_ts_utc"]}: {n_old} -> {len(pts)} misure '
+                f'(attese {expected_points(s0, e0)}), {new} nuove, totale {total:.1f} mm')
+            time.sleep(SLEEP_S)
+    with INDEX_FILE.open('w', newline='', encoding='utf-8') as fh:
+        w = csv.DictWriter(fh, fieldnames=INDEX_FIELDS)
+        w.writeheader()
+        for r in rows:
+            w.writerow({f: r.get(f, '') for f in INDEX_FIELDS})
+    return n_upd
 
 
 def main():
@@ -174,7 +282,7 @@ def main():
         area = (ev.get('area_name') or '').strip()
         ts_raw = (ev.get('event_timestamp_utc') or '').strip()
         if area not in SENSORS:
-            continue                       # panna -> SIR, gestito dalla pagina
+            continue                       # scarperia -> SIR, gestito dalla pagina
         ts = parse_ts(ts_raw)
         if ts is None:
             continue
@@ -215,8 +323,10 @@ def main():
         keys_seen.add(key)
         todo.append((area, ts_raw, mid))
 
+    n_ref = refresh_incomplete(now, seen)
+
     if not todo:
-        log('Nessun evento nuovo da archiviare.')
+        log('Nessun evento nuovo da archiviare.' + (f' ({n_ref} finestre completate)' if n_ref else ''))
         return 0
 
     todo.sort(key=lambda t: t[2], reverse=True)     # prima i piu' recenti
