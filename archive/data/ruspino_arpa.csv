@@ -28901,3 +28901,5 @@ timestamp_utc,area_name,location_type,location_name,lat,lon,max_dbz,mean_dbz,min
 2026-10-08T04:10:00Z,ruspino,area,ruspino,,,17.50,4.60,0.00,0.452,0.091,62,2026-10-08T04:15:50Z
 2026-10-08T04:15:00Z,ruspino,area,ruspino,,,15.50,1.38,-2.50,0.339,0.023,52,2026-10-08T04:25:49Z
 2026-10-08T04:20:00Z,ruspino,area,ruspino,,,14.00,2.32,-0.50,0.273,0.031,62,2026-10-08T04:25:49Z
+2026-10-08T04:25:00Z,ruspino,area,ruspino,,,18.00,4.39,0.00,0.486,0.085,61,2026-10-08T04:35:50Z
+2026-10-08T04:30:00Z,ruspino,area,ruspino,,,10.50,1.02,0.00,0.165,0.015,45,2026-10-08T04:35:50Z
