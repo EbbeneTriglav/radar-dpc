@@ -104,6 +104,9 @@ da `episodes.csv`, `episodes_alerts.csv`, `events.csv`, `forecast_verification.c
 GitHub fermi. È il livello di recovery affidabile: il cron di GitHub è
 best-effort e slitta/salta; quello di Cloudflare no. Va deployato a mano su
 Cloudflare **e** committato qui (i due devono coincidere).
+L'allowlist deve contenere il bucket attuale `s3-prod-dpc-radar.s3.eu-south-1.amazonaws.com`
+(+ pattern `*dpc-radar*`): senza, la mappa live va in 403 (08/10/2026). Unica copia del codice:
+`cloudflare-worker/worker.js` (tolte le copie vecchie `worker-proxy.js` e `js/worker.js`).
 
 ### Dati chiave (`archive/data/`)
 - `events.csv` — **registro storico unico** di eventi e allerte. Letto da 3

@@ -4,18 +4,38 @@
  * Inoltra richieste al bucket S3 dpc-radar e all'API DPC aggiungendo header
  * CORS. Emula un browser reale per evitare il WAF di CloudFront.
  *
+ * E' IL CODICE DEL WORKER "radar-dpc-proxy" su Cloudflare (unica copia valida:
+ * va incollato tutto nell'editor del Worker).
+ *
  * Endpoint:
  *   GET  /              → health check, mostra info worker
  *   *    /?url=<URL>    → proxy verso URL (whitelist enforced)
  */
 
 const ALLOWED_HOSTS = [
+  // Bucket S3 attuale dei prodotti radar DPC (VMI, SRI, SRT1, ...): l'API DPC
+  // restituisce URL pre-firmati su questo host. SENZA questa riga la mappa
+  // live risponde 403 "Hostname not allowed" (successo l'08/10/2026).
+  's3-prod-dpc-radar.s3.eu-south-1.amazonaws.com',
+  // Bucket storico: tenuto per compatibilita' con eventuali URL vecchie.
   'dpc-radar.s3.eu-south-1.amazonaws.com',
   'radar-api.protezionecivile.it',
   // Composito radar ARPA Lombardia (Desio+Flero, CMPyymmddhhMM.MAX.tif.gz):
   // usato da arpa.html per visualizzare il segnale radar live sulla mappa.
   'radarlive.arpalombardia.it',
 ];
+
+// Fallback: il DPC ha gia' rinominato il bucket una volta (dpc-radar ->
+// s3-prod-dpc-radar). Accettiamo qualunque bucket S3 AWS che contenga
+// "dpc-radar" nel nome, cosi' un rename futuro non blocca la mappa live.
+const ALLOWED_PATTERNS = [
+  /^[a-z0-9.-]*dpc-radar[a-z0-9.-]*\.s3\.[a-z0-9-]+\.amazonaws\.com$/i,
+];
+
+function hostAllowed(hostname) {
+  return ALLOWED_HOSTS.includes(hostname) ||
+         ALLOWED_PATTERNS.some((re) => re.test(hostname));
+}
 
 // User-Agent realistico: emula Chrome desktop per non essere bloccati dai WAF
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
@@ -127,7 +147,7 @@ export default {
       return jsonError('Invalid url parameter (not a valid URL)', 400);
     }
 
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    if (!hostAllowed(targetUrl.hostname)) {
       return jsonError(`Hostname not allowed: ${targetUrl.hostname}`, 403);
     }
 

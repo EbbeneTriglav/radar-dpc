@@ -1,5 +1,11 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-08 (c) — Mappa live: 403 dal proxy Cloudflare
+- Il `worker.js` ricopiato su Cloudflare era la copia vecchia del repo: l'allowlist non conteneva il bucket
+  attuale `s3-prod-dpc-radar` del DPC → ogni GeoTIFF "403 Hostname not allowed", mappa live vuota.
+  `cloudflare-worker/worker.js` ora ha bucket attuale + pattern `*dpc-radar*` + watchdog; tolte le copie
+  duplicate (`worker-proxy.js`, `js/worker.js`) per non ricaderci.
+
 ## 2026-10-08 (b) — Sito pubblico anonimo, Cornalita
 - **Nomi**: l'area toscana diventa `scarperia` in tutto il repo (file dati, basemap, eventi, episodi, stato;
   migrazione con `archive/scripts/migrate_rename_area.py`). Tolti i riferimenti a marchi e all'uso finale.
