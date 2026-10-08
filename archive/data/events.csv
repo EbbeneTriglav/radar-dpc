@@ -468,3 +468,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-08T14:31:38Z,scarperia,storm_on_area,5.0,0.57,6.17,SRI,2026-10-08T14:10:00Z,,true,true,catch-up: cella rilevata a posteriori +21min
 2026-10-08T15:21:24Z,ruspino,nowcast_warning,10,0.26,10.44,SRI,2026-10-08T15:05:00Z,,skipped,true,nowcast buffer=10km moto=NE/6.1kmh prob=1%
 2026-10-08T18:11:20Z,cepina,storm_on_area,7.0,2.19,7.08,SRI,2026-10-08T18:00:00Z,,true,true,cella su area
+2026-10-08T18:21:22Z,cepina,nowcast_warning,10,2.92,10.81,SRI,2026-10-08T18:10:00Z,,skipped,true,nowcast buffer=5km moto=N/21.1kmh prob=17%
