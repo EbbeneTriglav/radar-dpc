@@ -441,3 +441,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-07T22:25:59Z,panna,forecast_alarm,10,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
 2026-10-07T22:25:59Z,panna,forecast_warning,10,,,CUM3,,12.20,true,true,forecast 3h prossime 6h conferma MeteoSwiss
 2026-10-07T23:38:50Z,ruspino,nowcast_alarm,15,2.01,17.44,SRI,2026-10-07T23:30:00Z,,skipped,true,nowcast buffer=10km moto=NE/14.2kmh prob=11%
+2026-10-08T00:07:42Z,panna,forecast_warning,5,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
