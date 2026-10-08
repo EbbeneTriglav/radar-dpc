@@ -271,286 +271,6 @@
   "cepina:nowcast:ring_last_ms:5": {
     "ms": 1791455400000
   },
-  "panna:nowcast:SRI:10:alarm": {
-    "active": false,
-    "last_trigger_utc": "2026-10-08T03:56:01Z",
-    "rearmed_utc": "2026-10-08T07:16:01Z"
-  },
-  "panna:nowcast:SRI:10:emergency": {
-    "active": true,
-    "last_trigger_utc": "2026-10-08T10:01:38Z"
-  },
-  "panna:nowcast:SRI:10:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-10-08T10:21:31Z"
-  },
-  "panna:nowcast:SRI:5:alarm": {
-    "active": false,
-    "last_trigger_utc": "2026-07-26T04:05:30Z",
-    "rearmed_utc": "2026-10-06T09:01:10Z"
-  },
-  "panna:nowcast:SRI:5:emergency": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:20:54Z",
-    "rearmed_utc": "2026-10-07T23:20:57Z"
-  },
-  "panna:nowcast:SRI:5:warning": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:01:04Z",
-    "rearmed_utc": "2026-10-07T23:20:57Z"
-  },
-  "panna:nowcast:SRT1:10:alarm": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:20:54Z",
-    "rearmed_utc": "2026-10-07T23:20:57Z"
-  },
-  "panna:nowcast:SRT1:10:emergency": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:40:52Z",
-    "rearmed_utc": "2026-10-08T00:01:04Z"
-  },
-  "panna:nowcast:SRT1:10:warning": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T21:40:57Z",
-    "rearmed_utc": "2026-10-08T00:41:02Z"
-  },
-  "panna:nowcast:SRT1:5:alarm": {
-    "active": false,
-    "last_trigger_utc": "2026-06-29T21:17:36Z",
-    "rearmed_utc": "2026-10-06T09:01:10Z"
-  },
-  "panna:nowcast:SRT1:5:emergency": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:40:52Z",
-    "rearmed_utc": "2026-10-08T00:01:04Z"
-  },
-  "panna:nowcast:SRT1:5:warning": {
-    "active": false,
-    "last_trigger_utc": "2026-10-07T20:20:54Z",
-    "rearmed_utc": "2026-10-07T23:20:57Z"
-  },
-  "panna:nowcast:catchup:1791434700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791435000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791435300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791435600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791435900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791436200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791436500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791436800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791437100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791437400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791437700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791438000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791438300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791438600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791438900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791439200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791439500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791439800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791440100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791440400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791440700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791441000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791441300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791441600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791441900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791442200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791442500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791442800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791443100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791443400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791443700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791444000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791444300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791444600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791444900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791445200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791445500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791445800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791446100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791446400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791446700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791447000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791447300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791447600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791447900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791448200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791448500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791448800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791449100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791449400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791449700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791450000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791450300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791450600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791450900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791451200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791451500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791451800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791452100000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791452400000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791452700000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791453000000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791453300000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791453600000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791453900000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791454200000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791454500000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791454800000": {
-    "done": true
-  },
-  "panna:nowcast:catchup:1791455100000": {
-    "done": true
-  },
-  "panna:nowcast:cell_on_area": {
-    "active": false,
-    "cleared_utc": "2026-10-07T21:20:52Z",
-    "since": "2026-10-07T20:01:04Z"
-  },
-  "panna:nowcast:prealert": {
-    "last_utc": "2026-10-08T10:01:38Z",
-    "rank": 3
-  },
-  "panna:nowcast:ring_last_ms:10": {
-    "ms": 1791455400000
-  },
-  "panna:nowcast:ring_last_ms:5": {
-    "ms": 1791455400000
-  },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": true,
     "last_trigger_utc": "2026-10-08T09:16:26Z"
@@ -835,5 +555,285 @@
   "ruspino:persistent:warning": {
     "active": false,
     "rearmed_utc": "2026-10-08T10:21:31Z"
+  },
+  "scarperia:nowcast:SRI:10:alarm": {
+    "active": false,
+    "last_trigger_utc": "2026-10-08T03:56:01Z",
+    "rearmed_utc": "2026-10-08T07:16:01Z"
+  },
+  "scarperia:nowcast:SRI:10:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-10-08T10:01:38Z"
+  },
+  "scarperia:nowcast:SRI:10:warning": {
+    "active": true,
+    "last_trigger_utc": "2026-10-08T10:21:31Z"
+  },
+  "scarperia:nowcast:SRI:5:alarm": {
+    "active": false,
+    "last_trigger_utc": "2026-07-26T04:05:30Z",
+    "rearmed_utc": "2026-10-06T09:01:10Z"
+  },
+  "scarperia:nowcast:SRI:5:emergency": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:20:54Z",
+    "rearmed_utc": "2026-10-07T23:20:57Z"
+  },
+  "scarperia:nowcast:SRI:5:warning": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:01:04Z",
+    "rearmed_utc": "2026-10-07T23:20:57Z"
+  },
+  "scarperia:nowcast:SRT1:10:alarm": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:20:54Z",
+    "rearmed_utc": "2026-10-07T23:20:57Z"
+  },
+  "scarperia:nowcast:SRT1:10:emergency": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:40:52Z",
+    "rearmed_utc": "2026-10-08T00:01:04Z"
+  },
+  "scarperia:nowcast:SRT1:10:warning": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T21:40:57Z",
+    "rearmed_utc": "2026-10-08T00:41:02Z"
+  },
+  "scarperia:nowcast:SRT1:5:alarm": {
+    "active": false,
+    "last_trigger_utc": "2026-06-29T21:17:36Z",
+    "rearmed_utc": "2026-10-06T09:01:10Z"
+  },
+  "scarperia:nowcast:SRT1:5:emergency": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:40:52Z",
+    "rearmed_utc": "2026-10-08T00:01:04Z"
+  },
+  "scarperia:nowcast:SRT1:5:warning": {
+    "active": false,
+    "last_trigger_utc": "2026-10-07T20:20:54Z",
+    "rearmed_utc": "2026-10-07T23:20:57Z"
+  },
+  "scarperia:nowcast:catchup:1791434700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791435000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791435300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791435600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791435900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791436200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791436500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791436800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791437100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791437400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791437700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791438000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791438300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791438600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791438900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791439200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791439500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791439800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791440100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791440400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791440700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791441000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791441300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791441600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791441900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791442200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791442500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791442800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791443100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791443400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791443700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791444000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791444300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791444600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791444900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791445200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791445500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791445800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791446100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791446400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791446700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791447000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791447300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791447600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791447900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791448200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791448500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791448800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791449100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791449400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791449700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791450000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791450300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791450600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791450900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791451200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791451500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791451800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791452100000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791452400000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791452700000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791453000000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791453300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791453600000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791453900000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791454200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791454500000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791454800000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1791455100000": {
+    "done": true
+  },
+  "scarperia:nowcast:cell_on_area": {
+    "active": false,
+    "cleared_utc": "2026-10-07T21:20:52Z",
+    "since": "2026-10-07T20:01:04Z"
+  },
+  "scarperia:nowcast:prealert": {
+    "last_utc": "2026-10-08T10:01:38Z",
+    "rank": 3
+  },
+  "scarperia:nowcast:ring_last_ms:10": {
+    "ms": 1791455400000
+  },
+  "scarperia:nowcast:ring_last_ms:5": {
+    "ms": 1791455400000
   }
 }

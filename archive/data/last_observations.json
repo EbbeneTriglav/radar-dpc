@@ -90,87 +90,6 @@
     "timestamp_utc": "2026-05-27T14:34:48Z",
     "triggered": false
   },
-  "panna": {
-    "CUM3": {
-      "count": 13,
-      "max": 0.2,
-      "mean": 0.015,
-      "timestamp_utc": "2026-10-08T10:00:00Z",
-      "updated_at_utc": "2026-10-08T10:46:23Z"
-    },
-    "SRT1": {
-      "count": 1,
-      "max": 0.0,
-      "mean": 0.0,
-      "timestamp_utc": "2026-10-08T10:35:00Z",
-      "updated_at_utc": "2026-10-08T10:46:23Z"
-    },
-    "buffers": {
-      "10km": {
-        "sri_max": 0.0,
-        "sri_mean": 0.0,
-        "srt1_max": 0.0,
-        "srt1_mean": 0.0
-      },
-      "5km": {
-        "sri_max": 0.0,
-        "sri_mean": 0.0,
-        "srt1_max": 0.0,
-        "srt1_mean": 0.0
-      }
-    },
-    "forecast": {
-      "horizon_hours": 6,
-      "meteoswiss": {
-        "max_1h": 0.2,
-        "max_3h": 0.3
-      },
-      "metno": {
-        "max_1h": 1.7,
-        "max_3h": 3.4
-      },
-      "openmeteo": {
-        "max_1h": 0.0,
-        "max_3h": 0.0
-      },
-      "updated_at_utc": "2026-10-08T10:46:22Z"
-    },
-    "forecast_24h": {
-      "mch_weighted": 0.53,
-      "mean_ensemble": 8.92,
-      "metno_weighted": 10.11,
-      "n_models": 5,
-      "n_points": 11,
-      "updated_at_utc": "2026-10-08T10:36:15Z",
-      "worst_case": 23.35
-    },
-    "motion": null,
-    "nowcast": {
-      "buffers": {
-        "10km": {
-          "sri_max": 2.99,
-          "sri_mean": 0.67,
-          "srt1_max": 5.16,
-          "srt1_mean": 0.65
-        },
-        "5km": {
-          "sri_max": 2.27,
-          "sri_mean": 0.79,
-          "srt1_max": 1.67,
-          "srt1_mean": 0.79
-        }
-      },
-      "motion": {
-        "bearing_deg": 201.3018286240344,
-        "compass": "S",
-        "speed_kmh": 68.8
-      },
-      "timestamp_utc": "2026-10-08T10:41:16Z",
-      "triggered": true
-    },
-    "timestamp_utc": "2026-05-27T14:34:48Z",
-    "triggered": false
-  },
   "ruspino": {
     "CUM3": {
       "count": 16,
@@ -252,6 +171,87 @@
       },
       "timestamp_utc": "2026-10-08T10:41:16Z",
       "triggered": false
+    },
+    "timestamp_utc": "2026-05-27T14:34:48Z",
+    "triggered": false
+  },
+  "scarperia": {
+    "CUM3": {
+      "count": 13,
+      "max": 0.2,
+      "mean": 0.015,
+      "timestamp_utc": "2026-10-08T10:00:00Z",
+      "updated_at_utc": "2026-10-08T10:46:23Z"
+    },
+    "SRT1": {
+      "count": 1,
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-10-08T10:35:00Z",
+      "updated_at_utc": "2026-10-08T10:46:23Z"
+    },
+    "buffers": {
+      "10km": {
+        "sri_max": 0.0,
+        "sri_mean": 0.0,
+        "srt1_max": 0.0,
+        "srt1_mean": 0.0
+      },
+      "5km": {
+        "sri_max": 0.0,
+        "sri_mean": 0.0,
+        "srt1_max": 0.0,
+        "srt1_mean": 0.0
+      }
+    },
+    "forecast": {
+      "horizon_hours": 6,
+      "meteoswiss": {
+        "max_1h": 0.2,
+        "max_3h": 0.3
+      },
+      "metno": {
+        "max_1h": 1.7,
+        "max_3h": 3.4
+      },
+      "openmeteo": {
+        "max_1h": 0.0,
+        "max_3h": 0.0
+      },
+      "updated_at_utc": "2026-10-08T10:46:22Z"
+    },
+    "forecast_24h": {
+      "mch_weighted": 0.53,
+      "mean_ensemble": 8.92,
+      "metno_weighted": 10.11,
+      "n_models": 5,
+      "n_points": 11,
+      "updated_at_utc": "2026-10-08T10:36:15Z",
+      "worst_case": 23.35
+    },
+    "motion": null,
+    "nowcast": {
+      "buffers": {
+        "10km": {
+          "sri_max": 2.99,
+          "sri_mean": 0.67,
+          "srt1_max": 5.16,
+          "srt1_mean": 0.65
+        },
+        "5km": {
+          "sri_max": 2.27,
+          "sri_mean": 0.79,
+          "srt1_max": 1.67,
+          "srt1_mean": 0.79
+        }
+      },
+      "motion": {
+        "bearing_deg": 201.3018286240344,
+        "compass": "S",
+        "speed_kmh": 68.8
+      },
+      "timestamp_utc": "2026-10-08T10:41:16Z",
+      "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
     "triggered": false

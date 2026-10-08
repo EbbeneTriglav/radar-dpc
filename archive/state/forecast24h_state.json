@@ -9,18 +9,6 @@
   "cepina:forecast_24h:warning": {
     "active": false
   },
-  "panna:forecast_24h:alarm": {
-    "active": true,
-    "last_trigger_utc": "2026-10-07T05:45:42Z"
-  },
-  "panna:forecast_24h:emergency": {
-    "active": true,
-    "last_trigger_utc": "2026-10-07T05:45:42Z"
-  },
-  "panna:forecast_24h:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-10-07T03:45:45Z"
-  },
   "ruspino:forecast_24h:alarm": {
     "active": false
   },
@@ -29,5 +17,17 @@
   },
   "ruspino:forecast_24h:warning": {
     "active": false
+  },
+  "scarperia:forecast_24h:alarm": {
+    "active": true,
+    "last_trigger_utc": "2026-10-07T05:45:42Z"
+  },
+  "scarperia:forecast_24h:emergency": {
+    "active": true,
+    "last_trigger_utc": "2026-10-07T05:45:42Z"
+  },
+  "scarperia:forecast_24h:warning": {
+    "active": true,
+    "last_trigger_utc": "2026-10-07T03:45:45Z"
   }
 }

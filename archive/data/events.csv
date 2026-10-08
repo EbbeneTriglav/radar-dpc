@@ -1,36 +1,36 @@
 event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_max,product,observation_timestamp_utc,forecast_max_6h_mm,notified_email,notified_telegram,note
-2026-05-19T20:57:30Z,panna,forecast_warning,5,,,SRT1,,8.10,true,true,forecast 1h prossime 6h
-2026-05-26T18:08:09Z,panna,forecast_warning,5,,,SRT1,,8.80,true,true,forecast 1h prossime 6h
-2026-05-26T20:25:14Z,panna,forecast_warning,10,,,CUM3,,16.06,true,true,forecast 3h prossime 6h
-2026-05-26T20:25:14Z,panna,forecast_alarm,15,,,CUM3,,16.06,true,true,forecast 3h prossime 6h
-2026-05-26T22:00:42Z,panna,forecast_alarm,10,,,SRT1,,13.10,true,true,forecast 1h prossime 6h
+2026-05-19T20:57:30Z,scarperia,forecast_warning,5,,,SRT1,,8.10,true,true,forecast 1h prossime 6h
+2026-05-26T18:08:09Z,scarperia,forecast_warning,5,,,SRT1,,8.80,true,true,forecast 1h prossime 6h
+2026-05-26T20:25:14Z,scarperia,forecast_warning,10,,,CUM3,,16.06,true,true,forecast 3h prossime 6h
+2026-05-26T20:25:14Z,scarperia,forecast_alarm,15,,,CUM3,,16.06,true,true,forecast 3h prossime 6h
+2026-05-26T22:00:42Z,scarperia,forecast_alarm,10,,,SRT1,,13.10,true,true,forecast 1h prossime 6h
 2026-05-27T10:18:51Z,ruspino,forecast_warning,10,,,SRT1,,10.40,true,true,forecast 1h prossime 6h
 2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,2.44,18.51,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=5km
 2026-05-28T17:57:45Z,ruspino,nowcast_alarm,15,0.63,15.43,SRT1,2026-05-28T17:50:00Z,,true,true,nowcast buffer=10km
-2026-05-29T05:07:01Z,panna,nowcast_warning,10,0.49,13.12,SRI,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km moto=SW/3.4kmh prob=7%
-2026-05-29T05:07:01Z,panna,nowcast_warning,8,0.51,10.34,SRT1,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km
+2026-05-29T05:07:01Z,scarperia,nowcast_warning,10,0.49,13.12,SRI,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km moto=SW/3.4kmh prob=7%
+2026-05-29T05:07:01Z,scarperia,nowcast_warning,8,0.51,10.34,SRT1,2026-05-29T05:00:00Z,,true,true,nowcast buffer=10km
 2026-05-31T15:13:07Z,ruspino,nowcast_warning,8,0.47,13.35,SRT1,2026-05-31T15:05:00Z,,true,true,nowcast buffer=10km
 2026-05-31T17:59:53Z,ruspino,nowcast_warning,10,1.07,12.37,SRI,2026-05-31T17:50:00Z,,true,true,nowcast buffer=5km moto=SE/20.1kmh prob=13%
 2026-05-31T17:59:53Z,ruspino,nowcast_alarm,15,1.07,19.59,SRI,2026-05-31T17:50:00Z,,true,true,nowcast buffer=10km moto=E/33.4kmh prob=1%
 2026-05-31T19:22:27Z,ruspino,nowcast_alarm,15,0.64,17.66,SRI,2026-05-31T19:15:00Z,,true,true,nowcast buffer=5km moto=E/3.9kmh prob=28%
-2026-05-31T19:47:57Z,panna,forecast24h_warning,10,6.50,10.50,ensemble_24h,,10.50,true,true,mean=6.5 worst=10.5 metno=15.57
+2026-05-31T19:47:57Z,scarperia,forecast24h_warning,10,6.50,10.50,ensemble_24h,,10.50,true,true,mean=6.5 worst=10.5 metno=15.57
 2026-05-31T21:51:42Z,ruspino,nowcast_emergency,25,3.59,35.70,SRI,2026-05-31T21:45:00Z,,true,true,nowcast buffer=10km moto=E/17.3kmh prob=3%
 2026-05-31T22:51:31Z,ruspino,nowcast_warning,8,4.02,10.26,SRT1,2026-05-31T22:40:00Z,,true,true,nowcast buffer=5km
 2026-05-31T22:51:31Z,ruspino,nowcast_warning,10,1.40,13.27,SRI,2026-05-31T22:40:00Z,,true,true,nowcast buffer=10km moto=NE/31.8kmh prob=4%
-2026-06-02T05:09:18Z,panna,forecast24h_warning,10,11.27,38.99,ensemble_24h,,38.99,true,true,mean=11.3 worst=39.0 metno=6.04
+2026-06-02T05:09:18Z,scarperia,forecast24h_warning,10,11.27,38.99,ensemble_24h,,38.99,true,true,mean=11.3 worst=39.0 metno=6.04
 2026-06-02T07:17:57Z,ruspino,forecast_warning,15,,,CUM3,,21.30,true,true,forecast 3h prossime 6h
 2026-06-02T10:06:33Z,ruspino,nowcast_emergency,25,7.68,25.75,SRI,2026-06-02T09:55:00Z,,true,true,nowcast buffer=5km moto=SE/15.6kmh prob=31%
-2026-06-02T11:03:16Z,panna,forecast24h_alarm,15,15.15,58.33,ensemble_24h,,58.33,true,true,mean=15.2 worst=58.3 metno=10.11
+2026-06-02T11:03:16Z,scarperia,forecast24h_alarm,15,15.15,58.33,ensemble_24h,,58.33,true,true,mean=15.2 worst=58.3 metno=10.11
 2026-06-02T16:03:22Z,cepina,warning,10,14.084,14.730,CUM3,2026-06-02T15:30:00Z,5.90,true,true,
 2026-06-02T19:52:14Z,ruspino,warning,15,29.792,33.313,CUM3,2026-06-02T19:30:00Z,13.60,true,true,
-2026-06-02T21:29:23Z,panna,forecast24h_emergency,20,25.13,97.73,ensemble_24h,,97.73,true,true,mean=25.1 worst=97.7 metno=8.47
-2026-06-03T02:52:38Z,panna,nowcast_emergency,20,6.83,21.72,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=5km
-2026-06-03T02:52:38Z,panna,nowcast_emergency,20,4.42,22.56,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=10km
-2026-06-03T03:00:00Z,panna,storm_on_area,10.0,,62.22,CUM3,2026-06-03T03:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
-2026-06-03T03:05:00Z,panna,storm_cleared,10.0,,62.22,CUM3,2026-06-03T03:05:00Z,,recon,recon,ricostruito
-2026-06-03T05:13:53Z,panna,warning,10,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
-2026-06-03T05:13:53Z,panna,alarm,15,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
-2026-06-03T05:13:53Z,panna,emergency,20,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-02T21:29:23Z,scarperia,forecast24h_emergency,20,25.13,97.73,ensemble_24h,,97.73,true,true,mean=25.1 worst=97.7 metno=8.47
+2026-06-03T02:52:38Z,scarperia,nowcast_emergency,20,6.83,21.72,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=5km
+2026-06-03T02:52:38Z,scarperia,nowcast_emergency,20,4.42,22.56,SRT1,2026-06-03T02:40:00Z,,true,true,nowcast buffer=10km
+2026-06-03T03:00:00Z,scarperia,storm_on_area,10.0,,62.22,CUM3,2026-06-03T03:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-06-03T03:05:00Z,scarperia,storm_cleared,10.0,,62.22,CUM3,2026-06-03T03:05:00Z,,recon,recon,ricostruito
+2026-06-03T05:13:53Z,scarperia,warning,10,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-03T05:13:53Z,scarperia,alarm,15,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
+2026-06-03T05:13:53Z,scarperia,emergency,20,37.764,44.489,CUM3,2026-06-03T04:30:00Z,22.10,true,true,
 2026-06-05T02:34:43Z,cepina,nowcast_emergency,25,2.23,39.94,SRI,2026-06-05T02:25:00Z,,true,true,nowcast buffer=10km moto=NW/7.4kmh prob=2%
 2026-06-05T22:10:05Z,ruspino,nowcast_emergency,20,2.10,20.63,SRT1,2026-06-05T22:00:00Z,,true,true,nowcast buffer=5km
 2026-06-05T22:10:05Z,ruspino,nowcast_emergency,20,1.69,22.78,SRT1,2026-06-05T22:00:00Z,,true,true,nowcast buffer=10km
@@ -71,27 +71,27 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-06-29T10:45:00Z,cepina,storm_cleared,10.0,,10.73,ARPA,2026-06-29T10:45:00Z,,recon,recon,ricostruito
 2026-06-29T14:30:00Z,ruspino,storm_on_area,10.0,,39.18,ARPA,2026-06-29T14:50:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-06-29T14:55:00Z,ruspino,storm_cleared,10.0,,39.18,ARPA,2026-06-29T14:55:00Z,,recon,recon,ricostruito
-2026-06-29T19:44:03Z,panna,nowcast_alarm,15,1.23,19.15,SRI,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km moto=SE/5.1kmh prob=30%
-2026-06-29T19:44:03Z,panna,nowcast_emergency,20,1.25,29.02,SRT1,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km
-2026-06-29T21:17:36Z,panna,nowcast_emergency,25,13.91,51.82,SRI,2026-06-29T21:05:00Z,,true,true,nowcast buffer=5km moto=W/3.8kmh prob=31%
-2026-06-29T21:17:36Z,panna,nowcast_alarm,15,7.28,17.35,SRT1,2026-06-29T21:05:00Z,,true,true,nowcast buffer=5km
-2026-06-29T21:17:36Z,panna,nowcast_emergency,25,4.34,30.87,SRI,2026-06-29T21:05:00Z,,true,true,nowcast buffer=10km moto=SW/5.9kmh prob=2%
-2026-06-29T21:17:36Z,panna,nowcast_alarm,15,3.97,18.42,SRT1,2026-06-29T21:05:00Z,,true,true,nowcast buffer=10km
-2026-06-29T21:17:36Z,panna,storm_on_area,5.0,18.31,39.31,SRI,2026-06-29T21:05:00Z,,true,true,cella su area
-2026-06-29T22:47:23Z,panna,storm_cleared,5.0,0.48,1.38,SRI,2026-06-29T22:40:00Z,,true,true,"cella uscita dopo ~89min, caduti 3.6499998569488525mm"
+2026-06-29T19:44:03Z,scarperia,nowcast_alarm,15,1.23,19.15,SRI,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km moto=SE/5.1kmh prob=30%
+2026-06-29T19:44:03Z,scarperia,nowcast_emergency,20,1.25,29.02,SRT1,2026-06-29T19:35:00Z,,true,true,nowcast buffer=10km
+2026-06-29T21:17:36Z,scarperia,nowcast_emergency,25,13.91,51.82,SRI,2026-06-29T21:05:00Z,,true,true,nowcast buffer=5km moto=W/3.8kmh prob=31%
+2026-06-29T21:17:36Z,scarperia,nowcast_alarm,15,7.28,17.35,SRT1,2026-06-29T21:05:00Z,,true,true,nowcast buffer=5km
+2026-06-29T21:17:36Z,scarperia,nowcast_emergency,25,4.34,30.87,SRI,2026-06-29T21:05:00Z,,true,true,nowcast buffer=10km moto=SW/5.9kmh prob=2%
+2026-06-29T21:17:36Z,scarperia,nowcast_alarm,15,3.97,18.42,SRT1,2026-06-29T21:05:00Z,,true,true,nowcast buffer=10km
+2026-06-29T21:17:36Z,scarperia,storm_on_area,5.0,18.31,39.31,SRI,2026-06-29T21:05:00Z,,true,true,cella su area
+2026-06-29T22:47:23Z,scarperia,storm_cleared,5.0,0.48,1.38,SRI,2026-06-29T22:40:00Z,,true,true,"cella uscita dopo ~89min, caduti 3.6499998569488525mm"
 2026-07-01T11:52:12Z,ruspino,storm_on_area,10.0,26.39,63.43,SRI,2026-07-01T11:45:00Z,,true,true,cella su area dwell~87min rain~38mm
 2026-07-01T13:22:28Z,cepina,warning,10,16.865,21.010,CUM3,2026-07-01T13:00:00Z,14.40,true,true,
 2026-07-01T13:22:28Z,cepina,alarm,15,16.865,21.010,CUM3,2026-07-01T13:00:00Z,14.40,true,true,
 2026-07-01T14:10:44Z,ruspino,storm_cleared,10.0,0.00,0.00,SRI,2026-07-01T14:00:00Z,,true,true,"cella uscita dopo ~138min, caduti 0.0mm"
 2026-07-01T14:10:44Z,cepina,storm_on_area,5.0,1.81,5.70,SRI,2026-07-01T14:00:00Z,,true,true,cella su area
 2026-07-01T19:39:57Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-07-01T19:30:00Z,,true,true,"cella uscita dopo ~329min, caduti 0.0mm"
-2026-07-02T06:31:42Z,panna,nowcast_warning,10,2.18,10.68,SRI,2026-07-02T06:25:00Z,,true,true,nowcast buffer=5km moto=W/22.9kmh prob=49%
-2026-07-02T06:31:42Z,panna,storm_on_area,5.0,2.00,5.44,SRI,2026-07-02T06:25:00Z,,true,true,cella su area
-2026-07-02T09:53:10Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-07-02T09:45:00Z,,true,true,"cella uscita dopo ~201min, caduti 0.0mm"
-2026-07-10T16:15:07Z,panna,storm_on_area,5.0,14.37,55.40,SRI,2026-07-10T16:05:00Z,,true,true,cella su area dwell~138min rain~33mm
+2026-07-02T06:31:42Z,scarperia,nowcast_warning,10,2.18,10.68,SRI,2026-07-02T06:25:00Z,,true,true,nowcast buffer=5km moto=W/22.9kmh prob=49%
+2026-07-02T06:31:42Z,scarperia,storm_on_area,5.0,2.00,5.44,SRI,2026-07-02T06:25:00Z,,true,true,cella su area
+2026-07-02T09:53:10Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-07-02T09:45:00Z,,true,true,"cella uscita dopo ~201min, caduti 0.0mm"
+2026-07-10T16:15:07Z,scarperia,storm_on_area,5.0,14.37,55.40,SRI,2026-07-10T16:05:00Z,,true,true,cella su area dwell~138min rain~33mm
 2026-07-10T16:45:00Z,cepina,storm_on_area,10.0,,12.39,ARPA,2026-07-10T16:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-07-10T16:50:00Z,cepina,storm_cleared,10.0,,12.39,ARPA,2026-07-10T16:50:00Z,,recon,recon,ricostruito
-2026-07-10T18:17:15Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-07-10T18:05:00Z,,true,true,"cella uscita dopo ~122min, caduti 0.1850000023841858mm"
+2026-07-10T18:17:15Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-07-10T18:05:00Z,,true,true,"cella uscita dopo ~122min, caduti 0.1850000023841858mm"
 2026-07-10T20:14:46Z,ruspino,storm_on_area,10.0,5.04,23.20,SRI,2026-07-10T20:05:00Z,,true,true,cella su area dwell~100min rain~8mm
 2026-07-10T22:51:58Z,ruspino,storm_cleared,10.0,0.12,0.32,SRI,2026-07-10T22:40:00Z,,true,true,"cella uscita dopo ~157min, caduti 6.170000076293945mm"
 2026-07-10T22:51:58Z,cepina,storm_on_area,5.0,1.44,7.73,SRI,2026-07-10T22:40:00Z,,true,true,cella su area
@@ -120,7 +120,7 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-20T20:09:48Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-07-20T20:00:00Z,,true,true,"cella uscita dopo ~100min, caduti 0.0mm"
 2026-07-21T07:45:00Z,ruspino,storm_on_area,10.0,,27.34,ARPA,2026-07-21T07:45:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-07-21T08:00:00Z,ruspino,storm_cleared,10.0,,27.34,ARPA,2026-07-21T08:00:00Z,,recon,recon,ricostruito
-2026-07-21T18:30:38Z,panna,nowcast_warning,8,0.69,12.74,SRT1,2026-07-21T18:20:00Z,,true,true,nowcast buffer=10km
+2026-07-21T18:30:38Z,scarperia,nowcast_warning,8,0.69,12.74,SRT1,2026-07-21T18:20:00Z,,true,true,nowcast buffer=10km
 2026-07-25T22:51:21Z,cepina,storm_on_area,5.0,1.66,5.87,SRI,2026-07-25T22:40:00Z,,true,true,cella su area
 2026-07-25T22:51:21Z,cepina,storm_on_area,5.0,1.80,6.09,SRI,2026-07-25T22:35:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-07-25T22:51:21Z,cepina,storm_on_area,5.0,1.44,5.03,SRI,2026-07-25T22:30:00Z,,true,true,catch-up: cella rilevata a posteriori +21min
@@ -130,36 +130,36 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-07-25T23:12:57Z,cepina,storm_on_area,5.0,3.59,12.85,SRI,2026-07-25T23:00:00Z,,true,true,catch-up: cella rilevata a posteriori +12min
 2026-07-25T23:31:27Z,cepina,storm_cleared,5.0,0.57,1.92,SRI,2026-07-25T23:20:00Z,,true,true,"cella uscita dopo ~40min, caduti 4.509999752044678mm"
 2026-07-25T23:31:27Z,cepina,storm_on_area,5.0,1.80,7.24,SRI,2026-07-25T23:05:00Z,,true,true,catch-up: cella rilevata a posteriori +26min
-2026-07-26T03:45:32Z,panna,nowcast_warning,10,0.76,12.34,SRI,2026-07-26T03:35:00Z,,true,true,nowcast buffer=10km moto=N/26.8kmh prob=5%
-2026-07-26T03:45:32Z,panna,storm_on_area,5.0,3.53,13.72,SRI,2026-07-26T03:35:00Z,,true,true,cella su area dwell~143min
-2026-07-26T03:45:32Z,panna,storm_on_area,5.0,5.35,24.18,SRI,2026-07-26T03:30:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-07-26T03:45:32Z,panna,storm_on_area,5.0,4.58,27.77,SRI,2026-07-26T03:25:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T04:05:30Z,panna,nowcast_alarm,15,1.57,15.73,SRI,2026-07-26T03:55:00Z,,true,true,nowcast buffer=5km moto=SW/40.5kmh prob=4%
-2026-07-26T04:05:30Z,panna,nowcast_warning,8,1.91,8.35,SRT1,2026-07-26T03:55:00Z,,true,true,nowcast buffer=5km
-2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.26,8.79,SRI,2026-07-26T03:45:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.26,8.46,SRI,2026-07-26T03:40:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-07-26T04:05:30Z,panna,storm_on_area,5.0,3.53,13.72,SRI,2026-07-26T03:35:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
-2026-07-26T04:25:25Z,panna,storm_on_area,5.0,3.05,8.05,SRI,2026-07-26T04:10:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-07-26T04:25:25Z,panna,storm_on_area,5.0,3.42,10.73,SRI,2026-07-26T04:05:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T04:25:25Z,panna,storm_on_area,5.0,4.42,15.74,SRI,2026-07-26T04:00:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-07-26T04:39:37Z,panna,storm_on_area,5.0,6.11,19.85,SRI,2026-07-26T04:25:00Z,,true,true,catch-up: cella rilevata a posteriori +14min
-2026-07-26T04:39:37Z,panna,storm_on_area,5.0,2.87,9.84,SRI,2026-07-26T04:20:00Z,,true,true,catch-up: cella rilevata a posteriori +19min
-2026-07-26T04:39:37Z,panna,storm_on_area,5.0,4.40,14.29,SRI,2026-07-26T04:15:00Z,,true,true,catch-up: cella rilevata a posteriori +24min
-2026-07-26T05:00:33Z,panna,storm_on_area,5.0,4.26,14.23,SRI,2026-07-26T04:45:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-07-26T05:00:33Z,panna,storm_on_area,5.0,3.49,9.93,SRI,2026-07-26T04:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T05:00:33Z,panna,storm_on_area,5.0,5.03,15.23,SRI,2026-07-26T04:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-07-26T05:00:33Z,panna,storm_on_area,5.0,3.78,11.06,SRI,2026-07-26T04:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
-2026-07-26T05:20:27Z,panna,warning,10,16.872,19.900,CUM3,2026-07-26T05:00:00Z,1.40,true,true,
-2026-07-26T05:20:27Z,panna,alarm,15,16.872,19.900,CUM3,2026-07-26T05:00:00Z,1.40,true,true,
-2026-07-26T05:40:32Z,panna,storm_on_area,5.0,3.84,10.14,SRI,2026-07-26T05:25:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-07-26T05:40:32Z,panna,storm_on_area,5.0,4.05,9.93,SRI,2026-07-26T05:20:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T05:40:32Z,panna,storm_on_area,5.0,3.58,8.04,SRI,2026-07-26T05:15:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-07-26T05:40:32Z,panna,storm_on_area,5.0,5.20,11.63,SRI,2026-07-26T05:10:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
-2026-07-26T05:40:32Z,panna,storm_on_area,5.0,4.33,11.47,SRI,2026-07-26T05:05:00Z,,true,true,catch-up: cella rilevata a posteriori +35min
-2026-07-26T06:00:36Z,panna,storm_cleared,5.0,0.59,1.38,SRI,2026-07-26T05:50:00Z,,true,true,"cella uscita dopo ~135min, caduti 9.34000015258789mm"
-2026-07-26T06:00:36Z,panna,storm_on_area,5.0,2.74,7.34,SRI,2026-07-26T05:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-07-26T06:00:36Z,panna,storm_on_area,5.0,3.05,7.17,SRI,2026-07-26T05:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-07-26T06:00:36Z,panna,storm_on_area,5.0,3.52,9.69,SRI,2026-07-26T05:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T03:45:32Z,scarperia,nowcast_warning,10,0.76,12.34,SRI,2026-07-26T03:35:00Z,,true,true,nowcast buffer=10km moto=N/26.8kmh prob=5%
+2026-07-26T03:45:32Z,scarperia,storm_on_area,5.0,3.53,13.72,SRI,2026-07-26T03:35:00Z,,true,true,cella su area dwell~143min
+2026-07-26T03:45:32Z,scarperia,storm_on_area,5.0,5.35,24.18,SRI,2026-07-26T03:30:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-07-26T03:45:32Z,scarperia,storm_on_area,5.0,4.58,27.77,SRI,2026-07-26T03:25:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T04:05:30Z,scarperia,nowcast_alarm,15,1.57,15.73,SRI,2026-07-26T03:55:00Z,,true,true,nowcast buffer=5km moto=SW/40.5kmh prob=4%
+2026-07-26T04:05:30Z,scarperia,nowcast_warning,8,1.91,8.35,SRT1,2026-07-26T03:55:00Z,,true,true,nowcast buffer=5km
+2026-07-26T04:05:30Z,scarperia,storm_on_area,5.0,3.26,8.79,SRI,2026-07-26T03:45:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T04:05:30Z,scarperia,storm_on_area,5.0,3.26,8.46,SRI,2026-07-26T03:40:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-07-26T04:05:30Z,scarperia,storm_on_area,5.0,3.53,13.72,SRI,2026-07-26T03:35:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T04:25:25Z,scarperia,storm_on_area,5.0,3.05,8.05,SRI,2026-07-26T04:10:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-07-26T04:25:25Z,scarperia,storm_on_area,5.0,3.42,10.73,SRI,2026-07-26T04:05:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T04:25:25Z,scarperia,storm_on_area,5.0,4.42,15.74,SRI,2026-07-26T04:00:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-07-26T04:39:37Z,scarperia,storm_on_area,5.0,6.11,19.85,SRI,2026-07-26T04:25:00Z,,true,true,catch-up: cella rilevata a posteriori +14min
+2026-07-26T04:39:37Z,scarperia,storm_on_area,5.0,2.87,9.84,SRI,2026-07-26T04:20:00Z,,true,true,catch-up: cella rilevata a posteriori +19min
+2026-07-26T04:39:37Z,scarperia,storm_on_area,5.0,4.40,14.29,SRI,2026-07-26T04:15:00Z,,true,true,catch-up: cella rilevata a posteriori +24min
+2026-07-26T05:00:33Z,scarperia,storm_on_area,5.0,4.26,14.23,SRI,2026-07-26T04:45:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-07-26T05:00:33Z,scarperia,storm_on_area,5.0,3.49,9.93,SRI,2026-07-26T04:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T05:00:33Z,scarperia,storm_on_area,5.0,5.03,15.23,SRI,2026-07-26T04:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-07-26T05:00:33Z,scarperia,storm_on_area,5.0,3.78,11.06,SRI,2026-07-26T04:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T05:20:27Z,scarperia,warning,10,16.872,19.900,CUM3,2026-07-26T05:00:00Z,1.40,true,true,
+2026-07-26T05:20:27Z,scarperia,alarm,15,16.872,19.900,CUM3,2026-07-26T05:00:00Z,1.40,true,true,
+2026-07-26T05:40:32Z,scarperia,storm_on_area,5.0,3.84,10.14,SRI,2026-07-26T05:25:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-07-26T05:40:32Z,scarperia,storm_on_area,5.0,4.05,9.93,SRI,2026-07-26T05:20:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T05:40:32Z,scarperia,storm_on_area,5.0,3.58,8.04,SRI,2026-07-26T05:15:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-07-26T05:40:32Z,scarperia,storm_on_area,5.0,5.20,11.63,SRI,2026-07-26T05:10:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
+2026-07-26T05:40:32Z,scarperia,storm_on_area,5.0,4.33,11.47,SRI,2026-07-26T05:05:00Z,,true,true,catch-up: cella rilevata a posteriori +35min
+2026-07-26T06:00:36Z,scarperia,storm_cleared,5.0,0.59,1.38,SRI,2026-07-26T05:50:00Z,,true,true,"cella uscita dopo ~135min, caduti 9.34000015258789mm"
+2026-07-26T06:00:36Z,scarperia,storm_on_area,5.0,2.74,7.34,SRI,2026-07-26T05:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-07-26T06:00:36Z,scarperia,storm_on_area,5.0,3.05,7.17,SRI,2026-07-26T05:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-07-26T06:00:36Z,scarperia,storm_on_area,5.0,3.52,9.69,SRI,2026-07-26T05:30:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
 2026-07-26T14:05:00Z,ruspino,storm_on_area,10.0,,25.45,ARPA,2026-07-26T14:10:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
 2026-07-26T14:15:00Z,ruspino,storm_cleared,10.0,,25.45,ARPA,2026-07-26T14:15:00Z,,recon,recon,ricostruito
 2026-07-26T14:18:46Z,ruspino,storm_on_area,10.0,3.36,25.45,SRI,2026-07-26T14:10:00Z,,true,true,cella su area
@@ -189,10 +189,10 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-07T09:13:45Z,ruspino,storm_on_area,10.0,5.65,32.67,SRI,2026-08-07T09:05:00Z,,true,true,cella su area
 2026-08-07T09:56:03Z,ruspino,storm_cleared,10.0,0.68,3.39,SRI,2026-08-07T09:45:00Z,,true,true,"cella uscita dopo ~42min, caduti 20.125mm"
 2026-08-07T10:30:53Z,ruspino,warning,15,18.746,26.000,CUM3,2026-08-07T10:00:00Z,15.20,true,true,
-2026-08-08T13:30:36Z,panna,storm_on_area,5.0,1.06,11.19,SRI,2026-08-08T13:05:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
-2026-08-08T13:50:37Z,panna,storm_on_area,5.0,2.51,8.60,SRI,2026-08-08T13:40:00Z,,true,true,cella su area
-2026-08-08T14:25:34Z,panna,nowcast_emergency,20,4.49,20.14,SRT1,2026-08-08T14:15:00Z,,true,true,nowcast buffer=5km
-2026-08-08T14:45:38Z,panna,storm_cleared,5.0,0.45,1.04,SRI,2026-08-08T14:35:00Z,,true,true,"cella uscita dopo ~55min, caduti 7.014999866485596mm"
+2026-08-08T13:30:36Z,scarperia,storm_on_area,5.0,1.06,11.19,SRI,2026-08-08T13:05:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-08-08T13:50:37Z,scarperia,storm_on_area,5.0,2.51,8.60,SRI,2026-08-08T13:40:00Z,,true,true,cella su area
+2026-08-08T14:25:34Z,scarperia,nowcast_emergency,20,4.49,20.14,SRT1,2026-08-08T14:15:00Z,,true,true,nowcast buffer=5km
+2026-08-08T14:45:38Z,scarperia,storm_cleared,5.0,0.45,1.04,SRI,2026-08-08T14:35:00Z,,true,true,"cella uscita dopo ~55min, caduti 7.014999866485596mm"
 2026-08-08T19:08:32Z,cepina,storm_on_area,5.0,0.69,6.01,SRI,2026-08-08T18:55:00Z,,true,true,catch-up: cella rilevata a posteriori +13min
 2026-08-09T18:05:40Z,cepina,storm_on_area,5.0,3.56,11.34,SRI,2026-08-09T17:55:00Z,,true,true,cella su area dwell~94min
 2026-08-09T19:57:56Z,cepina,storm_cleared,5.0,0.00,0.18,SRI,2026-08-09T19:50:00Z,,true,true,"cella uscita dopo ~112min, caduti 4.880000114440918mm"
@@ -209,16 +209,16 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-15T18:00:06Z,cepina,storm_on_area,5.0,1.47,6.64,SRI,2026-08-15T17:50:00Z,,true,true,cella su area dwell~119min
 2026-08-15T18:20:53Z,cepina,storm_cleared,5.0,0.00,0.15,SRI,2026-08-15T18:10:00Z,,true,true,"cella uscita dopo ~20min, caduti 3.2849998474121094mm"
 2026-08-15T18:20:53Z,cepina,storm_on_area,5.0,1.47,6.64,SRI,2026-08-15T17:50:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
-2026-08-16T14:21:01Z,panna,storm_on_area,5.0,0.73,7.25,SRI,2026-08-16T14:10:00Z,,true,true,cella su area dwell~111min
-2026-08-16T14:35:47Z,panna,storm_cleared,5.0,0.05,0.71,SRI,2026-08-16T14:25:00Z,,true,true,"cella uscita dopo ~14min, caduti 1.7899999618530273mm"
-2026-08-16T14:35:47Z,panna,storm_on_area,5.0,0.73,7.25,SRI,2026-08-16T14:10:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-08-16T14:21:01Z,scarperia,storm_on_area,5.0,0.73,7.25,SRI,2026-08-16T14:10:00Z,,true,true,cella su area dwell~111min
+2026-08-16T14:35:47Z,scarperia,storm_cleared,5.0,0.05,0.71,SRI,2026-08-16T14:25:00Z,,true,true,"cella uscita dopo ~14min, caduti 1.7899999618530273mm"
+2026-08-16T14:35:47Z,scarperia,storm_on_area,5.0,0.73,7.25,SRI,2026-08-16T14:10:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
 2026-08-16T14:56:01Z,ruspino,storm_on_area,10.0,8.46,33.93,SRI,2026-08-16T14:45:00Z,,true,true,cella su area dwell~87min
 2026-08-16T15:33:24Z,ruspino,storm_cleared,10.0,0.00,0.09,SRI,2026-08-16T15:25:00Z,,true,true,"cella uscita dopo ~37min, caduti 9.72499942779541mm"
 2026-08-16T19:55:55Z,cepina,warning,10,10.062,11.885,CUM3,2026-08-16T19:30:00Z,5.20,true,true,
 2026-08-16T20:55:57Z,ruspino,storm_on_area,10.0,6.46,14.15,SRI,2026-08-16T20:45:00Z,,true,true,cella su area
 2026-08-16T22:20:52Z,ruspino,storm_cleared,10.0,2.12,4.51,SRI,2026-08-16T22:10:00Z,,true,true,"cella uscita dopo ~84min, caduti 6.019999980926514mm"
-2026-08-17T11:06:00Z,panna,storm_on_area,5.0,3.61,9.33,SRI,2026-08-17T10:55:00Z,,true,true,cella su area dwell~93min
-2026-08-17T11:31:11Z,panna,storm_cleared,5.0,0.05,0.64,SRI,2026-08-17T11:20:00Z,,true,true,"cella uscita dopo ~25min, caduti 2.424999952316284mm"
+2026-08-17T11:06:00Z,scarperia,storm_on_area,5.0,3.61,9.33,SRI,2026-08-17T10:55:00Z,,true,true,cella su area dwell~93min
+2026-08-17T11:31:11Z,scarperia,storm_cleared,5.0,0.05,0.64,SRI,2026-08-17T11:20:00Z,,true,true,"cella uscita dopo ~25min, caduti 2.424999952316284mm"
 2026-08-20T01:20:55Z,ruspino,storm_on_area,10.0,7.28,14.43,SRI,2026-08-20T01:10:00Z,,true,true,cella su area
 2026-08-20T01:48:44Z,ruspino,storm_cleared,10.0,0.00,0.00,SRI,2026-08-20T01:40:00Z,,true,true,"cella uscita dopo ~27min, caduti 4.105000019073486mm"
 2026-08-20T02:11:02Z,ruspino,storm_on_area,10.0,1.75,10.27,SRI,2026-08-20T02:00:00Z,,true,true,cella su area dwell~60min
@@ -251,18 +251,18 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-20T18:30:49Z,ruspino,warning,15,25.643,28.983,CUM3,2026-08-20T18:00:00Z,16.00,true,true,
 2026-08-20T18:35:55Z,ruspino,storm_cleared,10.0,1.33,3.25,SRI,2026-08-20T18:25:00Z,,true,true,"cella uscita dopo ~99min, caduti 28.404998779296875mm"
 2026-08-20T18:56:00Z,cepina,storm_cleared,5.0,0.69,2.03,SRI,2026-08-20T18:45:00Z,,true,true,"cella uscita dopo ~139min, caduti 4.164999961853027mm"
-2026-08-20T19:30:57Z,panna,storm_on_area,5.0,17.48,40.45,SRI,2026-08-20T19:20:00Z,,true,true,cella su area
-2026-08-20T20:15:57Z,panna,storm_cleared,5.0,0.94,2.28,SRI,2026-08-20T20:05:00Z,,true,true,"cella uscita dopo ~45min, caduti 14.039999961853027mm"
-2026-08-20T20:31:05Z,panna,warning,10,15.057,18.500,CUM3,2026-08-20T20:00:00Z,2.70,true,true,rilevamento tardivo catch-up +31min
-2026-08-20T20:31:05Z,panna,alarm,15,15.057,18.500,CUM3,2026-08-20T20:00:00Z,2.70,true,true,rilevamento tardivo catch-up +31min
-2026-08-20T21:13:03Z,panna,storm_on_area,5.0,2.48,7.28,SRI,2026-08-20T21:00:00Z,,true,true,catch-up: cella rilevata a posteriori +13min
-2026-08-20T21:13:03Z,panna,storm_on_area,5.0,1.83,5.96,SRI,2026-08-20T20:55:00Z,,true,true,catch-up: cella rilevata a posteriori +18min
+2026-08-20T19:30:57Z,scarperia,storm_on_area,5.0,17.48,40.45,SRI,2026-08-20T19:20:00Z,,true,true,cella su area
+2026-08-20T20:15:57Z,scarperia,storm_cleared,5.0,0.94,2.28,SRI,2026-08-20T20:05:00Z,,true,true,"cella uscita dopo ~45min, caduti 14.039999961853027mm"
+2026-08-20T20:31:05Z,scarperia,warning,10,15.057,18.500,CUM3,2026-08-20T20:00:00Z,2.70,true,true,rilevamento tardivo catch-up +31min
+2026-08-20T20:31:05Z,scarperia,alarm,15,15.057,18.500,CUM3,2026-08-20T20:00:00Z,2.70,true,true,rilevamento tardivo catch-up +31min
+2026-08-20T21:13:03Z,scarperia,storm_on_area,5.0,2.48,7.28,SRI,2026-08-20T21:00:00Z,,true,true,catch-up: cella rilevata a posteriori +13min
+2026-08-20T21:13:03Z,scarperia,storm_on_area,5.0,1.83,5.96,SRI,2026-08-20T20:55:00Z,,true,true,catch-up: cella rilevata a posteriori +18min
 2026-08-21T07:00:53Z,ruspino,storm_on_area,10.0,9.06,20.93,SRI,2026-08-21T06:50:00Z,,true,true,cella su area
-2026-08-21T07:00:53Z,panna,storm_on_area,5.0,3.08,8.58,SRI,2026-08-21T06:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
-2026-08-21T07:00:53Z,panna,storm_on_area,5.0,2.51,9.74,SRI,2026-08-21T06:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
+2026-08-21T07:00:53Z,scarperia,storm_on_area,5.0,3.08,8.58,SRI,2026-08-21T06:40:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-08-21T07:00:53Z,scarperia,storm_on_area,5.0,2.51,9.74,SRI,2026-08-21T06:35:00Z,,true,true,catch-up: cella rilevata a posteriori +25min
 2026-08-21T07:21:03Z,cepina,storm_on_area,5.0,1.95,5.57,SRI,2026-08-21T07:10:00Z,,true,true,cella su area
-2026-08-21T07:45:58Z,panna,storm_on_area,5.0,3.23,7.70,SRI,2026-08-21T07:35:00Z,,true,true,cella su area
-2026-08-21T08:25:51Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T08:15:00Z,,true,true,"cella uscita dopo ~39min, caduti 6.464999675750732mm"
+2026-08-21T07:45:58Z,scarperia,storm_on_area,5.0,3.23,7.70,SRI,2026-08-21T07:35:00Z,,true,true,cella su area
+2026-08-21T08:25:51Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T08:15:00Z,,true,true,"cella uscita dopo ~39min, caduti 6.464999675750732mm"
 2026-08-21T08:31:06Z,cepina,forecast_warning,5,,,SRT1,,9.30,true,true,forecast 1h prossime 6h
 2026-08-21T08:31:06Z,cepina,forecast_warning,10,,,CUM3,,23.10,true,true,forecast 3h prossime 6h
 2026-08-21T09:15:57Z,cepina,storm_cleared,5.0,0.80,2.40,SRI,2026-08-21T09:05:00Z,,true,true,"cella uscita dopo ~114min, caduti 3.634999990463257mm"
@@ -273,33 +273,33 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-21T10:43:58Z,cepina,storm_on_area,5.0,1.83,9.38,SRI,2026-08-21T10:35:00Z,,true,true,cella su area
 2026-08-21T11:06:07Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T10:55:00Z,,true,true,"cella uscita dopo ~22min, caduti 3.8499999046325684mm"
 2026-08-21T11:06:07Z,cepina,storm_on_area,5.0,1.83,9.38,SRI,2026-08-21T10:35:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
-2026-08-21T11:30:56Z,panna,storm_on_area,5.0,21.91,50.21,SRI,2026-08-21T11:20:00Z,,true,true,cella su area dwell~70min
-2026-08-21T12:30:52Z,panna,warning,10,17.954,26.286,CUM3,2026-08-21T12:00:00Z,0.90,true,true,
-2026-08-21T12:30:52Z,panna,alarm,15,17.954,26.286,CUM3,2026-08-21T12:00:00Z,0.90,true,true,
-2026-08-21T12:35:58Z,panna,storm_cleared,5.0,0.30,0.86,SRI,2026-08-21T12:25:00Z,,true,true,"cella uscita dopo ~65min, caduti 15.674999237060547mm"
-2026-08-21T12:45:58Z,panna,emergency,20,20.749,29.758,CUM3,2026-08-21T12:30:00Z,0.90,true,true,
+2026-08-21T11:30:56Z,scarperia,storm_on_area,5.0,21.91,50.21,SRI,2026-08-21T11:20:00Z,,true,true,cella su area dwell~70min
+2026-08-21T12:30:52Z,scarperia,warning,10,17.954,26.286,CUM3,2026-08-21T12:00:00Z,0.90,true,true,
+2026-08-21T12:30:52Z,scarperia,alarm,15,17.954,26.286,CUM3,2026-08-21T12:00:00Z,0.90,true,true,
+2026-08-21T12:35:58Z,scarperia,storm_cleared,5.0,0.30,0.86,SRI,2026-08-21T12:25:00Z,,true,true,"cella uscita dopo ~65min, caduti 15.674999237060547mm"
+2026-08-21T12:45:58Z,scarperia,emergency,20,20.749,29.758,CUM3,2026-08-21T12:30:00Z,0.90,true,true,
 2026-08-21T13:57:28Z,ruspino,storm_on_area,10.0,6.02,13.45,SRI,2026-08-21T13:50:00Z,,true,true,cella su area
 2026-08-21T14:36:04Z,ruspino,storm_cleared,10.0,1.10,2.40,SRI,2026-08-21T14:25:00Z,,true,true,"cella uscita dopo ~38min, caduti 9.4399995803833mm"
 2026-08-21T14:36:04Z,cepina,storm_on_area,5.0,2.84,13.02,SRI,2026-08-21T14:25:00Z,,true,true,cella su area
-2026-08-21T14:50:30Z,panna,storm_on_area,5.0,2.53,7.55,SRI,2026-08-21T14:40:00Z,,true,true,cella su area dwell~101min
+2026-08-21T14:50:30Z,scarperia,storm_on_area,5.0,2.53,7.55,SRI,2026-08-21T14:40:00Z,,true,true,cella su area dwell~101min
 2026-08-21T15:10:57Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T15:00:00Z,,true,true,"cella uscita dopo ~34min, caduti 9.029999732971191mm"
-2026-08-21T15:30:57Z,panna,storm_cleared,5.0,0.61,1.58,SRI,2026-08-21T15:20:00Z,,true,true,"cella uscita dopo ~40min, caduti 5.190000057220459mm"
-2026-08-21T16:05:51Z,panna,storm_on_area,5.0,1.87,6.78,SRI,2026-08-21T15:55:00Z,,true,true,cella su area dwell~79min
-2026-08-21T16:55:58Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T16:45:00Z,,true,true,"cella uscita dopo ~50min, caduti 2.3499999046325684mm"
+2026-08-21T15:30:57Z,scarperia,storm_cleared,5.0,0.61,1.58,SRI,2026-08-21T15:20:00Z,,true,true,"cella uscita dopo ~40min, caduti 5.190000057220459mm"
+2026-08-21T16:05:51Z,scarperia,storm_on_area,5.0,1.87,6.78,SRI,2026-08-21T15:55:00Z,,true,true,cella su area dwell~79min
+2026-08-21T16:55:58Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-08-21T16:45:00Z,,true,true,"cella uscita dopo ~50min, caduti 2.3499999046325684mm"
 2026-08-24T22:36:06Z,cepina,storm_on_area,5.0,1.54,5.48,SRI,2026-08-24T22:20:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-08-24T22:40:54Z,ruspino,storm_on_area,10.0,4.08,15.69,SRI,2026-08-24T22:30:00Z,,true,true,cella su area
 2026-08-24T23:01:04Z,ruspino,storm_cleared,10.0,0.00,0.08,SRI,2026-08-24T22:50:00Z,,true,true,"cella uscita dopo ~20min, caduti 2.190000057220459mm"
 2026-08-24T23:01:04Z,ruspino,storm_on_area,10.0,4.08,15.69,SRI,2026-08-24T22:30:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
-2026-08-24T23:47:18Z,panna,storm_on_area,5.0,1.64,10.69,SRI,2026-08-24T23:35:00Z,,true,true,cella su area
+2026-08-24T23:47:18Z,scarperia,storm_on_area,5.0,1.64,10.69,SRI,2026-08-24T23:35:00Z,,true,true,cella su area
 2026-08-25T00:06:12Z,cepina,storm_on_area,5.0,1.97,6.62,SRI,2026-08-24T23:50:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-08-25T01:06:13Z,ruspino,storm_on_area,10.0,6.27,21.09,SRI,2026-08-25T00:55:00Z,,true,true,cella su area
 2026-08-25T02:02:53Z,ruspino,storm_cleared,10.0,0.78,2.73,SRI,2026-08-25T01:55:00Z,,true,true,"cella uscita dopo ~56min, caduti 11.119999885559082mm"
-2026-08-25T02:21:07Z,panna,storm_cleared,5.0,0.66,1.46,SRI,2026-08-25T02:10:00Z,,true,true,"cella uscita dopo ~153min, caduti 15.354999542236328mm"
+2026-08-25T02:21:07Z,scarperia,storm_cleared,5.0,0.66,1.46,SRI,2026-08-25T02:10:00Z,,true,true,"cella uscita dopo ~153min, caduti 15.354999542236328mm"
 2026-08-25T04:31:04Z,cepina,storm_on_area,5.0,1.47,5.01,SRI,2026-08-25T04:15:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
-2026-08-25T06:41:05Z,panna,storm_on_area,5.0,1.12,5.55,SRI,2026-08-25T06:15:00Z,,true,true,catch-up: cella rilevata a posteriori +26min
-2026-08-25T07:01:14Z,panna,storm_on_area,5.0,3.01,7.46,SRI,2026-08-25T06:50:00Z,,true,true,cella su area dwell~101min
-2026-08-25T07:21:07Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-08-25T07:10:00Z,,true,true,"cella uscita dopo ~19min, caduti 2.804999828338623mm"
-2026-08-25T07:21:07Z,panna,storm_on_area,5.0,3.01,7.46,SRI,2026-08-25T06:50:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
+2026-08-25T06:41:05Z,scarperia,storm_on_area,5.0,1.12,5.55,SRI,2026-08-25T06:15:00Z,,true,true,catch-up: cella rilevata a posteriori +26min
+2026-08-25T07:01:14Z,scarperia,storm_on_area,5.0,3.01,7.46,SRI,2026-08-25T06:50:00Z,,true,true,cella su area dwell~101min
+2026-08-25T07:21:07Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-08-25T07:10:00Z,,true,true,"cella uscita dopo ~19min, caduti 2.804999828338623mm"
+2026-08-25T07:21:07Z,scarperia,storm_on_area,5.0,3.01,7.46,SRI,2026-08-25T06:50:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
 2026-08-25T07:46:04Z,ruspino,storm_on_area,10.0,4.27,12.53,SRI,2026-08-25T07:30:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-08-25T08:06:07Z,ruspino,storm_on_area,10.0,8.13,15.63,SRI,2026-08-25T07:55:00Z,,true,true,cella su area
 2026-08-25T09:26:03Z,ruspino,warning,15,24.515,25.600,CUM3,2026-08-25T09:00:00Z,21.60,true,true,
@@ -326,8 +326,8 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-08-28T22:10:48Z,cepina,storm_on_area,5.0,2.70,22.81,SRI,2026-08-28T22:00:00Z,,true,true,cella su area dwell~26min
 2026-08-28T22:30:59Z,cepina,storm_cleared,5.0,0.00,0.00,SRI,2026-08-28T22:20:00Z,,true,true,"cella uscita dopo ~20min, caduti 3.169999837875366mm"
 2026-08-28T22:30:59Z,cepina,storm_on_area,5.0,2.70,22.81,SRI,2026-08-28T22:00:00Z,,true,true,catch-up: cella rilevata a posteriori +31min
-2026-09-02T14:36:02Z,panna,storm_on_area,5.0,2.53,10.27,SRI,2026-09-02T14:25:00Z,,true,true,cella su area
-2026-09-02T15:41:06Z,panna,storm_cleared,5.0,0.19,1.84,SRI,2026-09-02T15:30:00Z,,true,true,"cella uscita dopo ~65min, caduti 10.079999923706055mm"
+2026-09-02T14:36:02Z,scarperia,storm_on_area,5.0,2.53,10.27,SRI,2026-09-02T14:25:00Z,,true,true,cella su area
+2026-09-02T15:41:06Z,scarperia,storm_cleared,5.0,0.19,1.84,SRI,2026-09-02T15:30:00Z,,true,true,"cella uscita dopo ~65min, caduti 10.079999923706055mm"
 2026-09-07T14:45:47Z,cepina,storm_on_area,5.0,1.57,9.11,SRI,2026-09-07T14:30:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
 2026-09-07T14:45:47Z,cepina,storm_on_area,5.0,1.99,6.03,SRI,2026-09-07T14:25:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-09-08T21:48:58Z,cepina,storm_on_area,5.0,2.06,7.30,SRI,2026-09-08T21:40:00Z,,true,true,cella su area
@@ -341,23 +341,23 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-09T05:26:30Z,cepina,warning,10,12.112,14.641,CUM3,2026-09-09T05:00:00Z,5.10,true,true,
 2026-09-09T07:46:12Z,cepina,storm_cleared,5.0,0.00,0.29,SRI,2026-09-09T07:35:00Z,,true,true,"cella uscita dopo ~275min, caduti 3.059999942779541mm"
 2026-09-09T10:25:56Z,ruspino,storm_on_area,10.0,19.76,91.89,SRI,2026-09-09T10:15:00Z,,true,true,cella su area
-2026-09-09T10:25:56Z,panna,storm_on_area,5.0,2.53,9.82,SRI,2026-09-09T10:15:00Z,,true,true,cella su area
-2026-09-09T11:58:14Z,panna,storm_cleared,5.0,0.24,1.02,SRI,2026-09-09T11:50:00Z,,true,true,"cella uscita dopo ~92min, caduti 2.9049999713897705mm"
+2026-09-09T10:25:56Z,scarperia,storm_on_area,5.0,2.53,9.82,SRI,2026-09-09T10:15:00Z,,true,true,cella su area
+2026-09-09T11:58:14Z,scarperia,storm_cleared,5.0,0.24,1.02,SRI,2026-09-09T11:50:00Z,,true,true,"cella uscita dopo ~92min, caduti 2.9049999713897705mm"
 2026-09-09T12:25:59Z,ruspino,warning,15,39.761,43.800,CUM3,2026-09-09T12:00:00Z,35.40,true,true,
 2026-09-09T12:41:10Z,cepina,storm_on_area,5.0,1.75,5.26,SRI,2026-09-09T12:30:00Z,,true,true,cella su area
 2026-09-09T13:21:13Z,ruspino,storm_cleared,10.0,0.00,0.56,SRI,2026-09-09T13:10:00Z,,true,true,"cella uscita dopo ~175min, caduti 14.299999237060547mm"
-2026-09-09T13:21:13Z,panna,storm_on_area,5.0,7.48,26.66,SRI,2026-09-09T13:10:00Z,,true,true,cella su area
+2026-09-09T13:21:13Z,scarperia,storm_on_area,5.0,7.48,26.66,SRI,2026-09-09T13:10:00Z,,true,true,cella su area
 2026-09-09T13:26:00Z,ruspino,alarm,50,55.906,58.875,CUM3,2026-09-09T13:00:00Z,35.40,true,true,
 2026-09-09T14:21:13Z,cepina,storm_cleared,5.0,0.44,1.40,SRI,2026-09-09T14:10:00Z,,true,true,"cella uscita dopo ~100min, caduti 7.544999599456787mm"
 2026-09-09T14:26:08Z,cepina,warning,10,10.897,11.379,CUM3,2026-09-09T14:00:00Z,4.70,true,true,
-2026-09-09T14:41:11Z,panna,storm_cleared,5.0,0.22,0.69,SRI,2026-09-09T14:30:00Z,,true,true,"cella uscita dopo ~79min, caduti 5.809999942779541mm"
+2026-09-09T14:41:11Z,scarperia,storm_cleared,5.0,0.22,0.69,SRI,2026-09-09T14:30:00Z,,true,true,"cella uscita dopo ~79min, caduti 5.809999942779541mm"
 2026-09-09T15:40:49Z,ruspino,storm_on_area,10.0,7.21,17.28,SRI,2026-09-09T15:30:00Z,,true,true,cella su area dwell~177min
 2026-09-09T16:56:11Z,ruspino,storm_cleared,10.0,0.59,1.44,SRI,2026-09-09T16:45:00Z,,true,true,"cella uscita dopo ~75min, caduti 6.289999961853027mm"
 2026-09-09T17:16:29Z,ruspino,storm_on_area,10.0,8.93,19.33,SRI,2026-09-09T17:05:00Z,,true,true,cella su area dwell~77min
 2026-09-09T17:56:28Z,ruspino,storm_cleared,10.0,0.00,0.09,SRI,2026-09-09T17:45:00Z,,true,true,"cella uscita dopo ~39min, caduti 8.0649995803833mm"
-2026-09-09T18:16:22Z,panna,storm_on_area,5.0,4.30,16.61,SRI,2026-09-09T18:05:00Z,,true,true,cella su area
-2026-09-09T18:56:22Z,panna,storm_cleared,5.0,0.63,1.40,SRI,2026-09-09T18:45:00Z,,true,true,"cella uscita dopo ~40min, caduti 10.229999542236328mm"
-2026-09-09T19:27:17Z,panna,warning,10,11.654,14.628,CUM3,2026-09-09T19:00:00Z,6.00,true,true,
+2026-09-09T18:16:22Z,scarperia,storm_on_area,5.0,4.30,16.61,SRI,2026-09-09T18:05:00Z,,true,true,cella su area
+2026-09-09T18:56:22Z,scarperia,storm_cleared,5.0,0.63,1.40,SRI,2026-09-09T18:45:00Z,,true,true,"cella uscita dopo ~40min, caduti 10.229999542236328mm"
+2026-09-09T19:27:17Z,scarperia,warning,10,11.654,14.628,CUM3,2026-09-09T19:00:00Z,6.00,true,true,
 2026-09-09T22:20:43Z,ruspino,storm_on_area,10.0,4.99,13.93,SRI,2026-09-09T22:10:00Z,,true,true,cella su area
 2026-09-09T23:00:55Z,cepina,storm_on_area,5.0,2.43,9.53,SRI,2026-09-09T22:50:00Z,,true,true,cella su area
 2026-09-10T00:30:37Z,cepina,storm_cleared,5.0,0.70,2.39,SRI,2026-09-10T00:20:00Z,,true,true,"cella uscita dopo ~89min, caduti 8.510000228881836mm"
@@ -368,33 +368,33 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-10T02:05:37Z,ruspino,forecast_warning,10,,,SRT1,,14.20,true,true,forecast 1h prossime 6h
 2026-09-10T02:10:46Z,cepina,storm_cleared,5.0,0.48,1.66,SRI,2026-09-10T02:00:00Z,,true,true,"cella uscita dopo ~59min, caduti 14.529999732971191mm"
 2026-09-10T02:20:44Z,cepina,warning,10,14.931,17.139,CUM3,2026-09-10T02:00:00Z,4.00,true,true,
-2026-09-10T03:10:46Z,panna,storm_on_area,5.0,2.30,7.15,SRI,2026-09-10T02:55:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-09-10T03:10:46Z,scarperia,storm_on_area,5.0,2.30,7.15,SRI,2026-09-10T02:55:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
 2026-09-10T03:20:41Z,cepina,alarm,15,17.184,18.478,CUM3,2026-09-10T03:00:00Z,4.00,true,true,
-2026-09-10T03:30:37Z,panna,storm_on_area,5.0,1.62,5.25,SRI,2026-09-10T03:10:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-09-10T03:30:37Z,scarperia,storm_on_area,5.0,1.62,5.25,SRI,2026-09-10T03:10:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-09-10T07:05:45Z,ruspino,storm_on_area,10.0,1.72,13.88,SRI,2026-09-10T06:50:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-09-10T07:50:38Z,panna,forecast_warning,5,,,SRT1,,5.10,true,true,forecast 1h prossime 6h
+2026-09-10T07:50:38Z,scarperia,forecast_warning,5,,,SRT1,,5.10,true,true,forecast 1h prossime 6h
 2026-09-10T08:05:41Z,ruspino,storm_on_area,10.0,2.73,11.38,SRI,2026-09-10T07:55:00Z,,true,true,cella su area
 2026-09-10T08:25:37Z,ruspino,storm_cleared,10.0,0.19,0.77,SRI,2026-09-10T08:15:00Z,,true,true,"cella uscita dopo ~19min, caduti 4.039999961853027mm"
 2026-09-10T08:25:37Z,ruspino,storm_on_area,10.0,2.73,11.38,SRI,2026-09-10T07:55:00Z,,true,true,catch-up: cella rilevata a posteriori +30min
 2026-09-10T11:00:59Z,cepina,storm_on_area,5.0,5.98,20.90,SRI,2026-09-10T10:50:00Z,,true,true,cella su area dwell~122min
-2026-09-10T11:20:57Z,panna,storm_on_area,5.0,2.59,7.05,SRI,2026-09-10T11:10:00Z,,true,true,cella su area
+2026-09-10T11:20:57Z,scarperia,storm_on_area,5.0,2.59,7.05,SRI,2026-09-10T11:10:00Z,,true,true,cella su area
 2026-09-10T12:00:53Z,cepina,storm_cleared,5.0,0.04,0.70,SRI,2026-09-10T11:50:00Z,,true,true,"cella uscita dopo ~59min, caduti 7.919999599456787mm"
 2026-09-10T12:51:01Z,cepina,warning,10,10.261,11.799,CUM3,2026-09-10T12:30:00Z,4.00,true,true,
 2026-09-10T13:00:40Z,cepina,storm_on_area,5.0,6.22,31.84,SRI,2026-09-10T12:50:00Z,,true,true,cella su area dwell~78min
-2026-09-10T13:20:50Z,panna,warning,10,13.731,15.800,CUM3,2026-09-10T13:00:00Z,4.20,true,true,
-2026-09-10T13:52:44Z,panna,storm_cleared,5.0,1.03,2.21,SRI,2026-09-10T13:45:00Z,,true,true,"cella uscita dopo ~151min, caduti 5.25mm"
+2026-09-10T13:20:50Z,scarperia,warning,10,13.731,15.800,CUM3,2026-09-10T13:00:00Z,4.20,true,true,
+2026-09-10T13:52:44Z,scarperia,storm_cleared,5.0,1.03,2.21,SRI,2026-09-10T13:45:00Z,,true,true,"cella uscita dopo ~151min, caduti 5.25mm"
 2026-09-10T13:52:44Z,cepina,storm_cleared,5.0,0.59,2.08,SRI,2026-09-10T13:45:00Z,,true,true,"cella uscita dopo ~52min, caduti 13.984999656677246mm"
-2026-09-10T14:25:37Z,panna,alarm,15,19.150,21.600,CUM3,2026-09-10T14:00:00Z,4.00,true,true,
-2026-09-10T15:00:00Z,panna,storm_on_area,10.0,,12.65,CUM3,2026-09-10T15:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
-2026-09-10T15:05:00Z,panna,storm_cleared,10.0,,12.65,CUM3,2026-09-10T15:05:00Z,,recon,recon,ricostruito
-2026-09-10T20:05:27Z,panna,storm_on_area,5.0,1.78,5.15,SRI,2026-09-10T19:50:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
-2026-09-10T20:26:13Z,panna,storm_on_area,5.0,2.23,6.19,SRI,2026-09-10T20:15:00Z,,true,true,cella su area
-2026-09-10T22:21:25Z,panna,warning,10,18.111,21.702,CUM3,2026-09-10T22:00:00Z,4.00,true,true,
-2026-09-10T22:21:25Z,panna,alarm,15,18.111,21.702,CUM3,2026-09-10T22:00:00Z,4.00,true,true,
-2026-09-10T22:51:14Z,panna,storm_cleared,5.0,0.00,0.00,SRI,2026-09-10T22:40:00Z,,true,true,"cella uscita dopo ~145min, caduti 4.724999904632568mm"
-2026-09-10T23:26:11Z,panna,emergency,20,20.996,25.190,CUM3,2026-09-10T23:00:00Z,19.20,true,true,
-2026-09-11T00:00:00Z,panna,storm_on_area,10.0,,23.39,CUM3,2026-09-11T00:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
-2026-09-11T00:05:00Z,panna,storm_cleared,10.0,,23.39,CUM3,2026-09-11T00:05:00Z,,recon,recon,ricostruito
+2026-09-10T14:25:37Z,scarperia,alarm,15,19.150,21.600,CUM3,2026-09-10T14:00:00Z,4.00,true,true,
+2026-09-10T15:00:00Z,scarperia,storm_on_area,10.0,,12.65,CUM3,2026-09-10T15:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-09-10T15:05:00Z,scarperia,storm_cleared,10.0,,12.65,CUM3,2026-09-10T15:05:00Z,,recon,recon,ricostruito
+2026-09-10T20:05:27Z,scarperia,storm_on_area,5.0,1.78,5.15,SRI,2026-09-10T19:50:00Z,,true,true,catch-up: cella rilevata a posteriori +15min
+2026-09-10T20:26:13Z,scarperia,storm_on_area,5.0,2.23,6.19,SRI,2026-09-10T20:15:00Z,,true,true,cella su area
+2026-09-10T22:21:25Z,scarperia,warning,10,18.111,21.702,CUM3,2026-09-10T22:00:00Z,4.00,true,true,
+2026-09-10T22:21:25Z,scarperia,alarm,15,18.111,21.702,CUM3,2026-09-10T22:00:00Z,4.00,true,true,
+2026-09-10T22:51:14Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-09-10T22:40:00Z,,true,true,"cella uscita dopo ~145min, caduti 4.724999904632568mm"
+2026-09-10T23:26:11Z,scarperia,emergency,20,20.996,25.190,CUM3,2026-09-10T23:00:00Z,19.20,true,true,
+2026-09-11T00:00:00Z,scarperia,storm_on_area,10.0,,23.39,CUM3,2026-09-11T00:00:00Z,,recon,recon,ricostruito (evento non registrato dal nowcast)
+2026-09-11T00:05:00Z,scarperia,storm_cleared,10.0,,23.39,CUM3,2026-09-11T00:05:00Z,,recon,recon,ricostruito
 2026-09-16T18:26:28Z,cepina,storm_on_area,5.0,3.48,14.44,SRI,2026-09-16T18:15:00Z,,true,true,cella su area
 2026-09-16T19:21:30Z,cepina,warning,10,13.569,16.721,CUM3,2026-09-16T19:00:00Z,5.90,true,true,
 2026-09-16T19:51:25Z,cepina,alarm,15,18.869,24.105,CUM3,2026-09-16T19:30:00Z,2.70,true,true,
@@ -412,39 +412,39 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-09-17T01:51:26Z,ruspino,storm_cleared,10.0,0.89,1.88,SRI,2026-09-17T01:40:00Z,,true,true,"cella uscita dopo ~59min, caduti 9.779999732971191mm"
 2026-09-17T02:31:38Z,ruspino,storm_on_area,10.0,7.40,18.65,SRI,2026-09-17T02:20:00Z,,true,true,cella su area dwell~96min
 2026-09-17T03:51:23Z,ruspino,storm_cleared,10.0,1.61,3.89,SRI,2026-09-17T03:40:00Z,,true,true,"cella uscita dopo ~79min, caduti 7.464999675750732mm"
-2026-09-17T10:28:38Z,panna,storm_on_area,5.0,2.14,6.57,SRI,2026-09-17T10:10:00Z,,true,true,catch-up: cella rilevata a posteriori +18min
-2026-09-17T10:51:31Z,panna,storm_on_area,5.0,2.07,5.61,SRI,2026-09-17T10:40:00Z,,true,true,cella su area
-2026-09-17T12:51:31Z,panna,storm_cleared,5.0,0.25,0.97,SRI,2026-09-17T12:40:00Z,,true,true,"cella uscita dopo ~120min, caduti 3.299999952316284mm"
+2026-09-17T10:28:38Z,scarperia,storm_on_area,5.0,2.14,6.57,SRI,2026-09-17T10:10:00Z,,true,true,catch-up: cella rilevata a posteriori +18min
+2026-09-17T10:51:31Z,scarperia,storm_on_area,5.0,2.07,5.61,SRI,2026-09-17T10:40:00Z,,true,true,cella su area
+2026-09-17T12:51:31Z,scarperia,storm_cleared,5.0,0.25,0.97,SRI,2026-09-17T12:40:00Z,,true,true,"cella uscita dopo ~120min, caduti 3.299999952316284mm"
 2026-09-18T13:02:14Z,cepina,storm_on_area,5.0,0.95,10.00,SRI,2026-09-18T12:55:00Z,,true,true,cella su area dwell~166min
 2026-09-18T14:21:27Z,cepina,storm_cleared,5.0,0.40,1.51,SRI,2026-09-18T14:10:00Z,,true,true,"cella uscita dopo ~79min, caduti 6.204999923706055mm"
-2026-09-19T02:06:17Z,panna,storm_on_area,5.0,2.29,7.41,SRI,2026-09-19T01:40:00Z,,true,true,catch-up: cella rilevata a posteriori +26min
+2026-09-19T02:06:17Z,scarperia,storm_on_area,5.0,2.29,7.41,SRI,2026-09-19T01:40:00Z,,true,true,catch-up: cella rilevata a posteriori +26min
 2026-10-05T06:46:03Z,cepina,storm_on_area,5.0,1.45,8.65,SRI,2026-10-05T06:35:00Z,,true,true,cella su area
 2026-10-05T07:45:57Z,cepina,storm_cleared,5.0,0.44,1.80,SRI,2026-10-05T07:35:00Z,,true,true,"cella uscita dopo ~59min, caduti 6.625mm"
-2026-10-06T13:10:56Z,panna,nowcast_warning,10,1.16,14.30,SRI,2026-10-06T13:00:00Z,,true,true,nowcast buffer=5km moto=NE/13.9kmh prob=4%
+2026-10-06T13:10:56Z,scarperia,nowcast_warning,10,1.16,14.30,SRI,2026-10-06T13:00:00Z,,true,true,nowcast buffer=5km moto=NE/13.9kmh prob=4%
 2026-10-06T13:31:07Z,ruspino,nowcast_warning,10,1.03,12.18,SRI,2026-10-06T13:20:00Z,,true,true,nowcast buffer=10km moto=SE/10.3kmh prob=2%
 2026-10-06T13:50:56Z,ruspino,nowcast_alarm,15,1.33,15.41,SRI,2026-10-06T13:40:00Z,,skipped,true,nowcast buffer=10km moto=W/4.5kmh prob=31%
-2026-10-06T14:31:16Z,panna,nowcast_emergency,25,0.28,31.64,SRI,2026-10-06T14:20:00Z,,skipped,true,nowcast buffer=10km moto=SW/58.1kmh prob=2%
+2026-10-06T14:31:16Z,scarperia,nowcast_emergency,25,0.28,31.64,SRI,2026-10-06T14:20:00Z,,skipped,true,nowcast buffer=10km moto=SW/58.1kmh prob=2%
 2026-10-06T14:51:00Z,cepina,nowcast_alarm,15,3.05,20.68,SRI,2026-10-06T14:40:00Z,,skipped,true,nowcast buffer=5km moto=NE/3.4kmh prob=4%
 2026-10-06T14:51:00Z,cepina,storm_on_area,7.0,1.95,7.78,SRI,2026-10-06T14:40:00Z,,true,true,cella su area
 2026-10-06T15:58:35Z,cepina,storm_cleared,7.0,0.43,1.45,SRI,2026-10-06T15:50:00Z,,true,true,"cella uscita dopo ~67min, caduti 4.894999980926514mm"
-2026-10-07T03:45:45Z,panna,forecast24h_warning,10,5.66,13.96,ensemble_24h,,13.96,true,true,mean=5.7 worst=14.0 metno=6.94 mch=23.41 conferma=MeteoSwiss
-2026-10-07T05:45:42Z,panna,forecast24h_alarm,15,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
-2026-10-07T05:45:42Z,panna,forecast24h_emergency,20,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+2026-10-07T03:45:45Z,scarperia,forecast24h_warning,10,5.66,13.96,ensemble_24h,,13.96,true,true,mean=5.7 worst=14.0 metno=6.94 mch=23.41 conferma=MeteoSwiss
+2026-10-07T05:45:42Z,scarperia,forecast24h_alarm,15,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
+2026-10-07T05:45:42Z,scarperia,forecast24h_emergency,20,9.31,26.89,ensemble_24h,,26.89,true,true,mean=9.3 worst=26.9 metno=8.61 mch=38.54 conferma=MeteoSwiss
 2026-10-07T11:10:43Z,ruspino,forecast24h_warning,30,30.89,47.15,ensemble_24h,,47.15,true,true,mean=30.9 worst=47.1 metno=29.3 mch=26.17 conferma=media ensemble
-2026-10-07T12:46:03Z,panna,nowcast_emergency,25,0.06,25.64,SRI,2026-10-07T12:35:00Z,,skipped,true,nowcast buffer=10km moto=SE/128.3kmh prob=37%
-2026-10-07T19:40:51Z,panna,nowcast_alarm,15,1.93,21.36,SRI,2026-10-07T19:30:00Z,,skipped,true,nowcast buffer=10km
-2026-10-07T20:01:04Z,panna,storm_on_area,5.0,4.62,10.32,SRI,2026-10-07T19:50:00Z,,true,true,cella su area
-2026-10-07T20:20:54Z,panna,nowcast_emergency,25,9.11,37.63,SRI,2026-10-07T20:10:00Z,,skipped,true,nowcast buffer=5km moto=NE/51.8kmh prob=65%
-2026-10-07T21:20:52Z,panna,storm_cleared,5.0,0.14,0.93,SRI,2026-10-07T21:10:00Z,,true,true,"cella uscita dopo ~79min, caduti 17.274999618530273mm"
+2026-10-07T12:46:03Z,scarperia,nowcast_emergency,25,0.06,25.64,SRI,2026-10-07T12:35:00Z,,skipped,true,nowcast buffer=10km moto=SE/128.3kmh prob=37%
+2026-10-07T19:40:51Z,scarperia,nowcast_alarm,15,1.93,21.36,SRI,2026-10-07T19:30:00Z,,skipped,true,nowcast buffer=10km
+2026-10-07T20:01:04Z,scarperia,storm_on_area,5.0,4.62,10.32,SRI,2026-10-07T19:50:00Z,,true,true,cella su area
+2026-10-07T20:20:54Z,scarperia,nowcast_emergency,25,9.11,37.63,SRI,2026-10-07T20:10:00Z,,skipped,true,nowcast buffer=5km moto=NE/51.8kmh prob=65%
+2026-10-07T21:20:52Z,scarperia,storm_cleared,5.0,0.14,0.93,SRI,2026-10-07T21:10:00Z,,true,true,"cella uscita dopo ~79min, caduti 17.274999618530273mm"
 2026-10-07T21:40:57Z,ruspino,nowcast_warning,10,1.48,10.20,SRI,2026-10-07T21:30:00Z,,skipped,true,nowcast buffer=10km moto=NE/12.9kmh prob=2%
-2026-10-07T21:55:55Z,panna,warning,10,11.465,12.305,CUM3,2026-10-07T21:30:00Z,1.10,true,true,
-2026-10-07T22:25:59Z,panna,forecast_alarm,10,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
-2026-10-07T22:25:59Z,panna,forecast_warning,10,,,CUM3,,12.20,true,true,forecast 3h prossime 6h conferma MeteoSwiss
+2026-10-07T21:55:55Z,scarperia,warning,10,11.465,12.305,CUM3,2026-10-07T21:30:00Z,1.10,true,true,
+2026-10-07T22:25:59Z,scarperia,forecast_alarm,10,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
+2026-10-07T22:25:59Z,scarperia,forecast_warning,10,,,CUM3,,12.20,true,true,forecast 3h prossime 6h conferma MeteoSwiss
 2026-10-07T23:38:50Z,ruspino,nowcast_alarm,15,2.01,17.44,SRI,2026-10-07T23:30:00Z,,skipped,true,nowcast buffer=10km moto=NE/14.2kmh prob=11%
-2026-10-08T00:07:42Z,panna,forecast_warning,5,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
-2026-10-08T03:56:01Z,panna,nowcast_alarm,15,0.62,20.75,SRI,2026-10-08T03:45:00Z,,skipped,true,nowcast buffer=10km moto=N/10.6kmh prob=2%
-2026-10-08T04:55:50Z,panna,nowcast_emergency,25,1.71,44.24,SRI,2026-10-08T04:45:00Z,,skipped,true,nowcast buffer=10km moto=E/33.2kmh prob=5%
-2026-10-08T04:55:50Z,panna,storm_on_area,5.0,3.03,19.10,SRI,2026-10-08T04:35:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
+2026-10-08T00:07:42Z,scarperia,forecast_warning,5,,,SRT1,,11.40,true,true,forecast 1h prossime 6h conferma MeteoSwiss
+2026-10-08T03:56:01Z,scarperia,nowcast_alarm,15,0.62,20.75,SRI,2026-10-08T03:45:00Z,,skipped,true,nowcast buffer=10km moto=N/10.6kmh prob=2%
+2026-10-08T04:55:50Z,scarperia,nowcast_emergency,25,1.71,44.24,SRI,2026-10-08T04:45:00Z,,skipped,true,nowcast buffer=10km moto=E/33.2kmh prob=5%
+2026-10-08T04:55:50Z,scarperia,storm_on_area,5.0,3.03,19.10,SRI,2026-10-08T04:35:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-10-08T05:55:51Z,ruspino,nowcast_warning,10,2.83,13.65,SRI,2026-10-08T05:45:00Z,,skipped,true,nowcast buffer=5km moto=NE/32.5kmh prob=53%
 2026-10-08T05:55:51Z,ruspino,nowcast_alarm,15,2.60,18.98,SRI,2026-10-08T05:45:00Z,,skipped,true,nowcast buffer=10km moto=NE/32.5kmh prob=52%
 2026-10-08T06:15:53Z,ruspino,nowcast_emergency,25,5.49,41.66,SRI,2026-10-08T06:05:00Z,,skipped,true,nowcast buffer=10km moto=NE/32.1kmh prob=2%
@@ -460,6 +460,6 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-08T09:16:26Z,cepina,storm_cleared,7.0,0.02,0.36,SRI,2026-10-08T09:05:00Z,,true,true,"cella uscita dopo ~70min, caduti 22.189998626708984mm"
 2026-10-08T09:26:26Z,ruspino,nowcast_emergency,25,0.81,26.53,SRI,2026-10-08T09:15:00Z,,skipped,true,nowcast buffer=10km moto=NE/45.9kmh prob=1%
 2026-10-08T09:26:26Z,ruspino,storm_cleared,7.0,0.56,2.53,SRI,2026-10-08T09:15:00Z,,true,true,"cella uscita dopo ~60min, caduti 5.275000095367432mm"
-2026-10-08T10:01:38Z,panna,nowcast_emergency,25,0.81,37.97,SRI,2026-10-08T09:50:00Z,,skipped,true,nowcast buffer=10km moto=E/48.4kmh prob=31%
+2026-10-08T10:01:38Z,scarperia,nowcast_emergency,25,0.81,37.97,SRI,2026-10-08T09:50:00Z,,skipped,true,nowcast buffer=10km moto=E/48.4kmh prob=31%
 2026-10-08T10:11:20Z,ruspino,persistent_alarm,30,30.08,,SRI_6h,2026-10-08T10:00:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 6h, copertura 100%"
 2026-10-08T10:31:20Z,cepina,warning,10,11.057,12.739,CUM3,2026-10-08T10:00:00Z,5.50,true,true,rilevamento tardivo catch-up +31min
