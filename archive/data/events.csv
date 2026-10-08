@@ -454,3 +454,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-08T07:35:55Z,ruspino,persistent_warning,15,23.52,,SRI_3h,2026-10-08T07:25:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
 2026-10-08T07:46:16Z,cepina,nowcast_alarm,15,1.78,15.43,SRI,2026-10-08T07:35:00Z,,skipped,true,nowcast buffer=10km moto=E/7.0kmh prob=35%
 2026-10-08T07:56:20Z,cepina,nowcast_emergency,25,3.50,32.83,SRI,2026-10-08T07:45:00Z,,skipped,true,nowcast buffer=10km moto=E/20.3kmh prob=3%
+2026-10-08T08:06:28Z,cepina,storm_on_area,7.0,2.65,9.83,SRI,2026-10-08T07:55:00Z,,true,true,cella su area
