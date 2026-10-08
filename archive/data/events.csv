@@ -447,3 +447,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-08T04:55:50Z,panna,storm_on_area,5.0,3.03,19.10,SRI,2026-10-08T04:35:00Z,,true,true,catch-up: cella rilevata a posteriori +20min
 2026-10-08T05:55:51Z,ruspino,nowcast_warning,10,2.83,13.65,SRI,2026-10-08T05:45:00Z,,skipped,true,nowcast buffer=5km moto=NE/32.5kmh prob=53%
 2026-10-08T05:55:51Z,ruspino,nowcast_alarm,15,2.60,18.98,SRI,2026-10-08T05:45:00Z,,skipped,true,nowcast buffer=10km moto=NE/32.5kmh prob=52%
+2026-10-08T06:15:53Z,ruspino,nowcast_emergency,25,5.49,41.66,SRI,2026-10-08T06:05:00Z,,skipped,true,nowcast buffer=10km moto=NE/32.1kmh prob=2%
