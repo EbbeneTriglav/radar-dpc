@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-10-09T00:57:05Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-10-09T00:51:28Z",
+  "_nowcast_last_run_utc": "2026-10-09T01:01:36Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -80,7 +80,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-10-09T00:51:28Z",
+      "timestamp_utc": "2026-10-09T01:01:36Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -148,24 +148,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 9.36,
-          "sri_mean": 1.91,
-          "srt1_max": 13.98,
-          "srt1_mean": 1.89
+          "sri_max": 12.25,
+          "sri_mean": 2.25,
+          "srt1_max": 11.47,
+          "srt1_mean": 1.98
         },
         "5km": {
-          "sri_max": 9.71,
-          "sri_mean": 4.07,
-          "srt1_max": 8.18,
-          "srt1_mean": 2.43
+          "sri_max": 12.76,
+          "sri_mean": 5.8,
+          "srt1_max": 8.56,
+          "srt1_mean": 2.94
         }
       },
       "motion": {
-        "bearing_deg": 348.3300424628018,
-        "compass": "N",
-        "speed_kmh": 3.1
+        "bearing_deg": 57.196885214539336,
+        "compass": "NE",
+        "speed_kmh": 7.1
       },
-      "timestamp_utc": "2026-10-09T00:51:28Z",
+      "timestamp_utc": "2026-10-09T01:01:36Z",
       "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -229,20 +229,20 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.0,
+          "sri_max": 0.82,
           "sri_mean": 0.0,
-          "srt1_max": 1.6,
-          "srt1_mean": 0.11
+          "srt1_max": 0.94,
+          "srt1_mean": 0.04
         },
         "5km": {
           "sri_max": 0.0,
           "sri_mean": 0.0,
-          "srt1_max": 0.35,
-          "srt1_mean": 0.02
+          "srt1_max": 0.09,
+          "srt1_mean": 0.0
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-10-09T00:51:28Z",
+      "timestamp_utc": "2026-10-09T01:01:36Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
