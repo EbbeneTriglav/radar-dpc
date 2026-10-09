@@ -1,4 +1,6 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261009T1325,2026-10-09T14:56:30Z,scarperia,nowcast,nowcast_alarm,SRI,16.86,nowcast buffer=10km moto=N/30.1kmh prob=13%
+scarperia_20261009T1325,2026-10-09T14:27:17Z,scarperia,nowcast,nowcast_warning,SRI,11.07,nowcast buffer=10km moto=N/26.1kmh prob=10%
 ruspino_20261008T1940,2026-10-09T00:51:28Z,ruspino,storm,storm_on_area,SRI,7.84,cella su area
 ruspino_20261008T1940,2026-10-08T23:51:25Z,ruspino,nowcast,nowcast_emergency,SRI,25.06,nowcast buffer=10km moto=NW/11.1kmh prob=29%
 ruspino_20261008T1940,2026-10-08T23:41:20Z,ruspino,nowcast,nowcast_alarm,SRI,17.62,nowcast buffer=5km moto=N/13.2kmh prob=36%
