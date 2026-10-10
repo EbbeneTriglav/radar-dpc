@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-10-10T11:11:35Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-10-10T11:16:54Z",
+  "_nowcast_last_run_utc": "2026-10-10T11:26:33Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 3.25,
-          "sri_mean": 0.46,
-          "srt1_max": 1.26,
-          "srt1_mean": 0.45
+          "sri_max": 2.13,
+          "sri_mean": 0.34,
+          "srt1_max": 1.38,
+          "srt1_mean": 0.42
         },
         "5km": {
-          "sri_max": 1.49,
-          "sri_mean": 0.45,
-          "srt1_max": 1.3,
-          "srt1_mean": 0.68
+          "sri_max": 1.27,
+          "sri_mean": 0.33,
+          "srt1_max": 1.38,
+          "srt1_mean": 0.62
         }
       },
       "motion": {
-        "bearing_deg": 145.66734012334646,
-        "compass": "SE",
-        "speed_kmh": 2.9
+        "bearing_deg": null,
+        "compass": "stazionaria",
+        "speed_kmh": 0.0
       },
-      "timestamp_utc": "2026-10-10T11:16:54Z",
+      "timestamp_utc": "2026-10-10T11:26:33Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -152,24 +152,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 1.2,
-          "sri_mean": 0.29,
-          "srt1_max": 1.08,
-          "srt1_mean": 0.24
+          "sri_max": 1.58,
+          "sri_mean": 0.24,
+          "srt1_max": 1.14,
+          "srt1_mean": 0.26
         },
         "5km": {
-          "sri_max": 0.87,
-          "sri_mean": 0.39,
-          "srt1_max": 0.77,
-          "srt1_mean": 0.34
+          "sri_max": 0.83,
+          "sri_mean": 0.35,
+          "srt1_max": 0.82,
+          "srt1_mean": 0.36
         }
       },
       "motion": {
-        "bearing_deg": 92.48011951513874,
-        "compass": "E",
-        "speed_kmh": 2.5
+        "bearing_deg": 66.70606674485526,
+        "compass": "NE",
+        "speed_kmh": 7.3
       },
-      "timestamp_utc": "2026-10-10T11:16:54Z",
+      "timestamp_utc": "2026-10-10T11:26:33Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -246,7 +246,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-10-10T11:16:54Z",
+      "timestamp_utc": "2026-10-10T11:26:33Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
