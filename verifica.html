@@ -1030,6 +1030,20 @@ async function openChart(ev){
   // Per l'export CSV: un valore per blocco, al timestamp originale (fine blocco)
   const cum3MaxCsv = cum3Blocks.map(b=>({x:b.x, y:b.max}));
   const cum3MeanCsv = cum3Blocks.filter(b=>b.mean!=null).map(b=>({x:b.x, y:b.mean}));
+  // Cumulata EVENTO della CUM3: somma progressiva dei blocchi 3h (sono adiacenti e
+  // non sovrapposti → sommabili). Dentro ogni blocco la salita è lineare (non si sa
+  // come è distribuita la pioggia nelle 3h): confrontabile con le cumulate radar e
+  // col pluviometro. Un blocco mancante NON è 0 mm: la cumulata è un minimo e lo
+  // dichiariamo nell'etichetta (n. blocchi mancanti).
+  const cumSeries = key => { const out=[]; let acc=0, prevEnd=null, gaps=0, n=0;
+    for(const b of cum3Blocks){ const v=b[key]; if(v==null||!isFinite(v)) { gaps++; continue; }
+      const st=b.x-3*3600_000;
+      if(prevEnd!=null && st>prevEnd) gaps+=Math.round((st-prevEnd)/(3*3600_000));
+      if(!out.length || prevEnd!==st) out.push({x:st, y:+acc.toFixed(1)});
+      acc+=v; n++; out.push({x:b.x, y:+acc.toFixed(1), _end:true}); prevEnd=b.x; }
+    return {pts:out, tot:+acc.toFixed(1), gaps, n}; };
+  const cum3CumMax = cumSeries('max'), cum3CumMean = cumSeries('mean');
+  const gapTxt = g => g ? `, ${g} blocchi mancanti: minimo` : '';
 
   // Pluviometro a terra (verità al suolo): prima l'archivio (ground_rain.csv,
   // se la finestra è coperta da ground_index.csv), altrimenti live Socrata/SIR.
@@ -1079,10 +1093,17 @@ async function openChart(ev){
   // ── Cumulate (asse Y destro, mm) — colori nettamente diversi dall'intensità ──
   if (arpaCumTot.length) ds.push({label:`Cumulata evento ARPA picco (${eventTotal.toFixed(0)} mm)`, data:arpaCumTot, yAxisID:'y1', _grp:'cum',
     borderColor:'#2dd4bf', backgroundColor:'#2dd4bf', pointRadius:0, tension:.2, borderWidth:3.5});
-  if (cum3MaxPts.length) ds.push({label:'CUM3 pluviometri DPC max (mm/3h)', data:cum3MaxPts, _csv:cum3MaxCsv, yAxisID:'y1', _grp:'cum',
-    borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:c=>c.raw&&c.raw._end?3:0, tension:0, borderWidth:2.5, spanGaps:false});
-  if (cum3MeanPts.length) ds.push({label:'CUM3 pluviometri DPC mean (mm/3h)', data:cum3MeanPts, _csv:cum3MeanCsv, yAxisID:'y1', _grp:'cum',
-    borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:1.5, borderDash:[2,3], tension:0, spanGaps:false});
+  // CUM3 come cumulata evento (default) — i blocchi 3h grezzi restano disponibili, nascosti
+  if (cum3CumMax.pts.length) ds.push({label:`Cumulata CUM3 pluviometri DPC max (${cum3CumMax.tot.toFixed(0)} mm${gapTxt(cum3CumMax.gaps)})`,
+    data:cum3CumMax.pts, yAxisID:'y1', _grp:'cum',
+    borderColor:'#ef4444', backgroundColor:'#ef4444', pointRadius:c=>c.raw&&c.raw._end?2.5:0, tension:0, borderWidth:3});
+  if (cum3CumMean.pts.length) ds.push({label:`Cumulata CUM3 pluviometri DPC mean (${cum3CumMean.tot.toFixed(0)} mm${gapTxt(cum3CumMean.gaps)})`,
+    data:cum3CumMean.pts, yAxisID:'y1', _grp:'cum',
+    borderColor:'#fb923c', backgroundColor:'#fb923c', pointRadius:0, borderWidth:2, borderDash:[5,3], tension:0});
+  if (cum3MaxPts.length) ds.push({label:'CUM3 DPC max — blocchi 3h grezzi (mm/3h)', data:cum3MaxPts, _csv:cum3MaxCsv, yAxisID:'y1', _grp:'cum', hidden:true,
+    borderColor:'#f87171', backgroundColor:'#f87171', pointRadius:c=>c.raw&&c.raw._end?3:0, tension:0, borderWidth:1.5, spanGaps:false});
+  if (cum3MeanPts.length) ds.push({label:'CUM3 DPC mean — blocchi 3h grezzi (mm/3h)', data:cum3MeanPts, _csv:cum3MeanCsv, yAxisID:'y1', _grp:'cum', hidden:true,
+    borderColor:'#fdba74', backgroundColor:'#fdba74', pointRadius:0, borderWidth:1.2, borderDash:[2,3], tension:0, spanGaps:false});
   if (ground && ground.daily && ground.total>0){
     // SIR giornaliero (09→09): nessun andamento orario → linea piatta sulla finestra
     ds.push({label:`${ground.name} — totale giorno ${ground.total.toFixed(0)} mm (SIR)`,

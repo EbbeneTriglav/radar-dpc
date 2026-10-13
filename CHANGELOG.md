@@ -1,5 +1,12 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-10-13 — Grafico evento: CUM3 cumulata; Report: episodi recenti
+- Verifica, grafico evento: la CUM3 DPC (max e mean) è disegnata come **cumulata evento** (somma progressiva dei
+  blocchi 3h, salita lineare dentro ogni blocco), confrontabile con le cumulate radar e col pluviometro. I blocchi 3h
+  grezzi restano in legenda, nascosti. Blocchi mancanti dichiarati nell'etichetta (cumulata = minimo).
+- Report: nuova tabella "Episodi più recenti (≥ 5 mm)". "Episodi principali" sono i 5 più piovosi del periodo,
+  quindi un episodio recente più piccolo non compariva.
+
 ## 2026-10-08 (c) — Mappa live: 403 dal proxy Cloudflare
 - Il `worker.js` ricopiato su Cloudflare era la copia vecchia del repo: l'allowlist non conteneva il bucket
   attuale `s3-prod-dpc-radar` del DPC → ogni GeoTIFF "403 Hostname not allowed", mappa live vuota.

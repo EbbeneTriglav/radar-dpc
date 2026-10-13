@@ -189,7 +189,7 @@ function describe(e){
   }
   if (num(e.peak_mmh)!=null && e.peak_utc) t+=`; picco ${f1(e.peak_mmh)} mm/h alle ${fHM(e.peak_utc)}`;
   t+=`. ${a.txt.charAt(0).toUpperCase()+a.txt.slice(1)}`;
-  if (+e.n_forecast) t+=`; allerta previsionale emessa${num(e.forecast_lead_h)!=null?` (${Math.abs(+e.forecast_lead_h)} h ${+e.forecast_lead_h>=0?'prima':'dopo'} il picco)`:''}`;
+  if (+e.n_forecast) t+=`; allerta previsionale emessa${num(e.forecast_lead_h)!=null?` (${Math.abs(+e.forecast_lead_h)} h ${+e.forecast_lead_h>=0?'prima del':'dopo il'} picco)`:''}`;
   return t+'.';
 }
 
@@ -327,8 +327,17 @@ function renderSint(S,R){
   h+=`<div class="rp-sec"><h2>Pioggia per episodio</h2><div class="chart-box"><canvas id="c-time"></canvas></div>
       <p class="rp-note">Pioggia osservata per episodio (pluviometro se disponibile, altrimenti CUM3 pluviometri DPC). Colore = area.</p></div>`;
   const top=R.top.filter(e=>observed(e).mm!=null).slice(0,5);
-  h+=`<div class="rp-sec"><h2>Episodi principali</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Pioggia</th><th class="n">Picco</th><th>Allerta</th><th>Descrizione</th></tr></thead><tbody>`+
+  h+=`<div class="rp-sec"><h2>Episodi principali (i 5 più piovosi del periodo)</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Pioggia</th><th class="n">Picco</th><th>Allerta</th><th>Descrizione</th></tr></thead><tbody>`+
     top.map(e=>{ const o=observed(e), a=alertInfo(e);
+      return `<tr><td>${fDT(e.start_utc)}</td><td>${AREA_LABEL[e.area_name]}</td><td class="n">${f1(num(e.duration_h))} h</td>
+        <td class="n"><b>${f0(o.mm)} mm</b></td><td class="n">${num(e.peak_mmh)!=null?f1(e.peak_mmh)+' mm/h':'—'}</td>
+        <td class="${a.kind==='ok'?'good':a.kind==='late'?'warn':'dim'}">${a.kind==='ok'?'✔ in anticipo':a.kind==='late'?'⏱ in ritardo':'— nessuna'}</td>
+        <td style="font-size:12px">${esc(describe(e))}</td></tr>`; }).join('')+`</tbody></table></div>`;
+  // Gli "Episodi principali" sono i 5 piu' piovosi del periodo: un episodio recente
+  // ma piu' piccolo non ci entra. Qui gli ultimi episodi con pioggia vera (≥ 5 mm).
+  const recent=S.eps.filter(e=>(observed(e).mm??0)>=5).sort((a,b)=>new Date(b.start_utc)-new Date(a.start_utc)).slice(0,5);
+  if(recent.length) h+=`<div class="rp-sec"><h2>Episodi più recenti (≥ 5 mm)</h2><table class="rp"><thead><tr><th>Quando</th><th>Area</th><th class="n">Durata</th><th class="n">Pioggia</th><th class="n">Picco</th><th>Allerta</th><th>Descrizione</th></tr></thead><tbody>`+
+    recent.map(e=>{ const o=observed(e), a=alertInfo(e);
       return `<tr><td>${fDT(e.start_utc)}</td><td>${AREA_LABEL[e.area_name]}</td><td class="n">${f1(num(e.duration_h))} h</td>
         <td class="n"><b>${f0(o.mm)} mm</b></td><td class="n">${num(e.peak_mmh)!=null?f1(e.peak_mmh)+' mm/h':'—'}</td>
         <td class="${a.kind==='ok'?'good':a.kind==='late'?'warn':'dim'}">${a.kind==='ok'?'✔ in anticipo':a.kind==='late'?'⏱ in ritardo':'— nessuna'}</td>
