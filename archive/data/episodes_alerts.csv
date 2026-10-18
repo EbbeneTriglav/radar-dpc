@@ -1,4 +1,8 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+ruspino_20261018T0720,2026-10-18T16:33:36Z,ruspino,nowcast,nowcast_warning,SRI,14.18,nowcast buffer=10km moto=S/3.4kmh prob=34%
+ruspino_20261018T0720,2026-10-18T11:06:07Z,ruspino,nowcast,nowcast_alarm,SRI,20.85,nowcast buffer=5km moto=N/24.3kmh prob=3%
+ruspino_20261018T0720,2026-10-18T10:46:03Z,ruspino,storm,storm_on_area,SRI,12.85,cella su area dwell~78min
+ruspino_20261018T0720,2026-10-18T10:36:07Z,ruspino,nowcast,nowcast_warning,SRI,10.31,nowcast buffer=5km moto=N/23.8kmh prob=76%
 scarperia_20261012T0705,2026-10-12T08:02:48Z,scarperia,storm,storm_on_area,SRI,7.82,cella su area
 scarperia_20261012T0705,2026-10-12T07:41:35Z,scarperia,nowcast,nowcast_emergency,SRI,37.26,nowcast buffer=5km moto=S/27.9kmh prob=3%
 scarperia_20261009T1325,2026-10-09T14:56:30Z,scarperia,nowcast,nowcast_alarm,SRI,16.86,nowcast buffer=10km moto=N/30.1kmh prob=13%
