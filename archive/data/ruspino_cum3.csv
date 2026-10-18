@@ -6779,3 +6779,9 @@ timestamp_utc,product,area_name,location_type,location_name,lat,lon,value,mean,m
 2026-10-18T09:00:00Z,CUM3,ruspino,vertex,ruspino_v3,45.853703,9.609002,0.658,,,,,2026-10-18T10:14:03Z
 2026-10-18T09:00:00Z,CUM3,ruspino,vertex,ruspino_v4,45.828375,9.621278,0.572,,,,,2026-10-18T10:14:03Z
 2026-10-18T09:00:00Z,CUM3,ruspino,vertex,ruspino_v5,45.831388,9.642094,0.907,,,,,2026-10-18T10:14:03Z
+2026-10-18T12:00:00Z,CUM3,ruspino,area,ruspino,,,,5.552,5.128,5.820,16,2026-10-18T15:15:04Z
+2026-10-18T12:00:00Z,CUM3,ruspino,vertex,ruspino_v1,45.850164,9.665657,5.580,,,,,2026-10-18T15:15:04Z
+2026-10-18T12:00:00Z,CUM3,ruspino,vertex,ruspino_v2,45.866839,9.637849,5.600,,,,,2026-10-18T15:15:04Z
+2026-10-18T12:00:00Z,CUM3,ruspino,vertex,ruspino_v3,45.853703,9.609002,5.642,,,,,2026-10-18T15:15:04Z
+2026-10-18T12:00:00Z,CUM3,ruspino,vertex,ruspino_v4,45.828375,9.621278,5.243,,,,,2026-10-18T15:15:04Z
+2026-10-18T12:00:00Z,CUM3,ruspino,vertex,ruspino_v5,45.831388,9.642094,5.788,,,,,2026-10-18T15:15:04Z
