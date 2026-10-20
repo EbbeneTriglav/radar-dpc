@@ -501,3 +501,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-20T14:31:00Z,ruspino,forecast_warning,15,,,CUM3,,27.80,true,true,forecast 3h prossime 6h conferma MET Norway
 2026-10-20T15:46:11Z,scarperia,nowcast_emergency,25,0.51,30.86,SRI,2026-10-20T15:35:00Z,,skipped,true,nowcast buffer=10km moto=NE/26.4kmh prob=43%
 2026-10-20T16:01:08Z,cepina,forecast_warning,10,,,CUM3,,17.50,true,true,forecast 3h prossime 6h conferma MeteoSwiss
+2026-10-20T16:06:05Z,ruspino,nowcast_warning,10,2.34,13.18,SRI,2026-10-20T15:50:00Z,,skipped,true,nowcast buffer=10km
