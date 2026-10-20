@@ -1,4 +1,23 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261020T1550,2026-10-20T21:06:13Z,scarperia,nowcast,nowcast_alarm,SRI,15.21,nowcast buffer=10km moto=E/70.3kmh prob=3%
+scarperia_20261020T1550,2026-10-20T21:06:13Z,scarperia,storm,storm_on_area,SRI,8.00,cella su area
+scarperia_20261020T1550,2026-10-20T20:36:07Z,scarperia,nowcast,nowcast_warning,SRI,10.54,nowcast buffer=10km
+scarperia_20261020T1550,2026-10-20T20:36:07Z,scarperia,storm,storm_on_area,SRI,6.73,cella su area
+ruspino_20261020T1505,2026-10-20T18:01:06Z,ruspino,forecast,forecast_warning,SRT1,,forecast 1h prossime 6h conferma MeteoSwiss
+cepina_20261020T1645,2026-10-20T17:28:41Z,cepina,forecast,forecast24h_alarm,ensemble_24h,54.12,mean=33.9 worst=54.1 metno=25.63 mch=52.92 conferma=MeteoSwiss
+ruspino_20261020T1505,2026-10-20T17:13:53Z,ruspino,nowcast,nowcast_alarm,SRI,15.00,nowcast buffer=10km
+ruspino_20261020T1505,2026-10-20T17:13:53Z,ruspino,storm,storm_on_area,SRI,9.39,cella su area dwell~177min
+ruspino_20261020T1505,2026-10-20T16:06:05Z,ruspino,nowcast,nowcast_warning,SRI,13.18,nowcast buffer=10km
+cepina_20261020T1645,2026-10-20T16:01:08Z,cepina,forecast,forecast_warning,CUM3,,forecast 3h prossime 6h conferma MeteoSwiss
+scarperia_20261020T1550,2026-10-20T15:46:11Z,scarperia,nowcast,nowcast_emergency,SRI,30.86,nowcast buffer=10km moto=NE/26.4kmh prob=43%
+ruspino_20261020T1505,2026-10-20T14:31:00Z,ruspino,forecast,forecast_warning,CUM3,,forecast 3h prossime 6h conferma MET Norway
+ruspino_20261020T1505,2026-10-20T09:11:00Z,ruspino,forecast,forecast24h_emergency,ensemble_24h,80.55,mean=61.4 worst=80.5 metno=80.78 mch=95.1 conferma=MET Norway+MeteoSwiss
+ruspino_20261020T1505,2026-10-20T07:10:55Z,ruspino,forecast,forecast24h_alarm,ensemble_24h,52.87,mean=47.4 worst=52.9 metno=54.85 mch=98.58 conferma=MET Norway+MeteoSwiss
+cepina_20261020T1645,2026-10-20T07:10:55Z,cepina,forecast,forecast24h_warning,ensemble_24h,33.08,mean=22.2 worst=33.1 metno=23.33 mch=38.55 conferma=MeteoSwiss
+scarperia_20261020T1550,2026-10-20T03:55:55Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,27.87,mean=18.7 worst=27.9 metno=23.93 mch=4.6 conferma=MET Norway
+scarperia_20261020T1550,2026-10-20T01:55:57Z,scarperia,forecast,forecast24h_alarm,ensemble_24h,19.72,mean=12.3 worst=19.7 metno=19.94 mch=4.48 conferma=MET Norway
+ruspino_20261020T1505,2026-10-20T01:55:57Z,ruspino,forecast,forecast24h_warning,ensemble_24h,33.95,mean=26.2 worst=34.0 metno=44.7 mch=45.73 conferma=MET Norway+MeteoSwiss
+scarperia_20261020T1550,2026-10-19T22:10:57Z,scarperia,forecast,forecast24h_warning,ensemble_24h,17.48,mean=9.1 worst=17.5 metno=10.18 mch=4.29 conferma=MET Norway
 ruspino_20261018T0720,2026-10-18T16:33:36Z,ruspino,nowcast,nowcast_warning,SRI,14.18,nowcast buffer=10km moto=S/3.4kmh prob=34%
 ruspino_20261018T0720,2026-10-18T11:06:07Z,ruspino,nowcast,nowcast_alarm,SRI,20.85,nowcast buffer=5km moto=N/24.3kmh prob=3%
 ruspino_20261018T0720,2026-10-18T10:46:03Z,ruspino,storm,storm_on_area,SRI,12.85,cella su area dwell~78min
