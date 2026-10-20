@@ -492,3 +492,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-18T11:26:05Z,ruspino,storm_cleared,7.0,0.52,1.05,SRI,2026-10-18T11:15:00Z,,true,true,"cella uscita dopo ~40min, caduti 5.214999675750732mm"
 2026-10-18T16:33:36Z,ruspino,nowcast_warning,10,0.42,14.18,SRI,2026-10-18T16:20:00Z,,skipped,true,nowcast buffer=10km moto=S/3.4kmh prob=34%
 2026-10-19T22:10:57Z,scarperia,forecast24h_warning,10,9.05,17.48,ensemble_24h,,17.48,true,true,mean=9.1 worst=17.5 metno=10.18 mch=4.29 conferma=MET Norway
+2026-10-20T01:55:57Z,scarperia,forecast24h_alarm,15,12.30,19.72,ensemble_24h,,19.72,true,true,mean=12.3 worst=19.7 metno=19.94 mch=4.48 conferma=MET Norway
+2026-10-20T01:55:57Z,ruspino,forecast24h_warning,30,26.17,33.95,ensemble_24h,,33.95,true,true,mean=26.2 worst=34.0 metno=44.7 mch=45.73 conferma=MET Norway+MeteoSwiss
