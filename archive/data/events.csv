@@ -504,3 +504,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-20T16:06:05Z,ruspino,nowcast_warning,10,2.34,13.18,SRI,2026-10-20T15:50:00Z,,skipped,true,nowcast buffer=10km
 2026-10-20T17:13:53Z,ruspino,nowcast_alarm,15,2.77,15.00,SRI,2026-10-20T17:05:00Z,,skipped,true,nowcast buffer=10km
 2026-10-20T17:13:53Z,ruspino,storm_on_area,7.0,3.97,9.39,SRI,2026-10-20T17:05:00Z,,true,true,cella su area dwell~177min
+2026-10-20T17:28:41Z,cepina,forecast24h_alarm,50,33.92,54.12,ensemble_24h,,54.12,true,true,mean=33.9 worst=54.1 metno=25.63 mch=52.92 conferma=MeteoSwiss

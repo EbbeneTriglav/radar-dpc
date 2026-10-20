@@ -1,7 +1,8 @@
 {
-  "_last_run_utc": "2026-10-20T14:06:06Z",
+  "_last_run_utc": "2026-10-20T17:28:41Z",
   "cepina:forecast_24h:alarm": {
-    "active": false
+    "active": true,
+    "last_trigger_utc": "2026-10-20T17:28:41Z"
   },
   "cepina:forecast_24h:emergency": {
     "active": false
