@@ -1,4 +1,28 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+cepina_20261020T1645,2026-10-21T09:46:15Z,cepina,storm,storm_on_area,SRI,18.91,catch-up: cella rilevata a posteriori +21min
+cepina_20261020T1645,2026-10-21T09:36:08Z,cepina,nowcast,nowcast_alarm,SRI,21.67,nowcast buffer=5km moto=N/23.5kmh prob=7%
+cepina_20261020T1645,2026-10-21T09:36:08Z,cepina,storm,storm_on_area,SRI,18.91,cella su area
+cepina_20261020T1645,2026-10-21T09:16:10Z,cepina,nowcast,nowcast_warning,SRI,11.06,nowcast buffer=5km moto=N/49.3kmh prob=71%
+scarperia_20261020T1550,2026-10-21T09:06:04Z,scarperia,storm,storm_on_area,SRI,5.59,cella su area dwell~180min
+ruspino_20261020T1505,2026-10-21T07:56:09Z,ruspino,storm,storm_on_area,SRI,13.74,cella su area dwell~139min
+scarperia_20261020T1550,2026-10-21T07:16:06Z,scarperia,nowcast,nowcast_emergency,SRI,39.92,nowcast buffer=10km moto=NE/17.4kmh prob=18%
+ruspino_20261020T1505,2026-10-21T06:56:03Z,ruspino,nowcast,nowcast_emergency,SRI,28.74,nowcast buffer=10km moto=NE/6.0kmh prob=2%
+ruspino_20261020T1505,2026-10-21T06:46:07Z,ruspino,nowcast,nowcast_warning,SRT1,8.19,nowcast buffer=10km moto=N/25.8kmh prob=1%
+ruspino_20261020T1505,2026-10-21T06:26:08Z,ruspino,storm,storm_on_area,SRI,9.80,cella su area dwell~121min
+scarperia_20261020T1550,2026-10-21T05:46:09Z,scarperia,storm,storm_on_area,SRI,5.17,cella su area dwell~117min
+ruspino_20261020T1505,2026-10-21T03:36:06Z,ruspino,nowcast,nowcast_alarm,SRI,15.47,nowcast buffer=10km moto=N/48.9kmh prob=48%
+ruspino_20261020T1505,2026-10-21T03:16:05Z,ruspino,nowcast,nowcast_warning,SRI,10.85,nowcast buffer=5km
+scarperia_20261020T1550,2026-10-21T03:06:07Z,scarperia,nowcast,nowcast_alarm,SRI,16.09,nowcast buffer=10km moto=N/33.2kmh prob=40%
+scarperia_20261020T1550,2026-10-21T02:56:15Z,scarperia,storm,storm_on_area,SRI,5.51,cella su area dwell~58min
+ruspino_20261020T1505,2026-10-21T02:06:08Z,ruspino,monitor,persistent_emergency,SRI_12h,,"pioggia persistente: cumulata mobile SRI media area 12h, copertura 100%"
+ruspino_20261020T1505,2026-10-21T01:31:00Z,ruspino,monitor,warning,CUM3,17.320,rilevamento tardivo catch-up +31min
+ruspino_20261020T1505,2026-10-21T00:51:04Z,ruspino,monitor,persistent_alarm,SRI_6h,,"pioggia persistente: cumulata mobile SRI media area 6h, copertura 100%"
+scarperia_20261020T1550,2026-10-20T23:41:06Z,scarperia,storm,storm_on_area,SRI,5.69,catch-up: cella rilevata a posteriori +16min
+ruspino_20261020T1505,2026-10-20T23:16:14Z,ruspino,monitor,persistent_warning,SRI_3h,,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
+ruspino_20261020T1505,2026-10-20T22:56:08Z,ruspino,nowcast,nowcast_emergency,SRI,26.80,nowcast buffer=5km moto=W/56.0kmh prob=33%
+ruspino_20261020T1505,2026-10-20T21:56:11Z,ruspino,storm,storm_on_area,SRI,7.66,cella su area
+ruspino_20261020T1505,2026-10-20T21:46:06Z,ruspino,nowcast,nowcast_warning,SRI,11.49,nowcast buffer=5km moto=W/97.3kmh prob=63%
+ruspino_20261020T1505,2026-10-20T21:46:06Z,ruspino,nowcast,nowcast_alarm,SRI,20.22,nowcast buffer=10km moto=W/97.3kmh prob=58%
 scarperia_20261020T1550,2026-10-20T21:06:13Z,scarperia,nowcast,nowcast_alarm,SRI,15.21,nowcast buffer=10km moto=E/70.3kmh prob=3%
 scarperia_20261020T1550,2026-10-20T21:06:13Z,scarperia,storm,storm_on_area,SRI,8.00,cella su area
 scarperia_20261020T1550,2026-10-20T20:36:07Z,scarperia,nowcast,nowcast_warning,SRI,10.54,nowcast buffer=10km
