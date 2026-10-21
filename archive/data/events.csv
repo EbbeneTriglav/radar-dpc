@@ -526,3 +526,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-21T03:06:07Z,scarperia,nowcast_alarm,15,1.58,16.09,SRI,2026-10-21T02:50:00Z,,skipped,true,nowcast buffer=10km moto=N/33.2kmh prob=40%
 2026-10-21T03:16:05Z,ruspino,nowcast_warning,10,4.73,10.85,SRI,2026-10-21T03:05:00Z,,skipped,true,nowcast buffer=5km
 2026-10-21T03:26:06Z,scarperia,storm_cleared,5.0,0.65,1.81,SRI,2026-10-21T03:15:00Z,,true,true,"cella uscita dopo ~29min, caduti 1.934999942779541mm"
+2026-10-21T03:36:06Z,ruspino,nowcast_alarm,15,1.35,15.47,SRI,2026-10-21T03:25:00Z,,skipped,true,nowcast buffer=10km moto=N/48.9kmh prob=48%
