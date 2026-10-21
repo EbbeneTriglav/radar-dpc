@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-10-21T01:31:09Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-10-21T01:21:11Z",
+  "_nowcast_last_run_utc": "2026-10-21T01:31:11Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 2.09,
-          "sri_mean": 0.17,
-          "srt1_max": 2.95,
+          "sri_max": 3.46,
+          "sri_mean": 0.65,
+          "srt1_max": 3.02,
           "srt1_mean": 0.45
         },
         "5km": {
-          "sri_max": 1.0,
-          "sri_mean": 0.03,
-          "srt1_max": 1.89,
-          "srt1_mean": 0.61
+          "sri_max": 2.96,
+          "sri_mean": 0.83,
+          "srt1_max": 1.94,
+          "srt1_mean": 0.6
         }
       },
       "motion": {
-        "bearing_deg": 249.6282983534032,
-        "compass": "W",
-        "speed_kmh": 52.9
+        "bearing_deg": null,
+        "compass": "stazionaria",
+        "speed_kmh": 0.0
       },
-      "timestamp_utc": "2026-10-21T01:21:11Z",
+      "timestamp_utc": "2026-10-21T01:31:11Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -152,24 +152,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 8.66,
-          "sri_mean": 2.45,
-          "srt1_max": 15.25,
-          "srt1_mean": 4.35
+          "sri_max": 15.57,
+          "sri_mean": 4.66,
+          "srt1_max": 14.8,
+          "srt1_mean": 4.14
         },
         "5km": {
-          "sri_max": 8.72,
-          "sri_mean": 3.78,
-          "srt1_max": 13.8,
-          "srt1_mean": 6.14
+          "sri_max": 15.57,
+          "sri_mean": 7.6,
+          "srt1_max": 13.3,
+          "srt1_mean": 6.2
         }
       },
       "motion": {
-        "bearing_deg": 178.33610231506694,
-        "compass": "S",
-        "speed_kmh": 22.0
+        "bearing_deg": null,
+        "compass": "stazionaria",
+        "speed_kmh": 0.0
       },
-      "timestamp_utc": "2026-10-21T01:21:11Z",
+      "timestamp_utc": "2026-10-21T01:31:11Z",
       "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -235,8 +235,8 @@
         "10km": {
           "sri_max": 0.0,
           "sri_mean": 0.0,
-          "srt1_max": 1.5,
-          "srt1_mean": 0.12
+          "srt1_max": 1.38,
+          "srt1_mean": 0.11
         },
         "5km": {
           "sri_max": 0.0,
@@ -246,7 +246,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-10-21T01:21:11Z",
+      "timestamp_utc": "2026-10-21T01:31:11Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
