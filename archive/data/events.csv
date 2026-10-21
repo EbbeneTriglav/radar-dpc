@@ -546,3 +546,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-21T09:46:15Z,cepina,storm_on_area,7.0,4.35,18.91,SRI,2026-10-21T09:25:00Z,,true,true,catch-up: cella rilevata a posteriori +21min
 2026-10-21T13:41:15Z,ruspino,nowcast_alarm,15,0.61,18.19,SRI,2026-10-21T13:30:00Z,,skipped,true,nowcast buffer=10km moto=NE/30.7kmh prob=19%
 2026-10-21T13:51:14Z,ruspino,nowcast_emergency,25,3.14,57.48,SRI,2026-10-21T13:40:00Z,,skipped,true,nowcast buffer=10km moto=NE/31.1kmh prob=54%
+2026-10-21T14:21:05Z,ruspino,storm_on_area,7.0,2.87,8.68,SRI,2026-10-21T14:10:00Z,,true,true,cella su area
