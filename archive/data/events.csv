@@ -523,3 +523,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-21T01:31:00Z,ruspino,warning,15,16.341,17.320,CUM3,2026-10-21T01:00:00Z,7.70,true,true,rilevamento tardivo catch-up +31min
 2026-10-21T02:06:08Z,ruspino,persistent_emergency,50,50.33,,SRI_12h,2026-10-21T01:55:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 12h, copertura 100%"
 2026-10-21T02:56:15Z,scarperia,storm_on_area,5.0,2.05,5.51,SRI,2026-10-21T02:45:00Z,,true,true,cella su area dwell~58min
+2026-10-21T03:06:07Z,scarperia,nowcast_alarm,15,1.58,16.09,SRI,2026-10-21T02:50:00Z,,skipped,true,nowcast buffer=10km moto=N/33.2kmh prob=40%
