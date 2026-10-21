@@ -1,4 +1,17 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+cepina_20261021T1620,2026-10-21T19:16:10Z,cepina,storm,storm_on_area,SRI,7.53,cella su area
+cepina_20261021T1620,2026-10-21T18:46:13Z,cepina,nowcast,nowcast_emergency,SRI,28.12,nowcast buffer=5km moto=N/11.3kmh prob=4%
+ruspino_20261020T1505,2026-10-21T17:46:11Z,ruspino,storm,storm_on_area,SRI,14.24,cella su area dwell~85min
+ruspino_20261020T1505,2026-10-21T17:21:08Z,ruspino,nowcast,nowcast_emergency,SRI,34.51,nowcast buffer=10km moto=E/15.0kmh prob=38%
+ruspino_20261020T1505,2026-10-21T17:11:18Z,ruspino,nowcast,nowcast_warning,SRI,11.62,nowcast buffer=10km moto=NE/15.3kmh prob=40%
+cepina_20261021T1620,2026-10-21T17:11:18Z,cepina,storm,storm_on_area,SRI,7.24,cella su area
+cepina_20261021T1620,2026-10-21T16:41:05Z,cepina,nowcast,nowcast_alarm,SRI,21.72,nowcast buffer=10km moto=NE/47.9kmh prob=51%
+ruspino_20261020T1505,2026-10-21T15:41:16Z,ruspino,storm,storm_on_area,SRI,14.01,cella su area
+ruspino_20261020T1505,2026-10-21T15:22:37Z,ruspino,monitor,warning,CUM3,22.096,
+ruspino_20261020T1505,2026-10-21T15:01:25Z,ruspino,monitor,persistent_warning,SRI_3h,,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
+ruspino_20261020T1505,2026-10-21T14:21:05Z,ruspino,storm,storm_on_area,SRI,8.68,cella su area
+ruspino_20261020T1505,2026-10-21T13:51:14Z,ruspino,nowcast,nowcast_emergency,SRI,57.48,nowcast buffer=10km moto=NE/31.1kmh prob=54%
+ruspino_20261020T1505,2026-10-21T13:41:15Z,ruspino,nowcast,nowcast_alarm,SRI,18.19,nowcast buffer=10km moto=NE/30.7kmh prob=19%
 cepina_20261020T1645,2026-10-21T09:46:15Z,cepina,storm,storm_on_area,SRI,18.91,catch-up: cella rilevata a posteriori +21min
 cepina_20261020T1645,2026-10-21T09:36:08Z,cepina,nowcast,nowcast_alarm,SRI,21.67,nowcast buffer=5km moto=N/23.5kmh prob=7%
 cepina_20261020T1645,2026-10-21T09:36:08Z,cepina,storm,storm_on_area,SRI,18.91,cella su area
