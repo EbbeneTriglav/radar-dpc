@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-10-21T18:52:01Z",
+  "_last_run_utc": "2026-10-21T20:50:58Z",
   "cepina:forecast_24h:alarm": {
     "active": false
   },
@@ -7,8 +7,7 @@
     "active": false
   },
   "cepina:forecast_24h:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-10-20T07:10:55Z"
+    "active": false
   },
   "ruspino:forecast_24h:alarm": {
     "active": false
