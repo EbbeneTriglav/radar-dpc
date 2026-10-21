@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-10-21T20:48:09Z",
+  "_last_run_utc": "2026-10-21T21:01:08Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": false,
     "last_trigger_utc": "2026-10-21T16:41:05Z",
@@ -50,15 +50,6 @@
   "cepina:nowcast:SRT1:5:warning": {
     "active": true,
     "last_trigger_utc": "2026-10-21T18:36:15Z"
-  },
-  "cepina:nowcast:catchup:1792594200000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1792594500000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1792594800000": {
-    "done": true
   },
   "cepina:nowcast:catchup:1792595100000": {
     "done": true
@@ -261,6 +252,12 @@
   "cepina:nowcast:catchup:1792614900000": {
     "done": true
   },
+  "cepina:nowcast:catchup:1792615200000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1792615500000": {
+    "done": true
+  },
   "cepina:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-10-21T20:48:09Z",
@@ -271,10 +268,10 @@
     "rank": 3
   },
   "cepina:nowcast:ring_last_ms:10": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   },
   "cepina:nowcast:ring_last_ms:5": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": false,
@@ -292,8 +289,9 @@
     "rearmed_utc": "2026-10-21T20:16:07Z"
   },
   "ruspino:nowcast:SRI:5:alarm": {
-    "active": true,
-    "last_trigger_utc": "2026-10-21T17:56:10Z"
+    "active": false,
+    "last_trigger_utc": "2026-10-21T17:56:10Z",
+    "rearmed_utc": "2026-10-21T21:01:08Z"
   },
   "ruspino:nowcast:SRI:5:emergency": {
     "active": false,
@@ -315,8 +313,9 @@
     "rearmed_utc": "2026-10-21T17:11:18Z"
   },
   "ruspino:nowcast:SRT1:10:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-10-21T17:56:10Z"
+    "active": false,
+    "last_trigger_utc": "2026-10-21T17:56:10Z",
+    "rearmed_utc": "2026-10-21T21:01:08Z"
   },
   "ruspino:nowcast:SRT1:5:alarm": {
     "active": false,
@@ -329,17 +328,9 @@
     "rearmed_utc": "2026-10-21T17:56:10Z"
   },
   "ruspino:nowcast:SRT1:5:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-10-21T17:56:10Z"
-  },
-  "ruspino:nowcast:catchup:1792594200000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1792594500000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1792594800000": {
-    "done": true
+    "active": false,
+    "last_trigger_utc": "2026-10-21T17:56:10Z",
+    "rearmed_utc": "2026-10-21T21:01:08Z"
   },
   "ruspino:nowcast:catchup:1792595100000": {
     "done": true
@@ -542,6 +533,12 @@
   "ruspino:nowcast:catchup:1792614900000": {
     "done": true
   },
+  "ruspino:nowcast:catchup:1792615200000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1792615500000": {
+    "done": true
+  },
   "ruspino:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-10-21T19:06:11Z",
@@ -552,10 +549,10 @@
     "rank": 3
   },
   "ruspino:nowcast:ring_last_ms:10": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   },
   "ruspino:nowcast:ring_last_ms:5": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   },
   "ruspino:persistent:alarm": {
     "active": false,
@@ -628,15 +625,6 @@
     "active": false,
     "last_trigger_utc": "2026-10-20T21:26:06Z",
     "rearmed_utc": "2026-10-21T00:31:24Z"
-  },
-  "scarperia:nowcast:catchup:1792594200000": {
-    "done": true
-  },
-  "scarperia:nowcast:catchup:1792594500000": {
-    "done": true
-  },
-  "scarperia:nowcast:catchup:1792594800000": {
-    "done": true
   },
   "scarperia:nowcast:catchup:1792595100000": {
     "done": true
@@ -839,6 +827,12 @@
   "scarperia:nowcast:catchup:1792614900000": {
     "done": true
   },
+  "scarperia:nowcast:catchup:1792615200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1792615500000": {
+    "done": true
+  },
   "scarperia:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-10-21T09:46:15Z",
@@ -849,9 +843,9 @@
     "rank": 3
   },
   "scarperia:nowcast:ring_last_ms:10": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   },
   "scarperia:nowcast:ring_last_ms:5": {
-    "ms": 1792615200000
+    "ms": 1792615800000
   }
 }
