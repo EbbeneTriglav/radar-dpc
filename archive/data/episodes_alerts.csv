@@ -1,4 +1,13 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261023T1350,2026-10-23T20:51:05Z,scarperia,monitor,warning,CUM3,11.919,
+scarperia_20261023T1350,2026-10-23T18:36:12Z,scarperia,storm,storm_on_area,SRI,8.14,cella su area dwell~111min
+scarperia_20261023T1350,2026-10-23T17:38:14Z,scarperia,storm,storm_on_area,SRI,9.38,cella su area dwell~57min
+scarperia_20261023T1350,2026-10-23T17:29:10Z,scarperia,nowcast,nowcast_alarm,SRI,16.79,nowcast buffer=10km moto=S/26.7kmh prob=2%
+scarperia_20261023T1350,2026-10-23T15:46:10Z,scarperia,nowcast,nowcast_warning,SRI,11.64,nowcast buffer=5km moto=S/76.1kmh prob=3%
+ruspino_20261023T0940,2026-10-23T15:31:18Z,ruspino,nowcast,nowcast_warning,SRI,11.15,nowcast buffer=10km moto=NE/2.2kmh prob=33%
+scarperia_20261023T1350,2026-10-23T11:56:18Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,25.96,mean=8.6 worst=26.0 metno=4.61 mch=27.31 conferma=MeteoSwiss
+ruspino_20261023T0940,2026-10-23T11:31:07Z,ruspino,nowcast,nowcast_warning,SRI,10.32,nowcast buffer=10km moto=NE/36.4kmh prob=50%
+scarperia_20261023T1350,2026-10-22T23:55:56Z,scarperia,forecast,forecast24h_warning,ensemble_24h,15.36,mean=6.2 worst=15.4 metno=2.75 mch=10.16 conferma=MeteoSwiss
 cepina_20261021T1620,2026-10-21T19:16:10Z,cepina,storm,storm_on_area,SRI,7.53,cella su area
 cepina_20261021T1620,2026-10-21T18:46:13Z,cepina,nowcast,nowcast_emergency,SRI,28.12,nowcast buffer=5km moto=N/11.3kmh prob=4%
 ruspino_20261020T1505,2026-10-21T17:46:11Z,ruspino,storm,storm_on_area,SRI,14.24,cella su area dwell~85min
