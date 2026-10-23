@@ -564,3 +564,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-21T20:48:09Z,cepina,storm_cleared,7.0,0.18,0.56,SRI,2026-10-21T20:40:00Z,,true,true,"cella uscita dopo ~91min, caduti 11.444999694824219mm"
 2026-10-22T23:55:56Z,scarperia,forecast24h_warning,10,6.20,15.36,ensemble_24h,,15.36,true,true,mean=6.2 worst=15.4 metno=2.75 mch=10.16 conferma=MeteoSwiss
 2026-10-23T11:31:07Z,ruspino,nowcast_warning,10,0.35,10.32,SRI,2026-10-23T11:15:00Z,,skipped,true,nowcast buffer=10km moto=NE/36.4kmh prob=50%
+2026-10-23T11:56:18Z,scarperia,forecast24h_emergency,20,8.59,25.96,ensemble_24h,,25.96,true,true,mean=8.6 worst=26.0 metno=4.61 mch=27.31 conferma=MeteoSwiss
