@@ -586,3 +586,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-01T14:01:07Z,ruspino,persistent_warning,15,20.45,,SRI_3h,2026-11-01T13:50:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
 2026-11-01T14:01:07Z,scarperia,nowcast_emergency,25,4.16,27.77,SRI,2026-11-01T13:50:00Z,,skipped,true,nowcast buffer=10km moto=SW/14.6kmh prob=11%
 2026-11-01T14:21:13Z,scarperia,storm_cleared,5.0,0.30,1.16,SRI,2026-11-01T14:10:00Z,,true,true,"cella uscita dopo ~90min, caduti 9.809999465942383mm"
+2026-11-01T15:01:08Z,ruspino,persistent_alarm,30,30.47,,SRI_6h,2026-11-01T14:50:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 6h, copertura 100%"
