@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-11-01T14:21:13Z",
+  "_last_run_utc": "2026-11-01T14:31:07Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": false,
     "last_trigger_utc": "2026-10-21T16:41:05Z",
@@ -255,6 +255,12 @@
   "cepina:nowcast:catchup:1793541900000": {
     "done": true
   },
+  "cepina:nowcast:catchup:1793542200000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1793542500000": {
+    "done": true
+  },
   "cepina:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-10-21T20:48:09Z",
@@ -265,10 +271,10 @@
     "rank": 3
   },
   "cepina:nowcast:ring_last_ms:10": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   },
   "cepina:nowcast:ring_last_ms:5": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": true,
@@ -515,6 +521,12 @@
   "ruspino:nowcast:catchup:1793541900000": {
     "done": true
   },
+  "ruspino:nowcast:catchup:1793542200000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1793542500000": {
+    "done": true
+  },
   "ruspino:nowcast:cell_on_area": {
     "active": true,
     "cum_alerts": [],
@@ -526,10 +538,10 @@
     "rank": 3
   },
   "ruspino:nowcast:ring_last_ms:10": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   },
   "ruspino:nowcast:ring_last_ms:5": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   },
   "ruspino:persistent:alarm": {
     "active": false,
@@ -544,8 +556,9 @@
     "last_trigger_utc": "2026-11-01T14:01:07Z"
   },
   "scarperia:nowcast:SRI:10:alarm": {
-    "active": true,
-    "last_trigger_utc": "2026-11-01T10:51:08Z"
+    "active": false,
+    "last_trigger_utc": "2026-11-01T10:51:08Z",
+    "rearmed_utc": "2026-11-01T14:31:07Z"
   },
   "scarperia:nowcast:SRI:10:emergency": {
     "active": true,
@@ -790,6 +803,12 @@
   "scarperia:nowcast:catchup:1793541900000": {
     "done": true
   },
+  "scarperia:nowcast:catchup:1793542200000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1793542500000": {
+    "done": true
+  },
   "scarperia:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-11-01T14:21:13Z",
@@ -800,9 +819,9 @@
     "rank": 3
   },
   "scarperia:nowcast:ring_last_ms:10": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   },
   "scarperia:nowcast:ring_last_ms:5": {
-    "ms": 1793542200000
+    "ms": 1793542800000
   }
 }
