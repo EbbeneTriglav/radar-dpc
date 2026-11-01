@@ -1,4 +1,12 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261101T1040,2026-11-01T17:06:03Z,scarperia,nowcast,nowcast_warning,SRI,11.74,nowcast buffer=5km moto=E/28.1kmh prob=35%
+ruspino_20261101T0905,2026-11-01T16:56:09Z,ruspino,nowcast,nowcast_alarm,SRT1,19.59,nowcast buffer=5km moto=S/4.1kmh prob=3%
+scarperia_20261101T1040,2026-11-01T15:36:06Z,scarperia,storm,storm_on_area,SRI,5.92,cella su area dwell~88min
+ruspino_20261101T0905,2026-11-01T15:01:08Z,ruspino,monitor,persistent_alarm,SRI_6h,,"pioggia persistente: cumulata mobile SRI media area 6h, copertura 100%"
+scarperia_20261101T1040,2026-11-01T14:01:07Z,scarperia,nowcast,nowcast_emergency,SRI,27.77,nowcast buffer=10km moto=SW/14.6kmh prob=11%
+ruspino_20261101T0905,2026-11-01T14:01:07Z,ruspino,monitor,persistent_warning,SRI_3h,,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
+ruspino_20261101T0905,2026-11-01T13:11:08Z,ruspino,nowcast,nowcast_emergency,SRI,43.25,nowcast buffer=10km moto=SW/14.0kmh prob=35%
+scarperia_20261101T1040,2026-11-01T12:51:06Z,scarperia,storm,storm_on_area,SRI,21.17,cella su area
 ruspino_20261101T0905,2026-11-01T12:41:09Z,ruspino,storm,storm_on_area,SRI,7.54,cella su area
 ruspino_20261101T0905,2026-11-01T12:01:08Z,ruspino,nowcast,nowcast_alarm,SRI,17.81,nowcast buffer=10km moto=S/3.9kmh prob=9%
 ruspino_20261101T0905,2026-11-01T11:41:07Z,ruspino,nowcast,nowcast_warning,SRI,11.19,nowcast buffer=5km moto=S/4.7kmh prob=35%
