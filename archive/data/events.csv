@@ -576,3 +576,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-10-31T23:39:45Z,scarperia,forecast24h_warning,10,5.58,11.95,ensemble_24h,,11.95,true,true,mean=5.6 worst=11.9 metno=9.57 mch=12.87 conferma=MeteoSwiss
 2026-11-01T06:06:05Z,ruspino,nowcast_alarm,15,0.50,16.02,SRI,2026-11-01T05:55:00Z,,skipped,true,nowcast buffer=10km moto=S/5.0kmh prob=20%
 2026-11-01T10:11:08Z,scarperia,nowcast_emergency,25,0.71,31.75,SRI,2026-11-01T10:00:00Z,,skipped,true,nowcast buffer=10km moto=SW/46.5kmh prob=30%
+2026-11-01T11:11:07Z,scarperia,storm_on_area,5.0,1.62,5.51,SRI,2026-11-01T11:00:00Z,,true,true,cella su area dwell~56min
