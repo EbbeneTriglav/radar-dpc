@@ -74,7 +74,7 @@ prima del commit.
 **Frontend** (GitHub Pages): pagine HTML single-file che leggono i dati da
 `raw.githubusercontent.com/EbbeneTriglav/radar-dpc/main/archive/data/` via un
 helper `fetchData()`. Chart.js + Leaflet.js. Pagine:
-`index, storico, archivio, monitor, eventi, arpa, mch, previsioni, verifica, report`.
+`index, storico, archivio, eventi, arpa, mch, previsioni, verifica, report` (Monitor tolta 10/2026).
 `mch.html` = radar MeteoSwiss live (PNG da `archive/data/radar_mch/`, dato di studio). Tema: chiave localStorage
 `radar-theme` + `body.light-theme` su tutte le pagine.
 `report.html` genera nel browser report deterministici (sintesi stakeholder + tecnico)
@@ -149,7 +149,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   altrimenti i blocchi 21:00/24:00 non esistono ancora → cumulata mancante per
   eventi serali. Già corretto; non regredire.
 - **forecast_verification.csv**: `bias_mm` = osservato − previsto (negativo = il modello
-  sovrastima); l'osservato è la CUM3 (3h) → l'orizzonte 1h non è affidabile.
+  sovrastima); l'osservato è la CUM3 (3h) → l'orizzonte 1h non è affidabile. `forecast_mm` è il MASSIMO previsto
+  nelle prossime 6h, l'osservato è il solo blocco CUM3 più vicino a made_at+1h/3h: bias negativo per costruzione,
+  utile per il confronto relativo tra fonti, non come errore assoluto. OpenMeteo usa dati a 15', MET e ICON-CH1 orari.
 - **Fetch pluviometro Socrata**: usare filtro temporale `$where` sulla data, non
   `$limit` generico (con dati sub-orari copre solo ~14 giorni → eventi vecchi a 0).
 - **Ruolo ARPA per area** (`ARPA_ROLE` in nowcast.py): Ruspino `'or'` (ARPA affidabile, r≈0.7);
@@ -173,6 +175,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   allerte forecast 6h (`monitor.py`) e 24h (`forecast_ensemble_alert.py`): OM/worst ≥ soglia E (MET o ICON-CH1 o
   media). Nella matrice (`forecast_matrix.py`) è solo mostrato (`meteoswiss_icon_seamless`, 72h), non cambia il
   livello. Decisione presa con pochi giorni di verifica: rivederla con `forecast_verification.csv` dopo 3–4 settimane.
+  Prima revisione 03/11/2026 (06/10–02/11): MAE simile a MET, 11 notifiche confermate solo da ICON-CH1 (circa 4 giuste,
+  4 falsi allarmi di cui 3 a Cepina il 20/10, 3 dubbie). Campione piccolo: nessuna modifica, rivedere a fine 11/2026.
 - **Pluviometri ARPA in Previsioni**: `ground_daily.py` (workflow `ground-daily.yml`, ogni 3h) scrive `ground_daily.csv`
   (totali giorno UTC + n_obs/expected_obs). La pagina usa quello e chiama Socrata live solo se l'archivio ha buchi:
   dal browser Socrata risponde spesso **HTTP 429** (chiamate anonime limitate) → prima tutti i giorni erano "n.d.".
@@ -203,6 +207,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Allerte forecast 24h** (`forecast_ensemble_alert.py`): una sola notifica per run, il livello PIÙ ALTO confermato
   (gli inferiori diventano attivi in silenzio), come `monitor.py`. Prima partivano ALARM+EMERGENCY insieme.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
+  Tolta da `verifica.html` il 03/11/2026 (restava nella sezione Forecast). Le soglie sono ancora nel codice di
+  `forecast_matrix.py` (`MATRIX2`): spostarle nel secret è una modifica alla logica di allerta, solo con conferma.
 - **Sito pubblico anonimo**: nessun nome di committente/marchio/uso finale in pagine, README, commenti. L'area
   toscana si chiama `scarperia` ovunque nel repo (dati, file, stato). Il nome "interno" usato in email e Telegram
   e TUTTI i destinatari stanno nel secret `AREAS_PRIVATE` (`archive/scripts/area_private.py`: `apply_private`,
@@ -234,8 +240,7 @@ opzionali `TG_BOT_TOKEN` + `TG_CHAT_ID` per la notifica del watchdog.
 ---
 
 ## Stato attuale (aggiornare quando cambia)
-Sistema in produzione e funzionante. Ultimi lavori: tabella verifica a due radar
-(ARPA+DPC, cumulate mm), archivio+replay eventi ARPA, sezione Previsioni,
-watchdog Cloudflare + auto-riavvio healthcheck, ricostruzione eventi persi.
-Aperti/possibili: allineare granularità MET/OM, pagina Eventi dedicata,
-storicizzazione verifica forecast.
+Sistema in produzione e funzionante. Ultimi lavori (10/2026): ICON-CH1 come conferma forecast, pre-allerta anelli
+con mappa, cella 7 mm/h e pioggia persistente a Ruspino, sito pubblico anonimo, radar MeteoSwiss di studio.
+Aperti/possibili: allineare granularità MET/OM e finestra osservata in forecast_verify, soglie SP3 fuori dal codice
+pubblico, numero di pre-allerte anelli (escalation 10→15→25 = più messaggi per lo stesso evento).
