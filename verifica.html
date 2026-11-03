@@ -104,10 +104,11 @@
 
   <h2 style="font-size:15px;margin:24px 0 8px">Forecast — Ruspino 24/48/72h · Scarperia e Cepina prossimi 3 giorni</h2>
   <p class="vf-note">Stessi ingredienti delle dashboard: 5 modelli Open-Meteo (ICON·IFS·GFS·ARPEGE·AROME),
-  <b>worst-case</b> = modello più piovoso, <b>MET Norway (YR)</b> come validazione indipendente (mai mediato).
-  Se una soglia viene raggiunta (già al primo livello), il workflow <code>forecast-alert</code> invia <b>mail + Telegram</b> (la matrice decisionale
-  dettagliata va solo via mail ai destinatari); la mail può partire anche per un <b>salto improvviso</b> della previsione.
-  Ricalcolo live qui sotto per controllo; il <b>trigger reale</b> gira server-side ogni 6h.</p>
+  <b>worst-case</b> = modello più piovoso, <b>MET Norway (YR)</b> e <b>MeteoSwiss ICON-CH1</b> come validazioni indipendenti (mai mediate).
+  Le schede qui sotto ricalcolano dal vivo la matrice a worst-case (Scarperia e Cepina: soglie per giorno civile). L'allerta
+  <b>previsione 24h</b> registrata in Eventi richiede in più una conferma sopra soglia (media dei modelli, MET Norway o ICON-CH1).
+  Entrambe girano server-side nel workflow <code>forecast-alert</code> <b>ogni 2h</b>. Per Ruspino si mostrano solo i valori previsti:
+  soglie e livelli della matrice 24/48/72h sono riservati ai destinatari dei messaggi.</p>
   <div id="fc-sites" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
     <div class="vf-card"><div class="k">Caricamento forecast…</div></div>
   </div>
@@ -1212,8 +1213,8 @@ const OM_URL='https://api.open-meteo.com/v1/forecast', YR_URL='https://api.met.n
 const FC_MODELS=[['icon_seamless','ICON'],['ecmwf_ifs025','IFS'],['gfs_seamless','GFS'],['meteofrance_arpege_europe','ARPEGE'],['meteofrance_arome_france_hd','AROME']];
 // Punti+soglie IDENTICI agli script server-side (forecast_matrix.py)
 const FC_SITES=[
+  // Ruspino: solo valori previsti. Le soglie 24/48/72h sono riservate (non vanno nel repo pubblico).
   { name:'ruspino', label:'Ruspino', crit:'matrix',
-    thr:{'24h':[60,80],'48h':[80,120],'72h':[100,140]},  // MATRIX2 Ruspino (Att,Crit)
     pts:[[45.8672,9.6505,.11],[45.8623,9.6373,.10],[45.8574,9.6439,.10],[45.8524,9.6176,.10],[45.8464,9.6353,.12],[45.8475,9.6571,.09],[45.8377,9.6242,.09],[45.8426,9.6505,.08],[45.8278,9.6307,.07],[45.8327,9.6373,.07],[45.8475,9.6637,.07]] },
   { name:'scarperia', label:'Scarperia', crit:'day', thrDay:[5,10,15],  // mm/giorno worst-case
     pts:[[44.092,11.283,.14],[44.084,11.272,.12],[44.075,11.278,.11],[44.077,11.299,.13],[44.076,11.320,.11],[44.065,11.312,.09],[44.061,11.299,.08],[44.049,11.304,.05],[44.080,11.281,.06],[44.0818,11.309,.06],[44.0872,11.291,.05]] },
@@ -1316,7 +1317,7 @@ function renderForecastSites(){
         lines=['24h','48h','72h'].map(hz=>{ const perM={};
           for(const k in fc.series){ const v=rollMax(fc.series[k],H[hz]); if(v!=null) perM[k]=v; }
           const yr=fc.yr?rollMax(fc.yr,H[hz]):null;
-          return {label:hz, perM, mean:rollMax(fc.ensMean,H[hz]), yr, yrPart:!!(fc.yr&&fc.yr.length<H[hz]), thr:site.thr[hz]}; });
+          return {label:hz, perM, mean:rollMax(fc.ensMean,H[hz]), yr, yrPart:!!(fc.yr&&fc.yr.length<H[hz]), thr:null}; });
       } else {
         lines=dailyWorst(fc,3).map(d=>({...d, label:d.label+(d.nHours!==24?` <span style="font-weight:400;color:var(--text3,#94a3b8)">(${d.nHours}h)</span>`:''), thr:site.thrDay}));
       }
@@ -1326,25 +1327,26 @@ function renderForecastSites(){
         const worst=ks.length? Math.max(...ks.map(k=>L.perM[k])) : null;
         let lvl=-1, thrTxt='', col='#64748b';
         if(worst!=null){
-          if(site.crit==='matrix'){ const t=L.thr; lvl=worst>=t[1]?1:worst>=t[0]?0:-1;
-            col=lvl>=0?LVL.COLORS[lvl+1]:'#64748b'; }
+          if(site.crit==='matrix'){ col='#cbd5e1'; }   // nessun livello pubblico (soglie riservate)
           else { const t=L.thr; lvl=worst>=t[2]?2:worst>=t[1]?1:worst>=t[0]?0:-1; col=lvl>=0?LVL.COLORS[lvl+1]:'#64748b'; }
         }
-        thrTxt = site.crit==='matrix' ? `L1 ${L.thr[0]} · L2 ${L.thr[1]}` : `${L.thr[0]}/${L.thr[1]}/${L.thr[2]} mm`;
+        thrTxt = site.crit==='matrix' ? 'riservate' : `${L.thr[0]}/${L.thr[1]}/${L.thr[2]} mm`;
         if(lvl>maxLvl) maxLvl=lvl;
         // concordi = modelli (con dato completo) sopra la prima soglia / modelli considerati
-        const nAgree=ks.filter(k=>L.perM[k]>=L.thr[0]).length;
+        const nAgree=L.thr ? ks.filter(k=>L.perM[k]>=L.thr[0]).length : null;
         rows+=`<tr><td style="padding:4px 8px;font-weight:600;white-space:nowrap">${L.label}</td>
           <td style="padding:4px 8px;text-align:right;font-weight:700;color:${col}">${worst!=null?worst.toFixed(0)+' mm':'—'}</td>
           <td style="padding:4px 8px;text-align:right;color:#94a3b8">${L.mean!=null?L.mean.toFixed(0):'—'}</td>
           <td style="padding:4px 8px;text-align:right;color:#22d3ee">${L.yr!=null?L.yr.toFixed(0)+(L.yrPart?'*':''):'—'}</td>
-          <td style="padding:4px 8px;color:#94a3b8;font-size:11px">${thrTxt} · ${nAgree}/${ks.length}</td></tr>`;
+          <td style="padding:4px 8px;color:#94a3b8;font-size:11px">${thrTxt}${nAgree!=null?` · ${nAgree}/${ks.length}`:` · ${ks.length} modelli`}</td></tr>`;
       }
       // Il server (forecast_matrix.py, decide_send) invia quando rank = max_level+1 ≥ 1,
       // cioè già al PRIMO livello.
       const alertOn = maxLvl>=0;
       const lvlName = alertOn ? LEVELS[site.crit][maxLvl] : '';
-      const badge = alertOn
+      const badge = site.crit==='matrix'
+        ? `<span class="pill" style="background:#1e293b;color:#94a3b8" title="Soglie e livelli riservati ai destinatari dei messaggi">solo valori previsti</span>`
+        : alertOn
         ? `<span class="pill" style="background:#33415580;color:${LVL.COLORS[maxLvl+1]}">${lvlName} → notifica</span>`
         : `<span class="pill" style="background:#1e293b;color:#94a3b8">sotto soglia</span>`;
       const anyYrPart=lines.some(L=>L.yr!=null&&L.yrPart);
@@ -1366,10 +1368,10 @@ function renderForecastSites(){
   });
   document.getElementById('fc-note').innerHTML=
     'Worst-case = modello più piovoso (mai mediato con YR). Colonna <b>Ens.</b> = media dei modelli, <b>YR</b> = MET Norway indipendente. '+
-    '<b>Ruspino</b>: massima cumulata mobile su 24/48/72h. <b>Scarperia e Cepina</b>: cumulata per <b>giorno civile</b> (ora italiana) sui prossimi 3 giorni; '+
+    '<b>Ruspino</b>: massima cumulata mobile su 24/48/72h (solo valori: soglie riservate). <b>Scarperia e Cepina</b>: cumulata per <b>giorno civile</b> (ora italiana) sui prossimi 3 giorni; '+
     'il primo giorno comprende solo le ore restanti (indicate tra parentesi). '+
     'Un modello senza dati Open-Meteo per alcune ore (es. AROME oltre il suo orizzonte) è <b>escluso</b> da quell\'orizzonte/giorno e dal conteggio dei concordi, non contato come 0 mm. '+
-    'Il <b>trigger reale</b> di invio notifica gira server-side (workflow forecast-alert, ogni 6h) con la stessa logica: '+
+    'Il <b>trigger reale</b> di invio notifica gira server-side (workflow forecast-alert, ogni 2h) con la stessa logica: '+
     'la notifica parte già al <b>Liv. 1</b>, al massimo una volta al giorno più le escalation. '+
     '<b>La notifica può partire anche per un salto improvviso della previsione</b> (worst-case in forte aumento rispetto al run precedente, anche sotto soglia): '+
     'questo canale dipende dallo storico dei run e non è ricalcolato qui. Questo ricalcolo live serve al controllo visivo.';

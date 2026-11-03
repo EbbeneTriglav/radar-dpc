@@ -1,5 +1,12 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-11-03 — Verifica: niente soglie riservate sulla pagina pubblica
+- La sezione "Forecast" di `verifica.html` mostrava per Ruspino le soglie della matrice 24/48/72h (riservata, vedi
+  CLAUDE.md) e il livello calcolato. Ora per Ruspino solo i valori previsti (worst, media, YR), senza soglie né livello.
+  Scarperia e Cepina invariati. La logica server-side (`forecast_matrix.py`) non cambia.
+- Testo aggiornato: ICON-CH1 è fonte di conferma dell'allerta 24h (dal 06/10), il workflow `forecast-alert` gira ogni 2h
+  (non 6h).
+
 ## 2026-10-13 — Grafico evento: CUM3 cumulata; Report: episodi recenti
 - Verifica, grafico evento: la CUM3 DPC (max e mean) è disegnata come **cumulata evento** (somma progressiva dei
   blocchi 3h, salita lineare dentro ogni blocco), confrontabile con le cumulate radar e col pluviometro. I blocchi 3h
