@@ -69,7 +69,7 @@ Se più livelli scattano insieme, notifica solo il **più alto**.
 Il più affidabile per il preavviso immediato: usa **dati radar osservati**.
 Due anelli buffer (**5 km e 10 km dal bordo del poligono**) per rilevare celle
 in avvicinamento.
-- Soglie (tutte le aree): SRI 10/15/25 mm/h · SRT1 8/15/20 mm/1h
+- Soglie: SRI 10/15/25 mm/h (Ruspino e Scarperia 20/25 dal 04/11/2026, `prealert_ring_sri_mmh` in areas.json) · SRT1 8/15/20 mm/1h
 - Calcola posizione cella, **direzione di moto** (8 punti cardinali) +
   **velocità km/h** (2 frame SRI), **probabilità di arrivo** sul bacino.
 - Riporta intensità mm/h e cumulata 3h nel buffer.

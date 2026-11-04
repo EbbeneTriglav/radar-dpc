@@ -162,7 +162,9 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
   di quel frame. Motivo: Ruspino 07/10/2026, anello a 10,7 e 11,6 mm/h in frame mai visti (run ogni ~20').
 - **Soglia "cella sull'area"**: `cell_threshold()` = `monitoring.cell_on_area_mmh` in areas.json se presente,
   altrimenti warning SRT1 dell'area. Ruspino 7 mm/h dal 07/10/2026 (prima 10; backtest ARPA giu–ott: +1 avviso/mese,
-  0 falsi, 14/14 episodi ≥20 mm). Cepina 7 e Scarperia 5 (da SRT1). La pre-allerta anelli resta a SRI 10/15/25.
+  0 falsi, 14/14 episodi ≥20 mm). Cepina 7 e Scarperia 5 (da SRT1). Pre-allerta anelli SRI: `monitoring.prealert_ring_sri_mmh` in areas.json
+  (`ring_sri_thresholds()`), default 10/15/25; Ruspino e Scarperia 20/25 dal 04/11/2026 (06/10–03/11 a 10 mm/h: 45% di
+  avvisi senza cella sull'area entro 2h, 33 messaggi per 19 episodi a Ruspino). SRT1 anelli invariato (8/15/20).
 - **Pioggia persistente** (`_eval_persistent_rain`, dal 07/10/2026): cumulata MOBILE dell'SRI DPC media area
   (`<area>_sri.csv` + frame del run) sulle ultime N ore, regole in `monitoring.persistent_rain` (Ruspino:
   15 mm/3h warning, 30/6h alarm, 50/12h emergency; backtest CUM3 15/05–07/10: 3,7 / 1,2 / 0,8 al mese). Una

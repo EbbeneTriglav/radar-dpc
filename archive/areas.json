@@ -100,6 +100,8 @@
    "monitoring": {
     "cell_on_area_mmh": 7,
     "_cell_on_area_comment": "Soglia cella sull'area (SRI/ARPA max mm/h). Senza questa chiave vale il warning SRT1. Ruspino 7 dal 07/10/2026 (backtest giu-ott: +1 avviso/mese, nessun episodio perso).",
+    "prealert_ring_sri_mmh": {"warning": 20, "emergency": 25},
+    "_prealert_ring_comment": "Pre-allerta anelli 5/10 km, radar SRI max mm/h (solo Telegram). Senza questa chiave valgono 10/15/25 (SRI_THRESHOLDS in nowcast.py). Dal 04/11/2026 20/25: 06/10-03/11 a 10 mm/h 45% di avvisi senza cella sull'area entro 2h; a 20 mm/h circa 20-30%, 2-3 celle in meno anticipate.",
     "persistent_rain": [
      {
       "level": "warning",
@@ -277,6 +279,8 @@
     }
    ],
    "monitoring": {
+    "prealert_ring_sri_mmh": {"warning": 20, "emergency": 25},
+    "_prealert_ring_comment": "Pre-allerta anelli 5/10 km, radar SRI max mm/h (solo Telegram). Senza questa chiave valgono 10/15/25 (SRI_THRESHOLDS in nowcast.py). Dal 04/11/2026 20/25: 06/10-03/11 a 10 mm/h 45% di avvisi senza cella sull'area entro 2h; a 20 mm/h circa 20-30%, 2-3 celle in meno anticipate.",
     "enabled": true,
     "metric": "mean",
     "channels": [

@@ -1,5 +1,13 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-11-04 (b) — Pre-allerta anelli: Ruspino e Scarperia da 10 a 20 mm/h
+- Soglie SRI della "cella in avvicinamento" ora per area (`monitoring.prealert_ring_sri_mmh` in areas.json,
+  `ring_sri_thresholds()` in nowcast.py). Ruspino e Scarperia: Liv. 1 a 20 mm/h, Liv. 3 a 25 (tolti 10 e 15).
+  Cepina invariata (10/15/25). SRT1 degli anelli invariato.
+- Motivo (revisione 03/11, periodo 06/10–03/11): a 10 mm/h 45–46% degli avvisi senza cella sull'area entro 2h e molte
+  escalation dello stesso evento (Ruspino 33 messaggi per 19 episodi). Simulazione sull'anello 10 km a 20 mm/h: falsi
+  ~21% (Ruspino) e ~31% (Scarperia); costo: 2 celle su 12 e 3 su 18 senza pre-avviso nel periodo.
+
 ## 2026-11-04 — Matrice previsionale Ruspino: soglie fuori dal repo pubblico
 - `forecast_matrix.py` non contiene più le soglie 24/48/72h di Ruspino: le legge dal nuovo secret `MATRIX_PRIVATE`
   (passato solo allo step "Matrice previsionale" di `forecast-alert.yml`). **Il secret va creato prima di applicare la

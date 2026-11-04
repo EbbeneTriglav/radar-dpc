@@ -61,6 +61,27 @@ SRI_THRESHOLDS = [                 # mm/h istantanea
     {'level': 'alarm',     'value': 15, 'icon': '⛈️'},
     {'level': 'emergency', 'value': 25, 'icon': '⚡'},
 ]
+
+
+def ring_sri_thresholds(area):
+    """Soglie SRI della pre-allerta anelli per l'area: `monitoring.prealert_ring_sri_mmh` in areas.json
+    ({livello: mm/h}, livelli ammessi warning/alarm/emergency), altrimenti SRI_THRESHOLDS (10/15/25).
+    Ruspino e Scarperia 20/25 dal 04/11/2026 (troppi avvisi senza cella sull'area a 10 mm/h)."""
+    cfg = (area.get('monitoring') or {}).get('prealert_ring_sri_mmh')
+    if not isinstance(cfg, dict) or not cfg:
+        return SRI_THRESHOLDS
+    icons = {t['level']: t['icon'] for t in SRI_THRESHOLDS}
+    try:
+        out = [{'level': lv, 'value': (int(float(v)) if float(v).is_integer() else float(v)), 'icon': icons[lv]}
+               for lv, v in cfg.items() if lv in icons]
+    except (TypeError, ValueError):
+        out = []
+    if not out:
+        log.warning(f"{area.get('label', area.get('name'))}: prealert_ring_sri_mmh non valido, uso 10/15/25")
+        return SRI_THRESHOLDS
+    return sorted(out, key=lambda t: t['value'])
+
+
 # Soglie di cumulata EVENTO (mm) per gli aggiornamenti in diretta durante un
 # evento attivo: si notifica al superamento di ciascuna, una sola volta.
 # Configurabile via env CUM_EVENT_MILESTONES="20,40,60,80,100".
@@ -1183,7 +1204,7 @@ def process_area(area, archive_dir, writer, state, now_iso, sri_frames, srt1_tif
                 sig['ts_iso'] = datetime.fromtimestamp(sri_frames[best_i][0]/1000, tz=timezone.utc).isoformat().replace('+00:00','Z')
                 if cum3_stat:
                     sig['cum3_max'] = cum3_stat['max']
-            was_triggered = _eval_product(area, 'SRI', SRI_THRESHOLDS, sig, geom, buf_km,
+            was_triggered = _eval_product(area, 'SRI', ring_sri_thresholds(area), sig, geom, buf_km,
                           sri_frames[best_i:], centroid, state, now_iso, channels, writer,
                           rcpt_email=rcpt_email, rcpt_tg=rcpt_tg)
             if was_triggered:
