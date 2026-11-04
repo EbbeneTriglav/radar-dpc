@@ -1,5 +1,13 @@
 # CHANGELOG — Piattaforma Web V2 Radar DPC
 
+## 2026-11-04 — Matrice previsionale Ruspino: soglie fuori dal repo pubblico
+- `forecast_matrix.py` non contiene più le soglie 24/48/72h di Ruspino: le legge dal nuovo secret `MATRIX_PRIVATE`
+  (passato solo allo step "Matrice previsionale" di `forecast-alert.yml`). **Il secret va creato prima di applicare la
+  modifica**: senza, la matrice di Ruspino non viene calcolata (errore nel log + avviso Telegram una volta al giorno).
+  Calcolo, livelli, prossimità e anti-spam invariati (stessi risultati della versione precedente a parità di soglie).
+- Testi di email e Telegram neutri: "Matrice previsionale", azione al livello Critico con testo da `action_text` del
+  secret (default "AZIONE PREVENTIVA consigliata"). Step del workflow rinominato.
+
 ## 2026-11-03 — Verifica: niente soglie riservate sulla pagina pubblica
 - La sezione "Forecast" di `verifica.html` mostrava per Ruspino le soglie della matrice 24/48/72h (riservata, vedi
   CLAUDE.md) e il livello calcolato. Ora per Ruspino solo i valori previsti (worst, media, YR), senza soglie né livello.

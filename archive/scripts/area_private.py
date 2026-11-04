@@ -59,6 +59,27 @@ def recipients(area_name):
     return (r.get('email') or None, r.get('telegram_chat_ids') or None)
 
 
+_MATRIX_CACHE = None
+
+
+def matrix_private(area_name):
+    """Soglie RISERVATE della matrice previsionale (forecast_matrix.py) dal secret
+    `MATRIX_PRIVATE` (JSON), es. {"ruspino": {"thr": {"1g": [a, b], "2g": [..], "3g": [..]},
+    "action_text": "..."}}. {} se il secret manca o non è leggibile (mai stampare il contenuto)."""
+    global _MATRIX_CACHE
+    if _MATRIX_CACHE is None:
+        raw = (os.environ.get('MATRIX_PRIVATE') or '').strip()
+        _MATRIX_CACHE = {}
+        if raw:
+            try:
+                _MATRIX_CACHE = json.loads(raw)
+            except Exception as e:
+                log.warning(f'MATRIX_PRIVATE non leggibile ({type(e).__name__})')
+        else:
+            log.warning('MATRIX_PRIVATE non impostato')
+    return (_MATRIX_CACHE.get(area_name) or {}) if isinstance(_MATRIX_CACHE, dict) else {}
+
+
 def msg_label(area_or_name, default=None):
     """Nome dell'area per email/Telegram: privato se configurato, altrimenti pubblico."""
     if isinstance(area_or_name, dict):

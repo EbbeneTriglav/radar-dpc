@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-forecast_matrix.py — Matrice rischio scarico preventivo previsionale (24/48/72h) via email.
+forecast_matrix.py — Matrice di rischio previsionale (24/48/72h) via email + Telegram.
 
 Replica ESATTAMENTE gli ingredienti delle dashboard:
   · Ruspino v2.0: 11 punti pesati (POINTS_RUSPINO, copiati verbatim dalla
     dashboard), 5 modelli Open-Meteo, MET Norway come validazione SEPARATA
     (mai mediato nell'ensemble), cumulate MOBILI 24/48/72h, worst-case =
-    modello più piovoso, matrice 3×2 a soglia unica di scarico:
-      Attenzione [60, 80, 100] · Critico [80, 120, 140] (24/48/72h)
-      Scarico preventivo al livello CRITICO in QUALSIASI orizzonte.
+    modello più piovoso, matrice 3×2 (Attenzione/Critico × 24/48/72h).
+      Le SOGLIE sono RISERVATE: non stanno nel codice (repo pubblico) ma nel
+      secret GitHub `MATRIX_PRIVATE` (area_private.matrix_private). Senza secret
+      valido la matrice di Ruspino NON viene calcolata (log + avviso Telegram 1/giorno).
+      Azione preventiva consigliata al livello CRITICO in QUALSIASI orizzonte.
       Prossimità: warning se worst ≥ 85% della soglia successiva (proxFactor).
   · Scarperia v6.6: 11 punti CONTROL_POINTS (già identici alla dashboard),
     criterio B su CUMULATA GIORNALIERA worst-case (giorni civili Europe/Rome):
@@ -49,7 +51,7 @@ from forecast_ensemble_alert import (  # noqa: E402
     CONTROL_POINTS, MODELS, METNO_API, METNO_UA, OPENMETEO_API,
     _http, send_email, send_telegram, _area_recipients,
 )
-from area_private import msg_label  # noqa: E402
+from area_private import msg_label, matrix_private  # noqa: E402
 
 log = logging.getLogger('forecast_matrix')
 logging.basicConfig(level=logging.INFO,
@@ -101,10 +103,33 @@ MATRIX2 = {
     ],
     'levels': ['Attenzione', 'Critico'],
     'colors': ['#0ea5e9', '#dc2626'],
-    'thr': {'1g': [60, 80], '2g': [80, 120], '3g': [100, 140]},
-    'sp3_min_level': 1,      # scarico al Critico, qualsiasi orizzonte
+    # 'thr' (soglie mm per orizzonte) NON è qui: arriva dal secret MATRIX_PRIVATE
+    # (vedi ruspino_matrix_config). Il repo è pubblico e le soglie sono riservate.
+    'sp3_min_level': 1,      # azione preventiva al Critico, qualsiasi orizzonte
     'prox_factor': 0.85,     # prossimità: worst ≥ 85% soglia successiva
 }
+DEFAULT_ACTION_TEXT = 'AZIONE PREVENTIVA consigliata'
+
+
+def ruspino_matrix_config():
+    """Soglie riservate della matrice Ruspino dal secret MATRIX_PRIVATE.
+    Ritorna {'thr': {'1g': [att, crit], '2g': [...], '3g': [...]}, 'action_text': str}
+    oppure None se il secret manca o non è valido. Non logga MAI i valori."""
+    cfg = matrix_private('ruspino')
+    thr = (cfg or {}).get('thr') or {}
+    try:
+        out = {}
+        for hz in MATRIX2['horizons']:
+            v = [float(x) for x in thr[hz['key']]]
+            v = [int(x) if x.is_integer() else x for x in v]
+            if len(v) != 2 or not (0 < v[0] < v[1]):
+                raise ValueError('coppia soglie non valida')
+            out[hz['key']] = v
+    except Exception as e:
+        log.error(f'[Ruspino] soglie matrice non configurate o non valide nel secret '
+                  f'MATRIX_PRIVATE ({type(e).__name__}): matrice NON calcolata')
+        return None
+    return {'thr': out, 'action_text': str(cfg.get('action_text') or DEFAULT_ACTION_TEXT)}
 
 # ── Soglie giornaliere Scarperia — IDENTICHE alla dashboard v6.6 (thr) ──
 DAILY_THR = {'att': 5, 'crit': 10, 'ext': 15}   # mm/giorno, worst-case
@@ -260,6 +285,9 @@ def max_rolling_sum(series, window_h):
 # ─── Ruspino: matrice 3×2 su cumulate mobili ────────────────────────────────
 
 def compute_ruspino_matrix():
+    cfg = ruspino_matrix_config()
+    if cfg is None:
+        return {'config_missing': True}
     series, metno, n_pts, metno_cov, _ = weighted_series_by_model(POINTS_RUSPINO)
     if not series:
         return None
@@ -279,7 +307,7 @@ def compute_ruspino_matrix():
         mean_v = max_rolling_sum(ens_mean, H)
         metno_v = max_rolling_sum(metno, H) if metno else None
         mch_v = max_rolling_sum(mch, H) if mch else None
-        thr = MATRIX2['thr'][hz['key']]
+        thr = cfg['thr'][hz['key']]
         level_idx = 1 if worst >= thr[1] else (0 if worst >= thr[0] else -1)
         # concordanza sulla soglia Attenzione (stesso criterio dashboard)
         n_agree = sum(1 for v in per_model.values() if v >= thr[0])
@@ -295,7 +323,7 @@ def compute_ruspino_matrix():
         })
     sp3 = any(r['level_idx'] >= MATRIX2['sp3_min_level'] for r in rows)
     max_level = max((r['level_idx'] for r in rows), default=-1)
-    return {'rows': rows, 'sp3': sp3, 'max_level': max_level,
+    return {'rows': rows, 'sp3': sp3, 'max_level': max_level, 'action_text': cfg['action_text'],
             'n_points_ok': n_pts, 'n_models': n_models, 'metno_cov_h': metno_cov,
             'mch_cov_h': mch_cov}
 
@@ -353,13 +381,15 @@ def _cell(v, active, color):
 
 
 def compose_email_ruspino(res, now_iso):
+    area_lbl = msg_label('ruspino', 'Ruspino')
+    action = res.get('action_text') or DEFAULT_ACTION_TEXT
     lvl_name = MATRIX2['levels'][res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
     icon = '⛔' if res['sp3'] else ('⚠️' if res['max_level'] >= 0 else '✓')
-    subject = (f"{icon} Matrice scarico preventivo Ruspino — {lvl_name}"
-               + (' · SCARICO CONSIGLIATO' if res['sp3'] else ''))
+    subject = (f"{icon} Matrice previsionale {area_lbl} — {lvl_name}"
+               + (f' · {action}' if res['sp3'] else ''))
 
     head = ''.join(f'<th style="padding:8px 12px;border:1px solid #e2e8f0;color:{c};font-size:12px">{lv}'
-                   + (' · scarico' if i == 1 else '') + '</th>'
+                   + (' · azione' if i == 1 else '') + '</th>'
                    for i, (lv, c) in enumerate(zip(MATRIX2['levels'], MATRIX2['colors'])))
     body_rows, text_rows = [], []
     for r in res['rows']:
@@ -390,16 +420,16 @@ def compose_email_ruspino(res, now_iso):
     if res['sp3']:
         banner = ('<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:8px;'
                   'padding:12px 16px;margin:0 0 14px;font-size:15px;font-weight:700;color:#7f1d1d">'
-                  '⛔ SCARICO PREVENTIVO consigliato — livello Critico (worst-case) raggiunto</div>')
+                  f'⛔ {action} — livello Critico (worst-case) raggiunto</div>')
 
     metno_note = (f"MET Norway: copertura oraria {res['metno_cov_h']}/{FORECAST_HOURS}h "
                   "(validazione indipendente, mai mediato nell'ensemble) · "
                   f"MeteoSwiss ICON: copertura {res.get('mch_cov_h', 0)}/{FORECAST_HOURS}h "
                   "(terzo riferimento, non cambia il livello)")
     html = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
-<h2 style="margin:0 0 4px">🚱 Matrice rischio scarico preventivo — Bacino Ruspino</h2>
+<h2 style="margin:0 0 4px">📊 Matrice di rischio previsionale — Bacino {area_lbl}</h2>
 <p style="color:#64748b;font-size:12px;margin:0 0 14px">Cumulate mobili 24/48/72h · worst-case = modello più piovoso ·
-soglie identiche alla dashboard v2.0 (matrice 3×2, soglia unica di scarico) · run {now_iso}</p>
+matrice 3×2, azione al livello Critico · run {now_iso}</p>
 {banner}
 <table style="border-collapse:collapse">
 <tr><th style="padding:8px 12px;border:1px solid #e2e8f0"></th>{head}
@@ -413,11 +443,12 @@ Cella evidenziata = livello del worst-case. Contenuto riservato ai destinatari e
 (non pubblicato su dashboard/Telegram/eventi).</p>
 </body></html>"""
 
-    text = (f"MATRICE SCARICO PREVENTIVO — RUSPINO ({now_iso})\n"
-            + ('*** SCARICO PREVENTIVO consigliato (Critico raggiunto) ***\n' if res['sp3'] else '')
+    thr_txt = ' · '.join(f"{r['hz']['sub']} {r['thr'][0]:.0f}/{r['thr'][1]:.0f}" for r in res['rows'])
+    text = (f"MATRICE DI RISCHIO PREVISIONALE — {area_lbl.upper()} ({now_iso})\n"
+            + (f'*** {action} (Critico raggiunto) ***\n' if res['sp3'] else '')
             + '\n'.join(text_rows)
             + f"\n\nEnsemble {res['n_models']}/5 modelli, {res['n_points_ok']}/11 punti · {metno_note}\n"
-            "Soglie = dashboard Ruspino v2.0, matrice 3×2 (Att 60/80/100 · Crit 80/120/140).\n"
+            f"Soglie Attenzione/Critico (mm): {thr_txt}.\n"
             "Contenuto riservato ai destinatari email.")
     return subject, text, html
 
@@ -578,9 +609,9 @@ def compose_telegram_matrix(res, label, now_iso):
     else:
         levels = MATRIX2['levels']
         lvl_name = levels[res['max_level']] if res['max_level'] >= 0 else 'sotto soglia'
-        head = ("\u26D4 *SCARICO PREVENTIVO consigliato*" if res.get('sp3')
+        head = (f"\u26D4 *{res.get('action_text') or DEFAULT_ACTION_TEXT}*" if res.get('sp3')
                 else f"Livello: *{lvl_name.upper()}*")
-        lines = [f"\U0001F6B1 *Matrice scarico \u2014 {label}*", head, ""]
+        lines = [f"\U0001F4CA *Matrice previsionale \u2014 {label}*", head, ""]
         for r in res['rows']:
             lvn = levels[r['level_idx']] if r['level_idx'] >= 0 else 'sotto soglia'
             val = f"*{r['worst']:.0f} mm*" if r['level_idx'] >= 0 else f"{r['worst']:.0f} mm"
@@ -590,6 +621,24 @@ def compose_telegram_matrix(res, label, now_iso):
     lines.append(f"_Ensemble {res['n_models']}/5 modelli \u00b7 "
                  f"{res['n_points_ok']}/11 punti \u00b7 MET Norway e MeteoSwiss indip._")
     return "\n".join(lines)
+
+
+def _warn_config_missing(state, label, today, dry_run):
+    """Secret MATRIX_PRIVATE assente/non valido: la matrice non parte. Lo si dice
+    all'operatore (chat Telegram di default) al massimo una volta al giorno, così
+    non resta un canale di allerta spento senza che nessuno lo sappia."""
+    if state.get('_config_warn_date') == today:
+        return
+    md = (f"\u26A0\uFE0F *Matrice previsionale {label} NON calcolata*\n"
+          "Secret MATRIX_PRIVATE mancante o non valido: le soglie riservate non sono disponibili. "
+          "Le altre allerte (24h ensemble, nowcast, soglie DPC) funzionano normalmente.")
+    if dry_run:
+        log.info('DRY-RUN — avviso configurazione mancante non inviato')
+        return
+    st = send_telegram(md)
+    log.info(f'[{label}] avviso configurazione matrice: {st}')
+    if st == 'true':
+        state['_config_warn_date'] = today
 
 
 def main():
@@ -625,6 +674,9 @@ def main():
             res = compute()
         except Exception as e:
             log.error(f'[{label}] calcolo fallito: {e}', exc_info=True)
+            continue
+        if res and res.get('config_missing'):
+            _warn_config_missing(state, label, today, args.dry_run)
             continue
         if not res:
             log.warning(f'[{label}] nessun dato ensemble disponibile')

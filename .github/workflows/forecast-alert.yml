@@ -62,7 +62,7 @@ jobs:
             python archive/scripts/forecast_ensemble_alert.py
           fi
 
-      - name: Matrice SP3 previsionale (24/48/72h, email + Telegram)
+      - name: Matrice previsionale (24/48/72h, email + Telegram)
         # Email dettagliata (matrice completa) + Telegram compatto, agli stessi
         # destinatari dell'area. Niente events.csv, niente pagine pubbliche.
         # continue-on-error: un problema qui non deve bloccare il commit
@@ -77,6 +77,7 @@ jobs:
           AREAS_PRIVATE:    ${{ secrets.AREAS_PRIVATE }}
           TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MATRIX_PRIVATE:   ${{ secrets.MATRIX_PRIVATE }}   # soglie riservate della matrice Ruspino
         run: |
           MODE="${{ github.event.inputs.mode }}"
           if [ "$MODE" = "dry-run" ]; then

@@ -207,8 +207,13 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 - **Allerte forecast 24h** (`forecast_ensemble_alert.py`): una sola notifica per run, il livello PIÙ ALTO confermato
   (gli inferiori diventano attivi in silenzio), come `monitor.py`. Prima partivano ALARM+EMERGENCY insieme.
 - **Matrice SP3 (soglie 24/48/72h Ruspino) è riservata**: non aggiungerla in pagine/testi del repo pubblico.
-  Tolta da `verifica.html` il 03/11/2026 (restava nella sezione Forecast). Le soglie sono ancora nel codice di
-  `forecast_matrix.py` (`MATRIX2`): spostarle nel secret è una modifica alla logica di allerta, solo con conferma.
+  Tolta da `verifica.html` il 03/11/2026. Dal 04/11/2026 le soglie NON sono nel codice: `forecast_matrix.py` le legge
+  dal secret `MATRIX_PRIVATE` (`area_private.matrix_private`, JSON `{"ruspino": {"thr": {"1g": [att, crit], "2g": [..],
+  "3g": [..]}, "action_text": "..."}}`). Secret assente o non valido → matrice Ruspino NON calcolata, errore nel log e
+  avviso Telegram (chat di default) una volta al giorno; le altre allerte non cambiano. Nei testi niente "scarico":
+  il testo dell'azione viene da `action_text` (default "AZIONE PREVENTIVA consigliata"). Le soglie vecchie restano
+  nella storia git (non riscritta). Limite: worst e livello per run finiscono in log e `forecast_matrix_state.json`
+  (pubblici), da cui le soglie si possono solo stimare a posteriori.
 - **Sito pubblico anonimo**: nessun nome di committente/marchio/uso finale in pagine, README, commenti. L'area
   toscana si chiama `scarperia` ovunque nel repo (dati, file, stato). Il nome "interno" usato in email e Telegram
   e TUTTI i destinatari stanno nel secret `AREAS_PRIVATE` (`archive/scripts/area_private.py`: `apply_private`,
@@ -232,7 +237,8 @@ giornaliero nel repo `dati_idro` (SIR non ha API CORS).
 ## Secrets (già configurati, non stamparli mai)
 GitHub Actions: `SMTP_HOST/PORT/USER/PASS/TO`, `TELEGRAM_TOKEN`,
 `TELEGRAM_CHAT_ID`, `GITHUB_TOKEN` (automatico), `AREAS_PRIVATE` (destinatari e nomi per i
-messaggi, JSON per area), `SOCRATA_APP_TOKEN` (opzionale).
+messaggi, JSON per area), `MATRIX_PRIVATE` (soglie riservate della matrice previsionale Ruspino, dal 04/11/2026),
+`SOCRATA_APP_TOKEN` (opzionale).
 Cloudflare Worker: `GH_TOKEN` (PAT fine-grained, repo radar-dpc, Actions RW),
 opzionali `TG_BOT_TOKEN` + `TG_CHAT_ID` per la notifica del watchdog.
 **Mai loggare, stampare o committare valori di secret.**
@@ -242,5 +248,4 @@ opzionali `TG_BOT_TOKEN` + `TG_CHAT_ID` per la notifica del watchdog.
 ## Stato attuale (aggiornare quando cambia)
 Sistema in produzione e funzionante. Ultimi lavori (10/2026): ICON-CH1 come conferma forecast, pre-allerta anelli
 con mappa, cella 7 mm/h e pioggia persistente a Ruspino, sito pubblico anonimo, radar MeteoSwiss di studio.
-Aperti/possibili: allineare granularità MET/OM e finestra osservata in forecast_verify, soglie SP3 fuori dal codice
-pubblico, numero di pre-allerte anelli (escalation 10→15→25 = più messaggi per lo stesso evento).
+Aperti/possibili: allineare granularità MET/OM e finestra osservata in forecast_verify.
