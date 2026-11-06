@@ -597,3 +597,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-06T09:01:06Z,ruspino,nowcast_warning,8,2.29,8.41,SRT1,2026-11-06T08:50:00Z,,skipped,true,nowcast buffer=10km moto=NW/8.2kmh prob=9%
 2026-11-06T09:01:06Z,scarperia,nowcast_warning,20,2.53,22.31,SRI,2026-11-06T08:50:00Z,,skipped,true,nowcast buffer=10km moto=NE/15.2kmh prob=46%
 2026-11-06T09:01:06Z,scarperia,storm_on_area,5.0,2.80,6.98,SRI,2026-11-06T08:50:00Z,,true,true,cella su area
+2026-11-06T09:11:00Z,scarperia,nowcast_emergency,25,3.12,25.51,SRI,2026-11-06T08:55:00Z,,skipped,true,nowcast buffer=10km moto=N/9.8kmh prob=41%
