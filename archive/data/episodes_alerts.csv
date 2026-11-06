@@ -1,4 +1,12 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261106T0700,2026-11-06T12:56:07Z,scarperia,nowcast,nowcast_warning,SRT1,8.03,nowcast buffer=10km moto=N/13.6kmh prob=45%
+scarperia_20261106T0700,2026-11-06T12:16:06Z,scarperia,storm,storm_on_area,SRI,7.80,cella su area
+scarperia_20261106T0700,2026-11-06T09:11:00Z,scarperia,nowcast,nowcast_emergency,SRI,25.51,nowcast buffer=10km moto=N/9.8kmh prob=41%
+scarperia_20261106T0700,2026-11-06T09:01:06Z,scarperia,nowcast,nowcast_warning,SRI,22.31,nowcast buffer=10km moto=NE/15.2kmh prob=46%
+scarperia_20261106T0700,2026-11-06T09:01:06Z,scarperia,storm,storm_on_area,SRI,6.98,cella su area
+ruspino_20261106T0800,2026-11-06T09:01:06Z,ruspino,nowcast,nowcast_warning,SRT1,8.41,nowcast buffer=10km moto=NW/8.2kmh prob=9%
+ruspino_20261106T0800,2026-11-06T08:21:03Z,ruspino,storm,storm_on_area,SRI,7.85,cella su area
+scarperia_20261106T0700,2026-11-05T18:40:57Z,scarperia,forecast,forecast24h_warning,ensemble_24h,15.13,mean=8.3 worst=15.1 metno=11.38 mch=9.54 conferma=MET Norway
 scarperia_20261101T1040,2026-11-01T17:06:03Z,scarperia,nowcast,nowcast_warning,SRI,11.74,nowcast buffer=5km moto=E/28.1kmh prob=35%
 ruspino_20261101T0905,2026-11-01T16:56:09Z,ruspino,nowcast,nowcast_alarm,SRT1,19.59,nowcast buffer=5km moto=S/4.1kmh prob=3%
 scarperia_20261101T1040,2026-11-01T15:36:06Z,scarperia,storm,storm_on_area,SRI,5.92,cella su area dwell~88min
