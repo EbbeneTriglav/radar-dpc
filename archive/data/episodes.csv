@@ -1,4 +1,7 @@
 episode_id,area_name,start_utc,end_utc,duration_h,source,peak_mmh,peak_source,peak_utc,arpa_max_mm,arpa_mean_mm,arpa_cov_pct,sri_max_mm,sri_mean_mm,sri_cov_pct,sri_peak_mmh,cum3_max_mm,cum3_mean_mm,cum3_blocks,gauge_name,gauge_mm,gauge_type,n_alerts,n_storm,n_nowcast,n_monitor,n_forecast,first_alert_utc,alert_lead_min,forecast_lead_h,status,mch_max_mm,mch_mean_mm,mch_cov_pct
+scarperia_20261109T0805,scarperia,2026-11-09T08:05:00Z,2026-11-09T08:15:00Z,0.2,SRI,0.8,SRI,2026-11-09T08:05:00Z,,,,0.1,0.1,100,0.8,1.0,0.7,1,Monte di Fò,,,1,0,0,0,1,,,2.2,chiuso,,,
+scarperia_20261109T0150,scarperia,2026-11-09T01:50:00Z,2026-11-09T04:50:00Z,3.0,SRI,2.5,SRI,2026-11-09T04:20:00Z,,,,1.3,0.7,100,2.5,0.3,0.1,2,Monte di Fò,,,0,0,0,0,0,,,,chiuso,,,
+scarperia_20261108T2125,scarperia,2026-11-08T21:25:00Z,2026-11-08T22:40:00Z,1.2,SRI,3.7,SRI,2026-11-08T21:45:00Z,,,,1.7,0.9,100,3.7,0.3,0.1,1,Monte di Fò,,,0,0,0,0,0,,,,chiuso,,,
 scarperia_20261108T0745,scarperia,2026-11-08T07:45:00Z,2026-11-08T10:00:00Z,2.2,SRI,1.4,SRI,2026-11-08T09:20:00Z,,,,0.9,0.5,100,1.4,0.0,0.0,2,Monte di Fò,,,0,0,0,0,0,,,,chiuso,,,
 scarperia_20261107T0155,scarperia,2026-11-07T01:55:00Z,2026-11-07T05:45:00Z,3.8,SRI,3.3,SRI,2026-11-07T05:05:00Z,,,,4.3,1.8,100,3.3,0.0,0.0,0,Monte di Fò,7.4,"giornaliero 9→9 (1 g), condiviso con altri 1 episodi",0,0,0,0,0,,,,chiuso,,,
 ruspino_20261106T1705,ruspino,2026-11-06T17:05:00Z,2026-11-07T05:30:00Z,12.4,ARPA + SRI,3.6,ARPA,2026-11-06T18:40:00Z,8.1,2.0,99,36.1,22.6,100,11.3,3.2,1.7,3,Cornalita,4.6,10min,5,3,2,0,0,2026-11-06T22:11:06Z,-211,,chiuso,11.6,5.3,100
