@@ -633,3 +633,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-10T10:16:05Z,scarperia,forecast_alarm,10,,,SRT1,,13.60,true,true,forecast 1h prossime 6h conferma MeteoSwiss
 2026-11-10T10:26:07Z,scarperia,nowcast_warning,20,5.09,24.65,SRI,2026-11-10T10:10:00Z,,skipped,true,nowcast buffer=10km moto=E/31.7kmh prob=4%
 2026-11-10T10:26:07Z,scarperia,nowcast_alarm,15,4.66,15.89,SRT1,2026-11-10T10:15:00Z,,skipped,true,nowcast buffer=10km moto=E/33.7kmh prob=12%
+2026-11-10T10:46:06Z,scarperia,emergency,20,20.051,22.890,CUM3,2026-11-10T10:30:00Z,13.60,true,true,
