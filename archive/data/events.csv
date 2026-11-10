@@ -620,3 +620,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-10T01:26:05Z,scarperia,nowcast_warning,20,5.34,21.56,SRI,2026-11-10T01:10:00Z,,skipped,true,nowcast buffer=5km moto=E/59.5kmh prob=3%
 2026-11-10T02:16:12Z,scarperia,storm_cleared,5.0,0.00,0.00,SRI,2026-11-10T02:05:00Z,,true,true,"cella uscita dopo ~60min, caduti 5.109999656677246mm"
 2026-11-10T02:26:05Z,cepina,nowcast_warning,10,1.59,10.86,SRI,2026-11-10T02:10:00Z,,skipped,true,nowcast buffer=5km moto=SE/6.0kmh prob=5%
+2026-11-10T06:01:02Z,scarperia,forecast_warning,5,,,SRT1,,9.20,true,true,forecast 1h prossime 6h conferma MeteoSwiss (messaggio unico con 2 prodotti)
+2026-11-10T06:01:02Z,scarperia,forecast_warning,10,,,CUM3,,22.40,true,true,forecast 3h prossime 6h conferma MeteoSwiss (messaggio unico con 2 prodotti)
