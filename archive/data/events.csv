@@ -615,3 +615,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-09T09:55:54Z,scarperia,forecast24h_alarm,15,16.03,24.28,ensemble_24h,,24.28,true,true,mean=16.0 worst=24.3 metno=12.91 mch=14.09 conferma=media ensemble
 2026-11-09T12:15:52Z,scarperia,forecast24h_emergency,20,21.19,28.61,ensemble_24h,,28.61,true,true,mean=21.2 worst=28.6 metno=16.08 mch=20.66 conferma=media ensemble+MeteoSwiss
 2026-11-10T00:26:03Z,ruspino,storm_on_area,7.0,6.26,14.98,SRI,2026-11-10T00:15:00Z,,true,true,cella su area dwell~135min
+2026-11-10T01:06:02Z,ruspino,storm_cleared,7.0,0.43,1.59,SRI,2026-11-10T00:55:00Z,,true,true,"cella uscita dopo ~39min, caduti 6.585000038146973mm"
