@@ -1,4 +1,21 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261109T1445,2026-11-10T10:56:06Z,scarperia,nowcast,nowcast_emergency,SRI,26.78,nowcast buffer=10km moto=NE/4.7kmh prob=32%
+scarperia_20261109T1445,2026-11-10T10:46:06Z,scarperia,monitor,emergency,CUM3,22.890,
+scarperia_20261109T1445,2026-11-10T10:26:07Z,scarperia,nowcast,nowcast_warning,SRI,24.65,nowcast buffer=10km moto=E/31.7kmh prob=4%
+scarperia_20261109T1445,2026-11-10T10:26:07Z,scarperia,nowcast,nowcast_alarm,SRT1,15.89,nowcast buffer=10km moto=E/33.7kmh prob=12%
+scarperia_20261109T1445,2026-11-10T10:16:05Z,scarperia,forecast,forecast_alarm,SRT1,,forecast 1h prossime 6h conferma MeteoSwiss
+scarperia_20261109T1445,2026-11-10T09:46:24Z,scarperia,monitor,alarm,CUM3,18.690,
+scarperia_20261109T1445,2026-11-10T09:31:10Z,scarperia,monitor,warning,CUM3,15.290,rilevamento tardivo catch-up +31min
+scarperia_20261109T1445,2026-11-10T08:46:13Z,scarperia,storm,storm_on_area,SRI,7.39,cella su area
+scarperia_20261109T1445,2026-11-10T08:01:01Z,scarperia,forecast,forecast_emergency,CUM3,,forecast 3h prossime 6h conferma MeteoSwiss
+scarperia_20261109T1445,2026-11-10T07:16:12Z,scarperia,nowcast,nowcast_emergency,SRI,28.13,nowcast buffer=5km moto=NE/16.4kmh prob=19%
+scarperia_20261109T1445,2026-11-10T06:56:11Z,scarperia,nowcast,nowcast_warning,SRI,21.72,nowcast buffer=10km moto=E/60.6kmh prob=51%
+scarperia_20261109T1445,2026-11-10T06:36:02Z,scarperia,storm,storm_on_area,SRI,5.47,cella su area
+scarperia_20261109T1445,2026-11-10T06:01:02Z,scarperia,forecast,forecast_warning,SRT1,,forecast 1h prossime 6h conferma MeteoSwiss (messaggio unico con 2 prodotti)
+scarperia_20261109T1445,2026-11-10T06:01:02Z,scarperia,forecast,forecast_warning,CUM3,,forecast 3h prossime 6h conferma MeteoSwiss (messaggio unico con 2 prodotti)
+cepina_20261109T2355,2026-11-10T02:26:05Z,cepina,nowcast,nowcast_warning,SRI,10.86,nowcast buffer=5km moto=SE/6.0kmh prob=5%
+scarperia_20261109T1445,2026-11-10T01:26:05Z,scarperia,nowcast,nowcast_warning,SRI,21.56,nowcast buffer=5km moto=E/59.5kmh prob=3%
+scarperia_20261109T1445,2026-11-10T01:16:10Z,scarperia,storm,storm_on_area,SRI,6.58,cella su area dwell~74min
 ruspino_20261109T2315,2026-11-10T00:26:03Z,ruspino,storm,storm_on_area,SRI,14.98,cella su area dwell~135min
 scarperia_20261109T1445,2026-11-09T12:15:52Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,28.61,mean=21.2 worst=28.6 metno=16.08 mch=20.66 conferma=media ensemble+MeteoSwiss
 scarperia_20261109T1445,2026-11-09T09:55:54Z,scarperia,forecast,forecast24h_alarm,ensemble_24h,24.28,mean=16.0 worst=24.3 metno=12.91 mch=14.09 conferma=media ensemble
