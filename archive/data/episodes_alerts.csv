@@ -1,4 +1,5 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261109T1445,2026-11-10T12:00:00Z,scarperia,storm,storm_on_area,CUM3,15.49,ricostruito (evento non registrato dal nowcast)
 scarperia_20261109T1445,2026-11-10T10:56:06Z,scarperia,nowcast,nowcast_emergency,SRI,26.78,nowcast buffer=10km moto=NE/4.7kmh prob=32%
 scarperia_20261109T1445,2026-11-10T10:46:06Z,scarperia,monitor,emergency,CUM3,22.890,
 scarperia_20261109T1445,2026-11-10T10:26:07Z,scarperia,nowcast,nowcast_warning,SRI,24.65,nowcast buffer=10km moto=E/31.7kmh prob=4%
