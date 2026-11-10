@@ -1,4 +1,7 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+ruspino_20261109T2315,2026-11-10T00:26:03Z,ruspino,storm,storm_on_area,SRI,14.98,cella su area dwell~135min
+scarperia_20261109T1445,2026-11-09T12:15:52Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,28.61,mean=21.2 worst=28.6 metno=16.08 mch=20.66 conferma=media ensemble+MeteoSwiss
+scarperia_20261109T1445,2026-11-09T09:55:54Z,scarperia,forecast,forecast24h_alarm,ensemble_24h,24.28,mean=16.0 worst=24.3 metno=12.91 mch=14.09 conferma=media ensemble
 scarperia_20261109T0805,2026-11-09T05:55:53Z,scarperia,forecast,forecast24h_warning,ensemble_24h,20.00,mean=11.1 worst=20.0 metno=8.66 mch=3.95 conferma=media ensemble
 ruspino_20261106T1705,2026-11-07T05:11:03Z,ruspino,storm,storm_on_area,SRI,9.60,cella su area
 ruspino_20261106T1705,2026-11-06T23:31:06Z,ruspino,storm,storm_on_area,SRI,7.07,cella su area
