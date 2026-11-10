@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-11-10T02:16:12Z",
+  "_last_run_utc": "2026-11-10T02:26:05Z",
   "cepina:nowcast:SRI:10:alarm": {
     "active": false,
     "last_trigger_utc": "2026-10-21T16:41:05Z",
@@ -26,9 +26,8 @@
     "rearmed_utc": "2026-10-21T21:51:06Z"
   },
   "cepina:nowcast:SRI:5:warning": {
-    "active": false,
-    "last_trigger_utc": "2026-10-21T16:51:48Z",
-    "rearmed_utc": "2026-10-21T20:48:09Z"
+    "active": true,
+    "last_trigger_utc": "2026-11-10T02:26:05Z"
   },
   "cepina:nowcast:SRT1:10:alarm": {
     "active": false,
@@ -59,12 +58,6 @@
     "active": false,
     "last_trigger_utc": "2026-10-21T18:36:15Z",
     "rearmed_utc": "2026-10-21T21:41:04Z"
-  },
-  "cepina:nowcast:catchup:1794255600000": {
-    "done": true
-  },
-  "cepina:nowcast:catchup:1794255900000": {
-    "done": true
   },
   "cepina:nowcast:catchup:1794256200000": {
     "done": true
@@ -267,20 +260,26 @@
   "cepina:nowcast:catchup:1794276000000": {
     "done": true
   },
+  "cepina:nowcast:catchup:1794276300000": {
+    "done": true
+  },
+  "cepina:nowcast:catchup:1794276600000": {
+    "done": true
+  },
   "cepina:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-10-21T20:48:09Z",
     "since": "2026-10-21T19:16:10Z"
   },
   "cepina:nowcast:prealert": {
-    "last_utc": "2026-10-21T18:46:13Z",
-    "rank": 3
+    "last_utc": "2026-11-10T02:26:05Z",
+    "rank": 1
   },
   "cepina:nowcast:ring_last_ms:10": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   },
   "cepina:nowcast:ring_last_ms:5": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   },
   "ruspino:nowcast:SRI:10:alarm": {
     "active": false,
@@ -341,12 +340,6 @@
     "active": false,
     "last_trigger_utc": "2026-11-06T23:21:07Z",
     "rearmed_utc": "2026-11-07T02:31:05Z"
-  },
-  "ruspino:nowcast:catchup:1794255600000": {
-    "done": true
-  },
-  "ruspino:nowcast:catchup:1794255900000": {
-    "done": true
   },
   "ruspino:nowcast:catchup:1794256200000": {
     "done": true
@@ -549,6 +542,12 @@
   "ruspino:nowcast:catchup:1794276000000": {
     "done": true
   },
+  "ruspino:nowcast:catchup:1794276300000": {
+    "done": true
+  },
+  "ruspino:nowcast:catchup:1794276600000": {
+    "done": true
+  },
   "ruspino:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-11-10T01:06:02Z",
@@ -559,10 +558,10 @@
     "rank": 3
   },
   "ruspino:nowcast:ring_last_ms:10": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   },
   "ruspino:nowcast:ring_last_ms:5": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   },
   "ruspino:persistent:alarm": {
     "active": false,
@@ -634,12 +633,6 @@
     "active": false,
     "last_trigger_utc": "2026-11-06T09:31:14Z",
     "rearmed_utc": "2026-11-06T12:36:09Z"
-  },
-  "scarperia:nowcast:catchup:1794255600000": {
-    "done": true
-  },
-  "scarperia:nowcast:catchup:1794255900000": {
-    "done": true
   },
   "scarperia:nowcast:catchup:1794256200000": {
     "done": true
@@ -842,6 +835,12 @@
   "scarperia:nowcast:catchup:1794276000000": {
     "done": true
   },
+  "scarperia:nowcast:catchup:1794276300000": {
+    "done": true
+  },
+  "scarperia:nowcast:catchup:1794276600000": {
+    "done": true
+  },
   "scarperia:nowcast:cell_on_area": {
     "active": false,
     "cleared_utc": "2026-11-10T02:16:12Z",
@@ -852,9 +851,9 @@
     "rank": 1
   },
   "scarperia:nowcast:ring_last_ms:10": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   },
   "scarperia:nowcast:ring_last_ms:5": {
-    "ms": 1794276300000
+    "ms": 1794276900000
   }
 }
