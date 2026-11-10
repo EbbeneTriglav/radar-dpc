@@ -2,7 +2,7 @@
   "_cum3_available": true,
   "_forecast24h_last_run_utc": "2026-11-10T04:17:10Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
-  "_monitor_last_run_utc": "2026-11-10T04:31:08Z",
+  "_monitor_last_run_utc": "2026-11-10T04:46:04Z",
   "_nowcast_cum3_available": true,
   "_nowcast_last_run_utc": "2026-11-10T04:36:09Z",
   "_nowcast_sri_frames": 6,
@@ -12,17 +12,17 @@
   "cepina": {
     "CUM3": {
       "count": 11,
-      "max": 0.714,
-      "mean": 0.463,
-      "timestamp_utc": "2026-11-10T04:00:00Z",
-      "updated_at_utc": "2026-11-10T04:31:08Z"
+      "max": 0.904,
+      "mean": 0.554,
+      "timestamp_utc": "2026-11-10T04:30:00Z",
+      "updated_at_utc": "2026-11-10T04:46:03Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-10T04:20:00Z",
-      "updated_at_utc": "2026-11-10T04:31:07Z"
+      "timestamp_utc": "2026-11-10T04:35:00Z",
+      "updated_at_utc": "2026-11-10T04:46:03Z"
     },
     "buffers": {
       "10km": {
@@ -52,7 +52,7 @@
         "max_1h": 2.8,
         "max_3h": 8.4
       },
-      "updated_at_utc": "2026-11-10T04:31:07Z"
+      "updated_at_utc": "2026-11-10T04:46:02Z"
     },
     "forecast_24h": {
       "mch_weighted": 0.13,
@@ -89,17 +89,17 @@
   "ruspino": {
     "CUM3": {
       "count": 16,
-      "max": 0.249,
-      "mean": 0.042,
-      "timestamp_utc": "2026-11-10T04:00:00Z",
-      "updated_at_utc": "2026-11-10T04:31:04Z"
+      "max": 0.0,
+      "mean": 0.0,
+      "timestamp_utc": "2026-11-10T04:30:00Z",
+      "updated_at_utc": "2026-11-10T04:46:00Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-10T04:20:00Z",
-      "updated_at_utc": "2026-11-10T04:31:04Z"
+      "timestamp_utc": "2026-11-10T04:35:00Z",
+      "updated_at_utc": "2026-11-10T04:46:00Z"
     },
     "buffers": {
       "10km": {
@@ -129,7 +129,7 @@
         "max_1h": 2.8,
         "max_3h": 6.8
       },
-      "updated_at_utc": "2026-11-10T04:31:01Z"
+      "updated_at_utc": "2026-11-10T04:45:57Z"
     },
     "forecast_24h": {
       "mch_weighted": 0.0,
@@ -174,17 +174,17 @@
   "scarperia": {
     "CUM3": {
       "count": 13,
-      "max": 2.497,
-      "mean": 1.664,
-      "timestamp_utc": "2026-11-10T04:00:00Z",
-      "updated_at_utc": "2026-11-10T04:31:07Z"
+      "max": 3.593,
+      "mean": 2.352,
+      "timestamp_utc": "2026-11-10T04:30:00Z",
+      "updated_at_utc": "2026-11-10T04:46:02Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-10T04:20:00Z",
-      "updated_at_utc": "2026-11-10T04:31:06Z"
+      "timestamp_utc": "2026-11-10T04:35:00Z",
+      "updated_at_utc": "2026-11-10T04:46:02Z"
     },
     "buffers": {
       "10km": {
@@ -214,7 +214,7 @@
         "max_1h": 9.2,
         "max_3h": 22.4
       },
-      "updated_at_utc": "2026-11-10T04:31:06Z"
+      "updated_at_utc": "2026-11-10T04:46:01Z"
     },
     "forecast_24h": {
       "mch_weighted": 33.47,
