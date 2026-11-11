@@ -653,3 +653,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-11T21:01:04Z,scarperia,warning,10,10.570,13.200,CUM3,2026-11-11T20:30:00Z,18.88,true,true,rilevamento tardivo catch-up +31min
 2026-11-11T22:00:59Z,ruspino,forecast24h_warning,30,26.30,37.18,ensemble_24h,,37.18,true,true,mean=26.3 worst=37.2 metno=31.2 mch=28.15 conferma=MET Norway
 2026-11-11T22:41:08Z,scarperia,storm_on_area,5.0,1.88,5.47,SRI,2026-11-11T22:30:00Z,,true,true,cella su area dwell~22min
+2026-11-11T22:51:07Z,scarperia,storm_cleared,5.0,0.25,0.62,SRI,2026-11-11T22:40:00Z,,true,true,"cella uscita dopo ~9min, caduti 1.5549999475479126mm"
+2026-11-11T22:51:07Z,scarperia,storm_on_area,5.0,1.88,5.47,SRI,2026-11-11T22:30:00Z,,true,true,catch-up: cella rilevata a posteriori +21min
