@@ -1,4 +1,8 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261111T0235,2026-11-11T13:21:08Z,scarperia,storm,storm_on_area,SRI,10.61,cella su area
+scarperia_20261111T0235,2026-11-11T11:51:04Z,scarperia,storm,storm_on_area,SRI,7.34,cella su area
+scarperia_20261111T0235,2026-11-11T10:51:05Z,scarperia,nowcast,nowcast_emergency,SRI,48.93,nowcast buffer=5km moto=E/45.0kmh prob=2%
+scarperia_20261109T1445,2026-11-10T15:00:00Z,scarperia,storm,storm_on_area,CUM3,21.36,ricostruito (evento non registrato dal nowcast)
 scarperia_20261109T1445,2026-11-10T12:00:00Z,scarperia,storm,storm_on_area,CUM3,15.49,ricostruito (evento non registrato dal nowcast)
 scarperia_20261109T1445,2026-11-10T10:56:06Z,scarperia,nowcast,nowcast_emergency,SRI,26.78,nowcast buffer=10km moto=NE/4.7kmh prob=32%
 scarperia_20261109T1445,2026-11-10T10:46:06Z,scarperia,monitor,emergency,CUM3,22.890,
