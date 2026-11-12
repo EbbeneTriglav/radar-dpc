@@ -1,4 +1,11 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261111T0235,2026-11-11T22:51:07Z,scarperia,storm,storm_on_area,SRI,5.47,catch-up: cella rilevata a posteriori +21min
+scarperia_20261111T0235,2026-11-11T22:41:08Z,scarperia,storm,storm_on_area,SRI,5.47,cella su area dwell~22min
+scarperia_20261111T0235,2026-11-11T21:01:04Z,scarperia,monitor,warning,CUM3,13.200,rilevamento tardivo catch-up +31min
+scarperia_20261111T0235,2026-11-11T16:56:10Z,scarperia,nowcast,nowcast_warning,SRI,24.08,nowcast buffer=5km moto=W/27.8kmh prob=5%
+scarperia_20261111T0235,2026-11-11T15:04:58Z,scarperia,storm,storm_on_area,SRI,5.84,cella su area
+scarperia_20261111T0235,2026-11-11T15:01:03Z,scarperia,storm,storm_on_area,SRI,5.51,catch-up: cella rilevata a posteriori +16min
+scarperia_20261111T0235,2026-11-11T13:51:05Z,scarperia,nowcast,nowcast_warning,SRT1,9.04,nowcast buffer=5km moto=E/39.9kmh prob=3%
 scarperia_20261111T0235,2026-11-11T13:21:08Z,scarperia,storm,storm_on_area,SRI,10.61,cella su area
 scarperia_20261111T0235,2026-11-11T11:51:04Z,scarperia,storm,storm_on_area,SRI,7.34,cella su area
 scarperia_20261111T0235,2026-11-11T10:51:05Z,scarperia,nowcast,nowcast_emergency,SRI,48.93,nowcast buffer=5km moto=E/45.0kmh prob=2%
