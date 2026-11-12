@@ -7967,3 +7967,9 @@ timestamp_utc,product,area_name,location_type,location_name,lat,lon,value,mean,m
 2026-11-12T09:00:00Z,CUM3,scarperia,vertex,scarperia_v3,44.073086,11.330343,7.162,,,,,2026-11-12T11:57:28Z
 2026-11-12T09:00:00Z,CUM3,scarperia,vertex,scarperia_v4,44.092201,11.312029,6.102,,,,,2026-11-12T11:57:28Z
 2026-11-12T09:00:00Z,CUM3,scarperia,vertex,scarperia_v5,44.094786,11.282969,6.044,,,,,2026-11-12T11:57:28Z
+2026-11-12T12:00:00Z,CUM3,scarperia,area,scarperia,,,,11.681,10.633,13.200,13,2026-11-12T14:48:53Z
+2026-11-12T12:00:00Z,CUM3,scarperia,vertex,scarperia_v1,44.069925,11.282878,12.644,,,,,2026-11-12T14:48:53Z
+2026-11-12T12:00:00Z,CUM3,scarperia,vertex,scarperia_v2,44.056699,11.316312,10.751,,,,,2026-11-12T14:48:53Z
+2026-11-12T12:00:00Z,CUM3,scarperia,vertex,scarperia_v3,44.073086,11.330343,10.259,,,,,2026-11-12T14:48:53Z
+2026-11-12T12:00:00Z,CUM3,scarperia,vertex,scarperia_v4,44.092201,11.312029,10.720,,,,,2026-11-12T14:48:53Z
+2026-11-12T12:00:00Z,CUM3,scarperia,vertex,scarperia_v5,44.094786,11.282969,11.821,,,,,2026-11-12T14:48:53Z
