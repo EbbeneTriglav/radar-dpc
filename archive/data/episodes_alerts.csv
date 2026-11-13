@@ -1,4 +1,16 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261113T0520,2026-11-13T12:51:01Z,scarperia,monitor,emergency,CUM3,25.067,
+scarperia_20261113T0520,2026-11-13T11:21:07Z,scarperia,monitor,alarm,CUM3,18.821,
+scarperia_20261113T0520,2026-11-13T10:49:16Z,scarperia,monitor,warning,CUM3,16.213,
+scarperia_20261113T0520,2026-11-13T09:56:07Z,scarperia,nowcast,nowcast_emergency,SRI,29.42,nowcast buffer=5km moto=NE/11.1kmh prob=56%
+scarperia_20261113T0520,2026-11-13T09:46:02Z,scarperia,storm,storm_on_area,SRI,14.76,cella su area dwell~51min
+scarperia_20261113T0520,2026-11-13T09:36:08Z,scarperia,nowcast,nowcast_warning,SRI,22.28,nowcast buffer=5km moto=E/52.2kmh prob=43%
+scarperia_20261113T0520,2026-11-13T07:06:05Z,scarperia,storm,storm_on_area,SRI,5.05,cella su area
+ruspino_20261112T0505,2026-11-13T03:56:05Z,ruspino,storm,storm_on_area,SRI,7.92,catch-up: cella rilevata a posteriori +21min
+ruspino_20261112T0505,2026-11-13T03:46:07Z,ruspino,storm,storm_on_area,SRI,7.92,cella su area dwell~79min
+cepina_20261112T1340,2026-11-13T02:26:10Z,cepina,nowcast,nowcast_warning,SRI,10.19,nowcast buffer=10km
+cepina_20261112T1340,2026-11-13T01:36:10Z,cepina,storm,storm_on_area,SRI,7.29,cella su area
+scarperia_20261111T0235,2026-11-12T23:21:05Z,scarperia,nowcast,nowcast_warning,SRI,23.40,nowcast buffer=10km moto=NE/70.4kmh prob=2%
 scarperia_20261111T0235,2026-11-12T20:31:11Z,scarperia,storm,storm_on_area,SRI,11.44,cella su area
 scarperia_20261111T0235,2026-11-12T20:11:07Z,scarperia,nowcast,nowcast_emergency,SRI,26.49,nowcast buffer=10km moto=NE/82.1kmh prob=13%
 scarperia_20261111T0235,2026-11-12T19:51:44Z,scarperia,nowcast,nowcast_warning,SRI,24.20,nowcast buffer=10km moto=E/72.7kmh prob=47%
