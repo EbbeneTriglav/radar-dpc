@@ -11153,3 +11153,5 @@ timestamp_utc,area_name,max_mmh,mean_mmh,pixel_count,status,fetched_at_utc
 2026-11-12T23:45:00Z,scarperia,0.00,0.000,21,ok,2026-11-12T23:56:16Z
 2026-11-12T23:50:00Z,scarperia,1.14,0.640,21,ok,2026-11-13T00:06:14Z
 2026-11-12T23:55:00Z,scarperia,1.47,0.596,21,ok,2026-11-13T00:06:14Z
+2026-11-13T00:00:00Z,scarperia,0.95,0.427,21,ok,2026-11-13T00:16:18Z
+2026-11-13T00:05:00Z,scarperia,1.65,0.598,21,ok,2026-11-13T00:16:18Z
