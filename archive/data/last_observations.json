@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-11-13T05:11:06Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-11-13T05:06:03Z",
+  "_nowcast_last_run_utc": "2026-11-13T05:16:11Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 5.3,
-          "sri_mean": 0.55,
-          "srt1_max": 1.98,
-          "srt1_mean": 0.29
+          "sri_max": 4.53,
+          "sri_mean": 0.49,
+          "srt1_max": 2.14,
+          "srt1_mean": 0.36
         },
         "5km": {
-          "sri_max": 5.17,
-          "sri_mean": 0.68,
-          "srt1_max": 1.88,
-          "srt1_mean": 0.18
+          "sri_max": 5.42,
+          "sri_mean": 1.63,
+          "srt1_max": 2.08,
+          "srt1_mean": 0.33
         }
       },
       "motion": {
-        "bearing_deg": 288.4258621079089,
-        "compass": "W",
-        "speed_kmh": 6.7
+        "bearing_deg": 59.65557636832266,
+        "compass": "NE",
+        "speed_kmh": 8.2
       },
-      "timestamp_utc": "2026-11-13T05:06:03Z",
+      "timestamp_utc": "2026-11-13T05:16:11Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -152,24 +152,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 4.9,
-          "sri_mean": 0.86,
-          "srt1_max": 2.65,
-          "srt1_mean": 0.44
+          "sri_max": 7.81,
+          "sri_mean": 1.19,
+          "srt1_max": 2.54,
+          "srt1_mean": 0.5
         },
         "5km": {
-          "sri_max": 5.77,
-          "sri_mean": 1.29,
-          "srt1_max": 2.51,
-          "srt1_mean": 0.52
+          "sri_max": 7.5,
+          "sri_mean": 1.47,
+          "srt1_max": 2.65,
+          "srt1_mean": 0.68
         }
       },
       "motion": {
-        "bearing_deg": 340.4590269907208,
-        "compass": "N",
-        "speed_kmh": 15.4
+        "bearing_deg": 27.042169305098145,
+        "compass": "NE",
+        "speed_kmh": 4.3
       },
-      "timestamp_utc": "2026-11-13T05:06:03Z",
+      "timestamp_utc": "2026-11-13T05:16:11Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -233,9 +233,9 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 1.03,
-          "sri_mean": 0.04,
-          "srt1_max": 0.14,
+          "sri_max": 1.02,
+          "sri_mean": 0.02,
+          "srt1_max": 0.22,
           "srt1_mean": 0.01
         },
         "5km": {
@@ -246,11 +246,11 @@
         }
       },
       "motion": {
-        "bearing_deg": 48.977919344405215,
-        "compass": "NE",
-        "speed_kmh": 36.1
+        "bearing_deg": 202.88712082998208,
+        "compass": "SW",
+        "speed_kmh": 119.2
       },
-      "timestamp_utc": "2026-11-13T05:06:03Z",
+      "timestamp_utc": "2026-11-13T05:16:11Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
