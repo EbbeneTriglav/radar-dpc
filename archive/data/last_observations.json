@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-11-13T03:11:05Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-11-13T03:06:03Z",
+  "_nowcast_last_run_utc": "2026-11-13T03:16:05Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 3.05,
-          "sri_mean": 0.33,
-          "srt1_max": 5.47,
-          "srt1_mean": 0.99
+          "sri_max": 0.6,
+          "sri_mean": 0.05,
+          "srt1_max": 5.3,
+          "srt1_mean": 0.9
         },
         "5km": {
-          "sri_max": 3.71,
-          "sri_mean": 0.8,
-          "srt1_max": 4.15,
+          "sri_max": 0.78,
+          "sri_mean": 0.2,
+          "srt1_max": 3.98,
           "srt1_mean": 1.25
         }
       },
       "motion": {
-        "bearing_deg": 211.62638500050895,
+        "bearing_deg": 235.55374032929294,
         "compass": "SW",
-        "speed_kmh": 6.8
+        "speed_kmh": 10.9
       },
-      "timestamp_utc": "2026-11-13T03:06:03Z",
+      "timestamp_utc": "2026-11-13T03:16:05Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -152,24 +152,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 2.49,
-          "sri_mean": 0.18,
-          "srt1_max": 2.45,
-          "srt1_mean": 0.37
+          "sri_max": 2.27,
+          "sri_mean": 0.28,
+          "srt1_max": 2.36,
+          "srt1_mean": 0.35
         },
         "5km": {
-          "sri_max": 2.51,
-          "sri_mean": 0.59,
-          "srt1_max": 2.5,
-          "srt1_mean": 0.61
+          "sri_max": 2.05,
+          "sri_mean": 0.61,
+          "srt1_max": 2.34,
+          "srt1_mean": 0.63
         }
       },
       "motion": {
-        "bearing_deg": 218.47068803885185,
+        "bearing_deg": 215.68050705172965,
         "compass": "SW",
-        "speed_kmh": 30.3
+        "speed_kmh": 27.1
       },
-      "timestamp_utc": "2026-11-13T03:06:03Z",
+      "timestamp_utc": "2026-11-13T03:16:05Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -246,7 +246,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-11-13T03:06:03Z",
+      "timestamp_utc": "2026-11-13T03:16:05Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
