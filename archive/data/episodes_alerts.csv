@@ -1,4 +1,5 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261113T0520,2026-11-13T14:31:09Z,scarperia,storm,storm_on_area,SRI,7.02,cella su area dwell~84min
 scarperia_20261113T0520,2026-11-13T12:51:01Z,scarperia,monitor,emergency,CUM3,25.067,
 scarperia_20261113T0520,2026-11-13T11:21:07Z,scarperia,monitor,alarm,CUM3,18.821,
 scarperia_20261113T0520,2026-11-13T10:49:16Z,scarperia,monitor,warning,CUM3,16.213,
