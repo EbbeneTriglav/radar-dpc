@@ -711,3 +711,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-17T15:36:09Z,scarperia,storm_on_area,5.0,2.50,5.22,SRI,2026-11-17T15:20:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-11-17T15:46:06Z,scarperia,storm_on_area,5.0,2.25,5.18,SRI,2026-11-17T15:30:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
 2026-11-17T15:56:07Z,scarperia,storm_on_area,5.0,2.42,5.30,SRI,2026-11-17T15:45:00Z,,true,true,cella su area
+2026-11-17T16:26:08Z,scarperia,nowcast_warning,8,4.53,8.08,SRT1,2026-11-17T16:15:00Z,,skipped,true,nowcast buffer=5km moto=SE/6.6kmh prob=3%
+2026-11-17T16:26:08Z,scarperia,nowcast_emergency,25,3.20,25.83,SRI,2026-11-17T16:15:00Z,,skipped,true,nowcast buffer=10km moto=SE/12.4kmh prob=1%
