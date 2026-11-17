@@ -709,3 +709,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-16T20:50:56Z,scarperia,forecast24h_warning,10,10.14,13.40,ensemble_24h,,13.40,true,true,mean=10.1 worst=13.4 metno=11.6 mch=4.63 conferma=media ensemble+MET Norway
 2026-11-16T22:50:59Z,scarperia,forecast24h_alarm,15,15.44,19.04,ensemble_24h,,19.04,true,true,mean=15.4 worst=19.0 metno=12.68 mch=4.74 conferma=media ensemble
 2026-11-17T15:36:09Z,scarperia,storm_on_area,5.0,2.50,5.22,SRI,2026-11-17T15:20:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
+2026-11-17T15:46:06Z,scarperia,storm_on_area,5.0,2.25,5.18,SRI,2026-11-17T15:30:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
