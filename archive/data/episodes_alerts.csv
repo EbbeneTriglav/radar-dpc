@@ -1,4 +1,8 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261117T0840,2026-11-17T16:26:08Z,scarperia,nowcast,nowcast_warning,SRT1,8.08,nowcast buffer=5km moto=SE/6.6kmh prob=3%
+scarperia_20261117T0840,2026-11-17T16:26:08Z,scarperia,nowcast,nowcast_emergency,SRI,25.83,nowcast buffer=10km moto=SE/12.4kmh prob=1%
+scarperia_20261117T0840,2026-11-17T15:56:07Z,scarperia,storm,storm_on_area,SRI,5.30,cella su area
+scarperia_20261117T0840,2026-11-17T15:46:06Z,scarperia,storm,storm_on_area,SRI,5.18,catch-up: cella rilevata a posteriori +16min
 scarperia_20261117T0840,2026-11-17T15:36:09Z,scarperia,storm,storm_on_area,SRI,5.22,catch-up: cella rilevata a posteriori +16min
 scarperia_20261117T0425,2026-11-16T22:50:59Z,scarperia,forecast,forecast24h_alarm,ensemble_24h,19.04,mean=15.4 worst=19.0 metno=12.68 mch=4.74 conferma=media ensemble
 scarperia_20261117T0425,2026-11-16T20:50:56Z,scarperia,forecast,forecast24h_warning,ensemble_24h,13.40,mean=10.1 worst=13.4 metno=11.6 mch=4.63 conferma=media ensemble+MET Norway
