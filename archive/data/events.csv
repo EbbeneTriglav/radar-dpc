@@ -734,3 +734,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-19T08:16:07Z,scarperia,storm_on_area,5.0,2.40,6.03,SRI,2026-11-19T08:05:00Z,,true,true,cella su area
 2026-11-19T08:21:02Z,scarperia,warning,10,11.098,12.700,CUM3,2026-11-19T08:00:00Z,9.40,true,true,
 2026-11-19T08:52:49Z,scarperia,alarm,15,16.143,18.700,CUM3,2026-11-19T08:30:00Z,9.70,true,true,
+2026-11-19T09:46:06Z,ruspino,persistent_alarm,30,30.01,,SRI_6h,2026-11-19T09:35:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 6h, copertura 100%"
+2026-11-19T09:46:06Z,ruspino,storm_on_area,7.0,1.77,9.03,SRI,2026-11-19T09:30:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
