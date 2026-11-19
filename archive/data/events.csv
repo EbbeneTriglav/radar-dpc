@@ -725,3 +725,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-19T05:21:06Z,scarperia,forecast_alarm,10,,,SRT1,,11.10,true,true,forecast 1h prossime 6h conferma MeteoSwiss
 2026-11-19T05:36:11Z,ruspino,storm_cleared,7.0,1.19,2.26,SRI,2026-11-19T05:25:00Z,,true,true,"cella uscita dopo ~80min, caduti 11.09000015258789mm"
 2026-11-19T05:36:11Z,ruspino,persistent_warning,15,15.14,,SRI_3h,2026-11-19T05:25:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
+2026-11-19T06:36:14Z,scarperia,nowcast_warning,20,8.36,20.09,SRI,2026-11-19T06:25:00Z,,skipped,true,nowcast buffer=5km moto=NE/10.6kmh prob=13%
+2026-11-19T06:36:14Z,scarperia,storm_on_area,5.0,6.15,14.90,SRI,2026-11-19T06:25:00Z,,true,true,cella su area dwell~152min
