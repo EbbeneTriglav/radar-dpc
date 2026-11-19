@@ -1,6 +1,13 @@
 {
- "updated_at_utc": "2026-11-19T08:06:29Z",
+ "updated_at_utc": "2026-11-19T09:56:18Z",
  "events": [
+  {
+   "event_id": "ruspino_20261119_094606",
+   "area": "ruspino",
+   "start_utc": "2026-11-19T08:55:00Z",
+   "end_utc": "2026-11-19T09:50:00Z",
+   "n_frames": 12
+  },
   {
    "event_id": "ruspino_20261119_064621",
    "area": "ruspino",
