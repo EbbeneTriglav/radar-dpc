@@ -719,3 +719,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-19T02:21:17Z,scarperia,forecast_warning,5,,,SRT1,,11.70,true,true,forecast 1h prossime 6h conferma MeteoSwiss
 2026-11-19T03:06:35Z,scarperia,forecast_alarm,15,,,CUM3,,28.60,true,true,forecast 3h prossime 6h conferma MeteoSwiss
 2026-11-19T04:06:04Z,scarperia,forecast_emergency,20,,,CUM3,,26.10,true,true,forecast 3h prossime 6h conferma MeteoSwiss
+2026-11-19T04:16:03Z,ruspino,storm_on_area,7.0,3.99,13.32,SRI,2026-11-19T04:05:00Z,,true,true,cella su area
