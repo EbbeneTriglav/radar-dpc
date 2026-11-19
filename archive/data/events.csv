@@ -723,3 +723,5 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-19T04:46:03Z,ruspino,nowcast_warning,8,3.68,8.07,SRT1,2026-11-19T04:35:00Z,,skipped,true,nowcast buffer=5km moto=NE/8.7kmh prob=24%
 2026-11-19T05:16:08Z,ruspino,nowcast_emergency,25,9.71,27.10,SRI,2026-11-19T05:05:00Z,,skipped,true,nowcast buffer=5km moto=E/95.7kmh prob=40%
 2026-11-19T05:21:06Z,scarperia,forecast_alarm,10,,,SRT1,,11.10,true,true,forecast 1h prossime 6h conferma MeteoSwiss
+2026-11-19T05:36:11Z,ruspino,storm_cleared,7.0,1.19,2.26,SRI,2026-11-19T05:25:00Z,,true,true,"cella uscita dopo ~80min, caduti 11.09000015258789mm"
+2026-11-19T05:36:11Z,ruspino,persistent_warning,15,15.14,,SRI_3h,2026-11-19T05:25:00Z,,true,true,"pioggia persistente: cumulata mobile SRI media area 3h, copertura 100%"
