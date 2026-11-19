@@ -732,3 +732,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-19T07:16:04Z,scarperia,storm_cleared,5.0,0.78,1.69,SRI,2026-11-19T07:05:00Z,,true,true,"cella uscita dopo ~39min, caduti 5.375mm"
 2026-11-19T08:06:07Z,ruspino,storm_cleared,7.0,1.47,2.83,SRI,2026-11-19T07:55:00Z,,true,true,"cella uscita dopo ~79min, caduti 10.204999923706055mm"
 2026-11-19T08:16:07Z,scarperia,storm_on_area,5.0,2.40,6.03,SRI,2026-11-19T08:05:00Z,,true,true,cella su area
+2026-11-19T08:21:02Z,scarperia,warning,10,11.098,12.700,CUM3,2026-11-19T08:00:00Z,9.40,true,true,
