@@ -717,3 +717,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-18T09:50:56Z,scarperia,forecast24h_warning,10,9.05,12.85,ensemble_24h,,12.85,true,true,mean=9.1 worst=12.8 metno=11.75 mch=10.66 conferma=MET Norway+MeteoSwiss
 2026-11-18T11:50:55Z,scarperia,forecast24h_emergency,20,20.22,32.71,ensemble_24h,,32.71,true,true,mean=20.2 worst=32.7 metno=23.86 mch=31.28 conferma=media ensemble+MET Norway+MeteoSwiss
 2026-11-19T02:21:17Z,scarperia,forecast_warning,5,,,SRT1,,11.70,true,true,forecast 1h prossime 6h conferma MeteoSwiss
+2026-11-19T03:06:35Z,scarperia,forecast_alarm,15,,,CUM3,,28.60,true,true,forecast 3h prossime 6h conferma MeteoSwiss
