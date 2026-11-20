@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-11-20T17:21:05Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-11-20T17:13:49Z",
+  "_nowcast_last_run_utc": "2026-11-20T17:26:02Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.58,
-          "sri_mean": 0.1,
-          "srt1_max": 0.25,
-          "srt1_mean": 0.03
+          "sri_max": 0.94,
+          "sri_mean": 0.13,
+          "srt1_max": 0.32,
+          "srt1_mean": 0.04
         },
         "5km": {
-          "sri_max": 0.48,
+          "sri_max": 0.46,
           "sri_mean": 0.15,
-          "srt1_max": 0.13,
-          "srt1_mean": 0.02
+          "srt1_max": 0.2,
+          "srt1_mean": 0.05
         }
       },
       "motion": {
-        "bearing_deg": 84.15266323999143,
-        "compass": "E",
-        "speed_kmh": 21.8
+        "bearing_deg": 128.09878440873138,
+        "compass": "SE",
+        "speed_kmh": 19.5
       },
-      "timestamp_utc": "2026-11-20T17:13:49Z",
+      "timestamp_utc": "2026-11-20T17:26:02Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -165,7 +165,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-11-20T17:13:49Z",
+      "timestamp_utc": "2026-11-20T17:26:02Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -229,9 +229,9 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 0.47,
-          "sri_mean": 0.01,
-          "srt1_max": 0.0,
+          "sri_max": 0.0,
+          "sri_mean": 0.0,
+          "srt1_max": 0.03,
           "srt1_mean": 0.0
         },
         "5km": {
@@ -242,7 +242,7 @@
         }
       },
       "motion": null,
-      "timestamp_utc": "2026-11-20T17:13:49Z",
+      "timestamp_utc": "2026-11-20T17:26:02Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
