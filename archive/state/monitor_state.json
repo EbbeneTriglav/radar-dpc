@@ -25,7 +25,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "cepina:SRT1:last_eval_ms": 1795255200000,
+  "cepina:SRT1:last_eval_ms": 1795255800000,
   "cepina:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -87,7 +87,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "ruspino:SRT1:last_eval_ms": 1795254900000,
+  "ruspino:SRT1:last_eval_ms": 1795255800000,
   "ruspino:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -149,7 +149,7 @@
     "last_below_utc": null,
     "last_trigger_utc": null
   },
-  "scarperia:SRT1:last_eval_ms": 1795255200000,
+  "scarperia:SRT1:last_eval_ms": 1795255800000,
   "scarperia:SRT1:warning": {
     "active": false,
     "last_below_utc": null,
@@ -167,7 +167,7 @@
   },
   "scarperia:forecast:CUM3:alarm": {
     "active": true,
-    "last_below_utc": null,
+    "last_below_utc": "2026-11-21T10:21:00Z",
     "last_trigger_utc": "2026-11-19T03:06:35Z"
   },
   "scarperia:forecast:CUM3:emergency": {

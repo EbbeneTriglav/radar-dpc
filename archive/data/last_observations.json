@@ -2,7 +2,7 @@
   "_cum3_available": true,
   "_forecast24h_last_run_utc": "2026-11-21T09:26:00Z",
   "_last_run_utc": "2026-05-27T14:34:48Z",
-  "_monitor_last_run_utc": "2026-11-21T10:09:36Z",
+  "_monitor_last_run_utc": "2026-11-21T10:21:02Z",
   "_nowcast_cum3_available": true,
   "_nowcast_last_run_utc": "2026-11-21T10:16:12Z",
   "_nowcast_sri_frames": 6,
@@ -15,14 +15,14 @@
       "max": 0.0,
       "mean": 0.0,
       "timestamp_utc": "2026-11-21T09:30:00Z",
-      "updated_at_utc": "2026-11-21T10:09:36Z"
+      "updated_at_utc": "2026-11-21T10:21:01Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-21T10:00:00Z",
-      "updated_at_utc": "2026-11-21T10:09:35Z"
+      "timestamp_utc": "2026-11-21T10:10:00Z",
+      "updated_at_utc": "2026-11-21T10:21:01Z"
     },
     "buffers": {
       "10km": {
@@ -49,10 +49,10 @@
         "max_3h": 0.0
       },
       "openmeteo": {
-        "max_1h": 1.18,
-        "max_3h": 2.81
+        "max_1h": 1.2,
+        "max_3h": 2.83
       },
-      "updated_at_utc": "2026-11-21T10:09:35Z"
+      "updated_at_utc": "2026-11-21T10:21:01Z"
     },
     "forecast_24h": {
       "mch_weighted": 0.57,
@@ -96,14 +96,14 @@
       "max": 0.0,
       "mean": 0.0,
       "timestamp_utc": "2026-11-21T09:30:00Z",
-      "updated_at_utc": "2026-11-21T10:06:06Z"
+      "updated_at_utc": "2026-11-21T10:20:59Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-21T09:55:00Z",
-      "updated_at_utc": "2026-11-21T10:06:05Z"
+      "timestamp_utc": "2026-11-21T10:10:00Z",
+      "updated_at_utc": "2026-11-21T10:20:58Z"
     },
     "buffers": {
       "10km": {
@@ -122,18 +122,18 @@
     "forecast": {
       "horizon_hours": 6,
       "meteoswiss": {
-        "max_1h": null,
-        "max_3h": null
+        "max_1h": 0.0,
+        "max_3h": 0.0
       },
       "metno": {
         "max_1h": 0.0,
         "max_3h": 0.0
       },
       "openmeteo": {
-        "max_1h": null,
-        "max_3h": null
+        "max_1h": 1.6,
+        "max_3h": 3.98
       },
-      "updated_at_utc": "2026-11-21T10:06:03Z"
+      "updated_at_utc": "2026-11-21T10:20:56Z"
     },
     "forecast_24h": {
       "mch_weighted": 0.72,
@@ -177,14 +177,14 @@
       "max": 0.0,
       "mean": 0.0,
       "timestamp_utc": "2026-11-21T09:30:00Z",
-      "updated_at_utc": "2026-11-21T10:09:34Z"
+      "updated_at_utc": "2026-11-21T10:21:00Z"
     },
     "SRT1": {
       "count": 1,
       "max": 0.0,
       "mean": 0.0,
-      "timestamp_utc": "2026-11-21T10:00:00Z",
-      "updated_at_utc": "2026-11-21T10:09:33Z"
+      "timestamp_utc": "2026-11-21T10:10:00Z",
+      "updated_at_utc": "2026-11-21T10:21:00Z"
     },
     "buffers": {
       "10km": {
@@ -211,10 +211,10 @@
         "max_3h": 0.0
       },
       "openmeteo": {
-        "max_1h": 5.8,
-        "max_3h": 11.33
+        "max_1h": 3.1,
+        "max_3h": 6.46
       },
-      "updated_at_utc": "2026-11-21T10:09:31Z"
+      "updated_at_utc": "2026-11-21T10:21:00Z"
     },
     "forecast_24h": {
       "mch_weighted": 3.9,
