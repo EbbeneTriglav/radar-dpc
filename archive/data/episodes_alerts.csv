@@ -1,4 +1,19 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261122T0205,2026-11-22T13:57:52Z,scarperia,monitor,warning,CUM3,13.000,
+scarperia_20261122T0205,2026-11-22T12:46:10Z,scarperia,storm,storm_on_area,SRI,7.43,cella su area
+scarperia_20261122T0205,2026-11-22T12:26:09Z,scarperia,nowcast,nowcast_emergency,SRI,26.79,nowcast buffer=5km moto=E/83.1kmh prob=78%
+scarperia_20261122T0205,2026-11-22T12:16:06Z,scarperia,nowcast,nowcast_warning,SRT1,9.33,nowcast buffer=5km moto=N/44.9kmh prob=79%
+scarperia_20261122T0205,2026-11-22T11:36:01Z,scarperia,storm,storm_on_area,SRI,18.03,cella su area
+scarperia_20261122T0205,2026-11-22T10:46:05Z,scarperia,storm,storm_on_area,SRI,5.39,cella su area
+ruspino_20261122T0425,2026-11-22T09:26:06Z,ruspino,storm,storm_on_area,SRI,7.00,catch-up: cella rilevata a posteriori +16min
+scarperia_20261122T0205,2026-11-22T07:26:09Z,scarperia,storm,storm_on_area,SRI,7.05,catch-up: cella rilevata a posteriori +16min
+scarperia_20261122T0205,2026-11-22T07:26:09Z,scarperia,storm,storm_on_area,SRI,6.14,catch-up: cella rilevata a posteriori +21min
+scarperia_20261122T0205,2026-11-22T07:16:07Z,scarperia,storm,storm_on_area,SRI,6.14,cella su area
+scarperia_20261122T0205,2026-11-22T05:26:03Z,scarperia,storm,storm_on_area,SRI,6.73,cella su area dwell~175min
+scarperia_20261122T0205,2026-11-22T04:06:09Z,scarperia,nowcast,nowcast_emergency,SRI,31.18,nowcast buffer=5km moto=N/9.5kmh prob=39%
+scarperia_20261122T0205,2026-11-22T03:46:09Z,scarperia,storm,storm_on_area,SRI,11.47,cella su area
+scarperia_20261122T0205,2026-11-21T16:55:55Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,30.90,mean=18.1 worst=30.9 metno=20.57 mch=26.01 conferma=MET Norway+MeteoSwiss
+scarperia_20261122T0205,2026-11-21T14:55:59Z,scarperia,forecast,forecast24h_warning,ensemble_24h,13.28,mean=8.3 worst=13.3 metno=9.76 mch=11.56 conferma=MeteoSwiss
 scarperia_20261119T0255,2026-11-19T14:06:05Z,scarperia,nowcast,nowcast_warning,SRI,24.62,nowcast buffer=5km moto=E/73.0kmh prob=23%
 scarperia_20261119T0255,2026-11-19T10:46:06Z,scarperia,storm,storm_on_area,SRI,16.06,cella su area
 scarperia_20261119T0255,2026-11-19T10:26:07Z,scarperia,nowcast,nowcast_warning,SRT1,8.63,nowcast buffer=5km moto=W/63.4kmh prob=3%
