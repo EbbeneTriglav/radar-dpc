@@ -772,3 +772,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-22T17:26:07Z,scarperia,storm_on_area,5.0,2.35,5.32,SRI,2026-11-22T17:15:00Z,,true,true,cella su area
 2026-11-22T18:36:10Z,scarperia,storm_cleared,5.0,0.62,1.48,SRI,2026-11-22T18:25:00Z,,true,true,"cella uscita dopo ~70min, caduti 4.914999961853027mm"
 2026-11-22T18:40:18Z,scarperia,nowcast_emergency,25,1.57,29.58,SRI,2026-11-22T18:30:00Z,,skipped,true,nowcast buffer=10km moto=SE/21.4kmh prob=48%
+2026-11-24T14:56:14Z,scarperia,forecast24h_warning,10,8.41,13.41,ensemble_24h,,13.41,true,true,mean=8.4 worst=13.4 metno=10.69 mch=9.56 conferma=MET Norway
