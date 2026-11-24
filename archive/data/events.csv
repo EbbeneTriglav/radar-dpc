@@ -774,3 +774,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-22T18:40:18Z,scarperia,nowcast_emergency,25,1.57,29.58,SRI,2026-11-22T18:30:00Z,,skipped,true,nowcast buffer=10km moto=SE/21.4kmh prob=48%
 2026-11-24T14:56:14Z,scarperia,forecast24h_warning,10,8.41,13.41,ensemble_24h,,13.41,true,true,mean=8.4 worst=13.4 metno=10.69 mch=9.56 conferma=MET Norway
 2026-11-24T20:15:58Z,scarperia,forecast24h_alarm,15,12.20,22.37,ensemble_24h,,22.37,true,true,mean=12.2 worst=22.4 metno=15.31 mch=11.53 conferma=MET Norway
+2026-11-24T23:36:07Z,scarperia,storm_on_area,5.0,2.15,5.22,SRI,2026-11-24T23:25:00Z,,true,true,cella su area
