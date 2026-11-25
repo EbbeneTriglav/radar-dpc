@@ -784,3 +784,4 @@ event_timestamp_utc,area_name,level,threshold_mm,observed_mm_mean,observed_mm_ma
 2026-11-25T16:32:51Z,scarperia,forecast_warning,10,,,CUM3,,23.60,true,true,forecast 3h prossime 6h conferma MET Norway
 2026-11-25T18:01:04Z,scarperia,forecast_warning,5,,,SRT1,,16.30,true,true,forecast 1h prossime 6h conferma MeteoSwiss
 2026-11-25T21:31:07Z,scarperia,storm_on_area,5.0,2.21,5.20,SRI,2026-11-25T21:15:00Z,,true,true,catch-up: cella rilevata a posteriori +16min
+2026-11-25T21:51:02Z,scarperia,storm_on_area,5.0,2.15,6.03,SRI,2026-11-25T21:40:00Z,,true,true,cella su area
