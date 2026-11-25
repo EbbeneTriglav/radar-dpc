@@ -1,4 +1,9 @@
 episode_id,event_timestamp_utc,area_name,class,level,product,observed_mm_max,note
+scarperia_20261125T0935,2026-11-25T16:32:51Z,scarperia,forecast,forecast_warning,CUM3,,forecast 3h prossime 6h conferma MET Norway
+scarperia_20261125T0935,2026-11-25T13:36:05Z,scarperia,nowcast,nowcast_warning,SRT1,8.68,nowcast buffer=10km moto=NE/42.2kmh prob=52%
+scarperia_20261125T0935,2026-11-25T13:26:18Z,scarperia,storm,storm_on_area,SRI,18.45,cella su area dwell~55min
+scarperia_20261125T0935,2026-11-25T13:16:07Z,scarperia,storm,storm_on_area,SRI,5.24,catch-up: cella rilevata a posteriori +16min
+scarperia_20261124T1400,2026-11-25T02:15:58Z,scarperia,forecast,forecast24h_emergency,ensemble_24h,49.76,mean=30.3 worst=49.8 metno=30.03 mch=22.36 conferma=media ensemble+MET Norway+MeteoSwiss
 scarperia_20261124T1400,2026-11-24T23:36:07Z,scarperia,storm,storm_on_area,SRI,5.22,cella su area
 scarperia_20261124T1400,2026-11-24T20:15:58Z,scarperia,forecast,forecast24h_alarm,ensemble_24h,22.37,mean=12.2 worst=22.4 metno=15.31 mch=11.53 conferma=MET Norway
 scarperia_20261124T1400,2026-11-24T14:56:14Z,scarperia,forecast,forecast24h_warning,ensemble_24h,13.41,mean=8.4 worst=13.4 metno=10.69 mch=9.56 conferma=MET Norway
