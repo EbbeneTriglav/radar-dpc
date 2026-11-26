@@ -1,5 +1,5 @@
 {
-  "_last_run_utc": "2026-11-26T15:25:53Z",
+  "_last_run_utc": "2026-11-26T17:25:59Z",
   "cepina:forecast_24h:alarm": {
     "active": false
   },
@@ -19,14 +19,12 @@
     "active": false
   },
   "scarperia:forecast_24h:alarm": {
-    "active": true,
-    "last_trigger_utc": "2026-11-24T20:15:58Z"
+    "active": false
   },
   "scarperia:forecast_24h:emergency": {
     "active": false
   },
   "scarperia:forecast_24h:warning": {
-    "active": true,
-    "last_trigger_utc": "2026-11-24T14:56:14Z"
+    "active": false
   }
 }
