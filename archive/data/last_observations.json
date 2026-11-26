@@ -4,7 +4,7 @@
   "_last_run_utc": "2026-05-27T14:34:48Z",
   "_monitor_last_run_utc": "2026-11-26T03:52:16Z",
   "_nowcast_cum3_available": true,
-  "_nowcast_last_run_utc": "2026-11-26T03:56:11Z",
+  "_nowcast_last_run_utc": "2026-11-26T04:06:07Z",
   "_nowcast_sri_frames": 6,
   "_nowcast_srt1_available": true,
   "_sri_frames": 2,
@@ -67,24 +67,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 2.18,
-          "sri_mean": 0.71,
+          "sri_max": 2.23,
+          "sri_mean": 0.72,
           "srt1_max": 2.2,
-          "srt1_mean": 0.84
+          "srt1_mean": 0.82
         },
         "5km": {
-          "sri_max": 2.03,
-          "sri_mean": 1.04,
-          "srt1_max": 2.23,
-          "srt1_mean": 1.31
+          "sri_max": 2.23,
+          "sri_mean": 1.15,
+          "srt1_max": 2.17,
+          "srt1_mean": 1.26
         }
       },
       "motion": {
-        "bearing_deg": 81.29193972676026,
-        "compass": "E",
-        "speed_kmh": 2.7
+        "bearing_deg": 239.02956140038992,
+        "compass": "SW",
+        "speed_kmh": 4.2
       },
-      "timestamp_utc": "2026-11-26T03:56:11Z",
+      "timestamp_utc": "2026-11-26T04:06:07Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -152,24 +152,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 4.55,
-          "sri_mean": 1.01,
-          "srt1_max": 5.36,
-          "srt1_mean": 2.04
+          "sri_max": 4.93,
+          "sri_mean": 1.19,
+          "srt1_max": 5.09,
+          "srt1_mean": 1.93
         },
         "5km": {
-          "sri_max": 2.36,
-          "sri_mean": 1.2,
-          "srt1_max": 5.13,
-          "srt1_mean": 3.0
+          "sri_max": 3.59,
+          "sri_mean": 1.48,
+          "srt1_max": 4.75,
+          "srt1_mean": 2.79
         }
       },
       "motion": {
-        "bearing_deg": 104.14423590904615,
-        "compass": "E",
-        "speed_kmh": 11.0
+        "bearing_deg": null,
+        "compass": "stazionaria",
+        "speed_kmh": 0.0
       },
-      "timestamp_utc": "2026-11-26T03:56:11Z",
+      "timestamp_utc": "2026-11-26T04:06:07Z",
       "triggered": false
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
@@ -233,24 +233,24 @@
     "nowcast": {
       "buffers": {
         "10km": {
-          "sri_max": 14.52,
-          "sri_mean": 2.92,
-          "srt1_max": 6.67,
-          "srt1_mean": 1.01
+          "sri_max": 15.9,
+          "sri_mean": 1.66,
+          "srt1_max": 7.52,
+          "srt1_mean": 1.4
         },
         "5km": {
-          "sri_max": 14.97,
-          "sri_mean": 6.99,
-          "srt1_max": 4.39,
-          "srt1_mean": 1.83
+          "sri_max": 13.56,
+          "sri_mean": 4.0,
+          "srt1_max": 5.97,
+          "srt1_mean": 2.91
         }
       },
       "motion": {
-        "bearing_deg": 40.64443006114958,
+        "bearing_deg": 50.96401909628582,
         "compass": "NE",
-        "speed_kmh": 21.2
+        "speed_kmh": 24.0
       },
-      "timestamp_utc": "2026-11-26T03:56:11Z",
+      "timestamp_utc": "2026-11-26T04:06:07Z",
       "triggered": true
     },
     "timestamp_utc": "2026-05-27T14:34:48Z",
